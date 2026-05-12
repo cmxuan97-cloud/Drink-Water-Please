@@ -1,4 +1,5 @@
 // 诊断 endpoint — 看哪些 env / KV 配齐了。GET /api/push/diag
+export const config = { runtime: 'edge' };
 
 export default async function handler(_req: Request): Promise<Response> {
   try {

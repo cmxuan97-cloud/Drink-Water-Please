@@ -1,5 +1,7 @@
 import { Redis } from '@upstash/redis';
 
+export const config = { runtime: 'edge' };
+
 type Body = {
   clientId?: string;
   subscription?: { endpoint: string; keys?: { p256dh: string; auth: string } };
