@@ -1,15 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#bfe6f7"/>
-      <stop offset="100%" stop-color="#7dd3fc"/>
-    </linearGradient>
-    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7dd3fc"/>
-      <stop offset="100%" stop-color="#1d7fb8"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <path fill="url(#drop)" d="M256 96 C 180 200 144 264 144 320 a 112 112 0 0 0 224 0 c 0 -56 -36 -120 -112 -224 z"/>
-  <ellipse cx="220" cy="300" rx="22" ry="34" fill="#ffffff" opacity="0.45"/>
+  <!-- opaque white background -->
+  <rect width="512" height="512" fill="#ffffff"/>
+
+  <!-- droplet, centered, slightly tilted, hand-drawn vibe -->
+  <g transform="translate(256 280) rotate(-5)">
+    <!-- main filled body (sized for 80% maskable safe zone) -->
+    <path d="
+      M 0 -148
+      C -78 -52, -134 26, -118 96
+      C -98 166, 22 184, 96 148
+      C 156 116, 142 26, 92 -52
+      C 60 -104, 26 -138, 0 -148
+      Z"
+      fill="#1c8de8"
+      stroke="#0e7dcc"
+      stroke-width="7"
+      stroke-linejoin="round"
+      stroke-linecap="round"/>
+
+    <!-- sketchy double strokes for hand-drawn feel -->
+    <path d="M -4 -140 C -74 -46, -130 28, -112 96"
+          fill="none" stroke="#0e7dcc" stroke-width="4.5"
+          stroke-linecap="round" opacity="0.5"/>
+    <path d="M 96 -48 C 150 28, 138 116, 90 144"
+          fill="none" stroke="#0e7dcc" stroke-width="4.5"
+          stroke-linecap="round" opacity="0.5"/>
+    <path d="M -108 104 C -70 158, 26 176, 88 146"
+          fill="none" stroke="#0e7dcc" stroke-width="4.5"
+          stroke-linecap="round" opacity="0.4"/>
+
+    <!-- interior white sketch highlights -->
+    <path d="M -46 -46 Q -22 -94 4 -114"
+          fill="none" stroke="#ffffff" stroke-width="9"
+          stroke-linecap="round" opacity="0.55"/>
+    <path d="M -98 56 Q -78 -2 -52 -34"
+          fill="none" stroke="#ffffff" stroke-width="6.5"
+          stroke-linecap="round" opacity="0.35"/>
+    <path d="M -62 122 Q -28 148 18 152"
+          fill="none" stroke="#ffffff" stroke-width="5.5"
+          stroke-linecap="round" opacity="0.4"/>
+
+    <!-- two dot eyes, upper-right -->
+    <circle cx="46" cy="-38" r="7" fill="#ffffff"/>
+    <circle cx="74" cy="-32" r="7" fill="#ffffff"/>
+  </g>
 </svg>

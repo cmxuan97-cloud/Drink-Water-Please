@@ -90,7 +90,7 @@ export default defineConfig(({ mode }) => {
         srcDir: 'src',
         filename: 'sw.ts',
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'icon.svg'],
+        includeAssets: ['favicon.svg', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'],
         manifest: {
           name: 'Drink Water',
           short_name: 'Water',
@@ -99,11 +99,13 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           display: 'standalone',
           orientation: 'portrait',
-          background_color: '#e6f4fb',
-          theme_color: '#3aa6dd',
+          background_color: '#ffffff',
+          theme_color: '#1c8de8',
           icons: [
-            { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
-            { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           ],
         },
         injectManifest: {
