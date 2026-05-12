@@ -99,22 +99,18 @@ export const sendTestPush = async (): Promise<{ ok: boolean; sent?: number; erro
   return await safeJson(resp);
 };
 
-/** 延迟 seconds 秒后发推送 — 用于人工验证「定时推送」会到。
- *  局限：靠客户端 setTimeout，标签页/app 关掉就停。但能证明 push 链路正常。
- *  返回一个 cancel 函数。 */
-export const schedulePushIn = (
+/** 延迟 seconds 秒后发推送 — 服务端 sleep 后再推。
+ *  关闭 app 也能收：Vercel function 在云端继续 hold 那段时间。
+ *  返回 promise，但客户端 fire-and-forget 即可。 */
+export const schedulePushIn = async (
   seconds: number,
-  onFire: (result: { ok: boolean; error?: string }) => void,
-): (() => void) => {
-  const timer = window.setTimeout(async () => {
-    try {
-      const r = await sendTestPush();
-      onFire(r);
-    } catch (e) {
-      onFire({ ok: false, error: e instanceof Error ? e.message : String(e) });
-    }
-  }, seconds * 1000);
-  return () => clearTimeout(timer);
+): Promise<{ ok: boolean; sent?: number; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  const resp = await fetch(
+    `/api/push/send?clientId=${encodeURIComponent(clientId)}&test=1&delay=${seconds}`,
+    { method: 'POST' },
+  );
+  return await safeJson(resp);
 };
 
 /** 设置（作息时间）改了之后同步给服务端 */

@@ -255,6 +255,12 @@ export default async function handler(req: Request): Promise<Response> {
     const isTest = url.searchParams.get('test') === '1';
     const targetClient = url.searchParams.get('clientId');
     const dry = url.searchParams.get('dry') === '1';
+    const delaySec = Math.max(0, Math.min(25, parseInt(url.searchParams.get('delay') || '0', 10) || 0));
+
+    // 服务端 sleep — 即使客户端关闭 app，函数仍在 Vercel 上跑
+    if (delaySec > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
+    }
 
     if (!isTest) {
       const secret = url.searchParams.get('secret');

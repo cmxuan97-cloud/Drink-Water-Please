@@ -41,7 +41,6 @@ export default function SettingsPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [cancelTimer, setCancelTimer] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     setS(getSettings());
@@ -111,30 +110,25 @@ export default function SettingsPage() {
     }
   };
 
-  // 1 分钟倒计时推送
+  // 倒计时显示（视觉用，真正定时在服务端）
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;
     const t = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(t);
   }, [countdown]);
 
-  const onSchedulePush = (seconds: number) => {
-    if (cancelTimer) cancelTimer();
+  const onSchedulePush = async (seconds: number) => {
     setPushMsg(null);
     setCountdown(seconds);
-    const cancel = schedulePushIn(seconds, (r) => {
+    // 服务端 sleep N 秒后发推送 — 客户端 fire-and-forget，关闭也没事
+    try {
+      const r = await schedulePushIn(seconds);
       setCountdown(null);
-      setCancelTimer(null);
-      setPushMsg(r.ok ? '✅ 倒计时到，推送已发！查看锁屏' : `❌ ${r.error || '失败'}`);
-    });
-    setCancelTimer(() => cancel);
-  };
-
-  const onCancelSchedule = () => {
-    if (cancelTimer) cancelTimer();
-    setCancelTimer(null);
-    setCountdown(null);
-    setPushMsg('已取消倒计时');
+      setPushMsg(r.ok ? `✅ ${seconds} 秒后服务端已推出，查看锁屏` : `❌ ${r.error || '失败'}`);
+    } catch (e) {
+      setCountdown(null);
+      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 失败');
+    }
   };
 
   const goal = dailyGoalMl(s.weightKg);
@@ -321,26 +315,26 @@ export default function SettingsPage() {
             {countdown === null ? (
               <button
                 className="btn-pill"
-                onClick={() => onSchedulePush(60)}
+                onClick={() => onSchedulePush(10)}
                 disabled={pushBusy}
                 style={{ flex: 1, background: 'rgba(255,255,255,0.7)' }}
               >
-                ⏱ 1 分钟后推送
+                ⏱ 10 秒后推送
               </button>
             ) : (
               <button
                 className="btn-pill"
-                onClick={onCancelSchedule}
-                style={{ flex: 1, background: 'rgba(255, 220, 220, 0.9)' }}
+                disabled
+                style={{ flex: 1, background: 'rgba(220, 235, 220, 0.9)' }}
               >
-                ⏳ {countdown}s · 点击取消
+                ⏳ {countdown}s · 服务端定时中
               </button>
             )}
           </div>
         )}
         {countdown !== null && (
-          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.7, lineHeight: 1.5 }}>
-            ⚠ 保持页面打开 — 计时器在浏览器里跑，关闭就停（这是测试用，真实定时推送靠服务端 cron）
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
+            ✨ 服务端在 Vercel 上 sleep — <strong>现在可以关闭 app</strong>，推送照常到锁屏
           </div>
         )}
         {pushMsg && (
