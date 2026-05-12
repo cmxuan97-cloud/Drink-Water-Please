@@ -3,7 +3,7 @@ import { Redis } from '@upstash/redis';
 
 // 显式声明 Node runtime — web-push 依赖 Node crypto/https
 export const config = {
-  runtime: 'nodejs20.x',
+  runtime: 'nodejs',
   maxDuration: 30,
 };
 
