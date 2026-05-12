@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { kv } from '@vercel/kv';
 import webpush from 'web-push';
 
 type SubData = {
@@ -48,7 +47,7 @@ const initVapid = (): boolean => {
 };
 
 export default async function handler(req: Request): Promise<Response> {
-  const url = new URL(req.url);
+  const url = new URL(req.url, 'http://localhost');
   const isTest = url.searchParams.get('test') === '1';
   const targetClient = url.searchParams.get('clientId');
   const dry = url.searchParams.get('dry') === '1';
@@ -64,6 +63,12 @@ export default async function handler(req: Request): Promise<Response> {
   if (!initVapid()) {
     return Response.json({ error: '服务端未配置 VAPID keys' }, { status: 500 });
   }
+
+  // @vercel/kv throws at module-init time when env vars are missing, so import lazily
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    return Response.json({ error: '服务端未配置 KV 环境变量' }, { status: 500 });
+  }
+  const { kv } = await import('@vercel/kv');
 
   const allIds = isTest && targetClient
     ? [targetClient]

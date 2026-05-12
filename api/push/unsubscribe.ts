@@ -1,5 +1,3 @@
-import { kv } from '@vercel/kv';
-
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -16,6 +14,11 @@ export default async function handler(req: Request): Promise<Response> {
   if (!clientId) {
     return Response.json({ error: '缺 clientId' }, { status: 400 });
   }
+
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    return Response.json({ error: '服务端未配置 KV 环境变量' }, { status: 500 });
+  }
+  const { kv } = await import('@vercel/kv');
 
   try {
     await kv.del(`sub:${clientId}`);

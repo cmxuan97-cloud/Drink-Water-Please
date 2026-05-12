@@ -1,5 +1,3 @@
-import { kv } from '@vercel/kv';
-
 type Body = {
   clientId?: string;
   subscription?: { endpoint: string; keys?: { p256dh: string; auth: string } };
@@ -27,6 +25,11 @@ export default async function handler(req: Request): Promise<Response> {
   if (typeof wakeHour !== 'number' || typeof sleepHour !== 'number' || !tz) {
     return Response.json({ error: '设置参数缺失' }, { status: 400 });
   }
+
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    return Response.json({ error: '服务端未配置 KV 环境变量' }, { status: 500 });
+  }
+  const { kv } = await import('@vercel/kv');
 
   try {
     await kv.hset(`sub:${clientId}`, {

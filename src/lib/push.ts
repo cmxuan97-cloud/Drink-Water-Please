@@ -93,6 +93,10 @@ export const sendTestPush = async (): Promise<{ ok: boolean; sent?: number; erro
   const resp = await fetch(`/api/push/send?clientId=${encodeURIComponent(clientId)}&test=1`, {
     method: 'POST',
   });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    return { ok: false, error: `服务器错误 (${resp.status})${text ? ': ' + text.slice(0, 80) : ''}` };
+  }
   return await resp.json();
 };
 
