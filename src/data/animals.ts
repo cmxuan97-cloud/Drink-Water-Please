@@ -30,6 +30,27 @@ export const ANIMALS: Animal[] = [
   { id: 'a-fox', name: '狐狸小红', emoji: '🦊', hint: '偷偷藏一杯留到晚上', customArt: 'fox' },
   { id: 'a-panda', name: '熊猫圆圆', emoji: '🐼', hint: '竹叶上的露水也是水', customArt: 'panda' },
   { id: 'a-octopus', name: '章鱼小八', emoji: '🐙', hint: '八只手能同时举八杯水', customArt: 'octopus' },
+  // 第二批 20 只 —
+  { id: 'a-dolphin', name: '海豚跳跳', emoji: '🐬', hint: '海里跃出来的微笑使者', customArt: 'dolphin' },
+  { id: 'a-crab', name: '螃蟹横横', emoji: '🦀', hint: '横着走路的海边大厨', customArt: 'crab' },
+  { id: 'a-seahorse', name: '海马摇摇', emoji: '🐴', hint: '倒立游泳的优雅小马', customArt: 'seahorse' },
+  { id: 'a-jellyfish', name: '水母飘飘', emoji: '🪼', hint: '海里飘啊飘的果冻精灵', customArt: 'jellyfish' },
+  { id: 'a-koala', name: '考拉抱抱', emoji: '🐨', hint: '抱树打瞌睡的灰胖子', customArt: 'koala' },
+  { id: 'a-sloth', name: '树懒慢慢', emoji: '🦥', hint: '慢动作大王，喝水也要慢慢来', customArt: 'sloth' },
+  { id: 'a-hedgehog', name: '刺猬球球', emoji: '🦔', hint: '圆滚滚的小刺球，不扎人哦', customArt: 'hedgehog' },
+  { id: 'a-rabbit', name: '兔兔白白', emoji: '🐇', hint: '啃萝卜也要喝水的长耳朵', customArt: 'rabbit' },
+  { id: 'a-squirrel', name: '松鼠跳跳', emoji: '🐿️', hint: '抱橡果蹦来蹦去的活泼派', customArt: 'squirrel' },
+  { id: 'a-raccoon', name: '浣熊小偷', emoji: '🦝', hint: '戴黑眼罩的夜行小探险家', customArt: 'raccoon' },
+  { id: 'a-flamingo', name: '火烈鸟粉粉', emoji: '🦩', hint: '单腿站立的优雅', customArt: 'flamingo' },
+  { id: 'a-parrot', name: '鹦鹉七彩', emoji: '🦜', hint: '会说话的彩虹小鸟', customArt: 'parrot' },
+  { id: 'a-chick', name: '小鸡黄黄', emoji: '🐤', hint: '刚出壳的毛绒小不点', customArt: 'chick' },
+  { id: 'a-peacock', name: '孔雀蓝蓝', emoji: '🦚', hint: '开屏炫美的海军蓝', customArt: 'peacock' },
+  { id: 'a-turtle', name: '海龟大爷', emoji: '🐢', hint: '慢慢游、活百年的长寿者', customArt: 'turtle' },
+  { id: 'a-snake', name: '蛇蛇丝丝', emoji: '🐍', hint: '盘起来打盹儿的小机灵', customArt: 'snake' },
+  { id: 'a-bee', name: '蜜蜂嗡嗡', emoji: '🐝', hint: '采蜜累了来一口水的小工蜂', customArt: 'bee' },
+  { id: 'a-ladybug', name: '瓢虫点点', emoji: '🐞', hint: '红色背壳的幸运小红点', customArt: 'ladybug' },
+  { id: 'a-butterfly', name: '蝴蝶飞飞', emoji: '🦋', hint: '花丛中飞舞的彩色精灵', customArt: 'butterfly' },
+  { id: 'a-hamster', name: '仓鼠胖胖', emoji: '🐹', hint: '腮帮子塞满葵花子的小可爱', customArt: 'hamster' },
 ];
 
 export const unlockCount = (completedDays: number): number => {

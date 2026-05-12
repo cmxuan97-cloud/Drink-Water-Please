@@ -5,7 +5,12 @@ export type Mood = 'idle' | 'happy' | 'thirsty' | 'encouraging' | 'celebrating' 
 export type CharacterId =
   | 'kiwi' | 'mola' | 'dino' | 'kong' | 'godzilla' | 'robot' | 'ghost' | 'alien'
   | 'octopus' | 'panda' | 'penguin' | 'owl' | 'unicorn' | 'dragon' | 'otter'
-  | 'fox' | 'bear' | 'bat' | 'lion' | 'shark';
+  | 'fox' | 'bear' | 'bat' | 'lion' | 'shark'
+  // 第二批 20 只
+  | 'dolphin' | 'crab' | 'seahorse' | 'jellyfish' | 'koala' | 'sloth'
+  | 'hedgehog' | 'rabbit' | 'squirrel' | 'raccoon' | 'flamingo' | 'parrot'
+  | 'chick' | 'peacock' | 'turtle' | 'snake' | 'bee' | 'ladybug'
+  | 'butterfly' | 'hamster';
 
 type Spec = {
   viewBox: string;
@@ -805,6 +810,619 @@ const CHARACTERS: Record<CharacterId, Spec> = {
           <ellipse cx={88} cy={115} rx={5} ry={2} />
           <ellipse cx={101} cy={115} rx={5} ry={2} />
         </g>
+      </>
+    ),
+  },
+
+  // === Dolphin (海豚) ===
+  dolphin: {
+    viewBox: '5 50 240 150',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-dolphin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#88bee0" /><stop offset="100%" stopColor="#5089b8" />
+          </linearGradient>
+        </defs>
+        <path d="M 30 130 Q 50 80 130 75 Q 200 75 230 110 Q 235 130 220 145 L 200 155 Q 130 175 70 165 Q 30 160 20 145 Q 18 132 30 130 Z" fill="url(#g-dolphin)" />
+        <path d="M 165 75 L 175 50 L 185 78 Z" fill="#5089b8" />
+        <path d="M 220 130 L 245 115 L 240 145 Z" fill="#5089b8" />
+        <path d="M 30 130 Q 50 130 90 145 Q 130 165 200 155 L 200 165 Q 130 175 70 165 Q 30 160 20 145 Z" fill="#d8eaf3" />
+        <path d="M 195 130 Q 190 145 195 150" stroke="#3a6890" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        {Eye({ x: 90, y: 115, r: 4, closed: e, withHighlight: true })}
+        <path d="M 50 135 Q 55 142 50 148" stroke="#3a6890" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+      </>
+    ),
+  },
+
+  // === Crab (螃蟹) ===
+  crab: {
+    viewBox: '5 40 230 170',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-crab"><stop offset="0%" stopColor="#ff7855" /><stop offset="100%" stopColor="#d04030" /></radialGradient>
+        </defs>
+        <ellipse cx={120} cy={140} rx={75} ry={55} fill="url(#g-crab)" />
+        <ellipse cx={120} cy={155} rx={55} ry={35} fill="#ff9075" opacity={0.5} />
+        <line x1={105} y1={88} x2={100} y2={70} stroke="#d04030" strokeWidth={2.5} strokeLinecap="round" />
+        <line x1={135} y1={88} x2={140} y2={70} stroke="#d04030" strokeWidth={2.5} strokeLinecap="round" />
+        <circle cx={100} cy={65} r={6} fill="#1a1408" />
+        <circle cx={140} cy={65} r={6} fill="#1a1408" />
+        <circle cx={101} cy={63} r={2} fill="white" />
+        <circle cx={141} cy={63} r={2} fill="white" />
+        {e ? null : null}
+        <g fill="url(#g-crab)" stroke="#a02818" strokeWidth={1}>
+          <path d="M 45 130 Q 20 100 30 80 Q 38 90 35 105 Q 50 100 55 115 Z" />
+          <path d="M 195 130 Q 220 100 210 80 Q 202 90 205 115 Q 190 100 185 115 Z" />
+        </g>
+        <g stroke="#d04030" strokeWidth={3} strokeLinecap="round">
+          <line x1={55} y1={170} x2={35} y2={195} />
+          <line x1={75} y1={185} x2={60} y2={205} />
+          <line x1={185} y1={170} x2={205} y2={195} />
+          <line x1={165} y1={185} x2={180} y2={205} />
+        </g>
+        <path d="M 105 145 Q 120 155 135 145" stroke="#1a1408" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        {Blush({ x: 85, y: 145 })}
+        {Blush({ x: 155, y: 145 })}
+      </>
+    ),
+  },
+
+  // === Seahorse (海马) ===
+  seahorse: {
+    viewBox: '60 20 130 220',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-seahorse" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f4b870" /><stop offset="100%" stopColor="#d88840" /></linearGradient>
+        </defs>
+        <path d="M 130 35 Q 100 35 95 65 Q 90 95 115 105 Q 145 115 140 145 Q 135 175 105 180 Q 90 185 95 200 Q 105 215 120 205 Q 145 200 155 175 Q 165 145 145 125 Q 125 115 130 95 Q 135 75 155 78 Q 165 80 168 70 Z" fill="url(#g-seahorse)" />
+        <path d="M 130 35 Q 145 30 155 40 Q 160 50 152 52 Q 145 48 138 50 Z" fill="#d88840" />
+        <path d="M 115 50 L 105 35 L 118 45 Z" fill="#d88840" />
+        <path d="M 168 70 Q 180 75 175 90" stroke="#d88840" strokeWidth={2} fill="none" strokeLinecap="round" />
+        {Eye({ x: 142, y: 52, r: 3, closed: e })}
+        <g stroke="#a05810" strokeWidth={0.8} fill="none" opacity={0.5}>
+          <path d="M 100 75 q 5 2 0 5" />
+          <path d="M 105 95 q 5 2 0 5" />
+          <path d="M 120 115 q 5 2 0 5" />
+          <path d="M 135 135 q 5 2 0 5" />
+          <path d="M 145 160 q 5 2 0 5" />
+        </g>
+        {Blush({ x: 125, y: 65, rx: 5, ry: 3 })}
+      </>
+    ),
+  },
+
+  // === Jellyfish (水母) ===
+  jellyfish: {
+    viewBox: '30 30 190 200',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-jelly" cx="0.5" cy="0.4"><stop offset="0%" stopColor="#ffc6e0" stopOpacity={0.95}/><stop offset="100%" stopColor="#d878b0" stopOpacity={0.7}/></radialGradient>
+        </defs>
+        <path d="M 60 130 Q 60 60 125 55 Q 190 60 190 130 Q 190 140 180 140 Q 175 130 165 135 Q 155 140 150 130 Q 140 140 130 130 Q 120 140 110 130 Q 100 140 90 130 Q 80 140 70 135 Q 60 140 60 130 Z" fill="url(#g-jelly)" />
+        <ellipse cx={125} cy={90} rx={50} ry={20} fill="white" opacity={0.3} />
+        <g stroke="#c868a0" strokeWidth={3} fill="none" strokeLinecap="round" opacity={0.7}>
+          <path d="M 75 138 Q 70 165 78 190 Q 85 210 75 220" />
+          <path d="M 100 142 Q 95 175 105 200" />
+          <path d="M 125 145 Q 122 180 130 215" />
+          <path d="M 150 142 Q 155 175 145 205" />
+          <path d="M 175 138 Q 178 165 170 195 Q 165 215 175 225" />
+        </g>
+        {e ? (
+          <g stroke="#5a2870" strokeWidth={2.4} fill="none" strokeLinecap="round">
+            <path d="M 100 95 Q 108 90 116 95" />
+            <path d="M 134 95 Q 142 90 150 95" />
+          </g>
+        ) : (
+          <g fill="#5a2870">
+            <circle cx={108} cy={95} r={5} />
+            <circle cx={142} cy={95} r={5} />
+            <circle cx={110} cy={93} r={1.5} fill="white" />
+            <circle cx={144} cy={93} r={1.5} fill="white" />
+          </g>
+        )}
+        <path d="M 115 113 Q 125 118 135 113" stroke="#5a2870" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        {Blush({ x: 90, y: 110, rx: 5, ry: 3 })}
+        {Blush({ x: 160, y: 110, rx: 5, ry: 3 })}
+      </>
+    ),
+  },
+
+  // === Koala (考拉) ===
+  koala: {
+    viewBox: '30 25 180 200',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-koala" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a8b0b8" /><stop offset="100%" stopColor="#7a8088" /></linearGradient>
+        </defs>
+        <circle cx={70} cy={75} r={30} fill="url(#g-koala)" />
+        <circle cx={170} cy={75} r={30} fill="url(#g-koala)" />
+        <circle cx={70} cy={75} r={18} fill="#ffc4d8" />
+        <circle cx={170} cy={75} r={18} fill="#ffc4d8" />
+        <circle cx={120} cy={100} r={62} fill="url(#g-koala)" />
+        <ellipse cx={120} cy={120} rx={35} ry={28} fill="#d8dee4" />
+        {Eye({ x: 100, y: 100, r: 4.5, closed: e })}
+        {Eye({ x: 140, y: 100, r: 4.5, closed: e })}
+        <ellipse cx={120} cy={120} rx={11} ry={9} fill="#1a1408" />
+        <ellipse cx={117} cy={117} rx={3} ry={2} fill="#404040" />
+        <path d="M 113 132 Q 120 138 127 132" stroke="#1a1408" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+        <ellipse cx={120} cy={185} rx={55} ry={42} fill="url(#g-koala)" />
+        <g fill="url(#g-koala)">
+          <ellipse cx={75} cy={170} rx={14} ry={22} />
+          <ellipse cx={165} cy={170} rx={14} ry={22} />
+        </g>
+      </>
+    ),
+  },
+
+  // === Sloth (树懒) — 树懒总是闭眼睡觉 ===
+  sloth: {
+    viewBox: '30 30 180 200',
+    render: (_e) => (
+      <>
+        <defs>
+          <linearGradient id="g-sloth" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#b89878" /><stop offset="100%" stopColor="#88684a" /></linearGradient>
+        </defs>
+        <ellipse cx={120} cy={130} rx={75} ry={85} fill="url(#g-sloth)" />
+        <ellipse cx={120} cy={150} rx={48} ry={55} fill="#e8d4ba" />
+        <g stroke="#5a3818" strokeWidth={1} fill="none" opacity={0.4}>
+          <path d="M 65 100 q 8 3 0 8" />
+          <path d="M 175 100 q 8 3 0 8" />
+          <path d="M 60 130 q 8 3 0 8" />
+          <path d="M 180 130 q 8 3 0 8" />
+        </g>
+        <ellipse cx={88} cy={105} rx={18} ry={14} fill="#5a3818" />
+        <ellipse cx={152} cy={105} rx={18} ry={14} fill="#5a3818" />
+        {Eye({ x: 88, y: 105, r: 3, closed: true })}
+        {Eye({ x: 152, y: 105, r: 3, closed: true })}
+        <ellipse cx={120} cy={130} rx={6} ry={5} fill="#1a1408" />
+        <path d="M 110 145 Q 120 152 130 145" stroke="#1a1408" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        <g stroke="#5a3818" strokeWidth={1.5} fill="none" strokeLinecap="round">
+          <path d="M 85 130 L 78 138" />
+          <path d="M 85 132 L 75 132" />
+          <path d="M 155 130 L 162 138" />
+          <path d="M 155 132 L 165 132" />
+        </g>
+      </>
+    ),
+  },
+
+  // === Hedgehog (刺猬) ===
+  hedgehog: {
+    viewBox: '20 50 220 160',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-hedge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8c6a4a" /><stop offset="100%" stopColor="#5c4028" /></linearGradient>
+        </defs>
+        <path d="M 80 150 Q 85 80 150 80 Q 220 80 225 145 Q 225 175 175 180 Q 130 185 90 175 Q 75 168 80 150 Z" fill="url(#g-hedge)" />
+        <g stroke="#3c2818" strokeWidth={2} strokeLinecap="round">
+          {[
+            [90, 90, 88, 78], [105, 82, 103, 70], [120, 78, 118, 65],
+            [135, 75, 135, 62], [150, 75, 150, 60], [165, 76, 168, 63],
+            [180, 80, 185, 68], [195, 86, 202, 74], [210, 95, 220, 86],
+            [220, 110, 232, 105], [225, 130, 238, 128], [222, 150, 236, 152],
+          ].map(([x1, y1, x2, y2], i) => <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />)}
+        </g>
+        <ellipse cx={50} cy={155} rx={42} ry={32} fill="#f5dac0" />
+        {Eye({ x: 55, y: 140, r: 4, closed: e, withHighlight: true })}
+        <ellipse cx={25} cy={158} rx={8} ry={6} fill="#1a1408" />
+        <circle cx={20} cy={156} r={1.5} fill="white" />
+        <path d="M 38 170 Q 45 175 52 170" stroke="#1a1408" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        <g stroke="#3c2818" strokeWidth={2.5} strokeLinecap="round">
+          <line x1={100} y1={185} x2={100} y2={200} />
+          <line x1={160} y1={185} x2={160} y2={200} />
+        </g>
+        {Blush({ x: 60, y: 162, rx: 5, ry: 3 })}
+      </>
+    ),
+  },
+
+  // === Rabbit (兔子) ===
+  rabbit: {
+    viewBox: '40 5 160 215',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-rabbit" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#e8e0e0" /></linearGradient>
+        </defs>
+        <ellipse cx={95} cy={45} rx={14} ry={42} fill="url(#g-rabbit)" stroke="#d0c0c0" strokeWidth={1} />
+        <ellipse cx={145} cy={45} rx={14} ry={42} fill="url(#g-rabbit)" stroke="#d0c0c0" strokeWidth={1} />
+        <ellipse cx={95} cy={48} rx={7} ry={28} fill="#ffc4d8" />
+        <ellipse cx={145} cy={48} rx={7} ry={28} fill="#ffc4d8" />
+        <circle cx={120} cy={110} r={55} fill="url(#g-rabbit)" stroke="#d0c0c0" strokeWidth={1} />
+        {Eye({ x: 100, y: 105, r: 4, closed: e, withHighlight: true })}
+        {Eye({ x: 140, y: 105, r: 4, closed: e, withHighlight: true })}
+        <path d="M 115 122 L 120 128 L 125 122 Q 125 130 120 132 Q 115 130 115 122 Z" fill="#ffa0c0" />
+        <path d="M 120 132 Q 113 138 108 133 M 120 132 Q 127 138 132 133" stroke="#1a1408" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+        <g stroke="#404040" strokeWidth={0.8} strokeLinecap="round">
+          <line x1={92} y1={120} x2={80} y2={118} />
+          <line x1={92} y1={123} x2={80} y2={125} />
+          <line x1={148} y1={120} x2={160} y2={118} />
+          <line x1={148} y1={123} x2={160} y2={125} />
+        </g>
+        <ellipse cx={120} cy={185} rx={48} ry={32} fill="url(#g-rabbit)" stroke="#d0c0c0" strokeWidth={1} />
+        {Blush({ x: 82, y: 115 })}
+        {Blush({ x: 158, y: 115 })}
+      </>
+    ),
+  },
+
+  // === Squirrel (松鼠) ===
+  squirrel: {
+    viewBox: '20 25 220 200',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-squirrel" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d8884a" /><stop offset="100%" stopColor="#a85820" /></linearGradient>
+        </defs>
+        <path d="M 165 200 Q 220 195 235 130 Q 240 65 200 50 Q 175 55 178 90 Q 195 100 200 130 Q 195 155 175 165 Z" fill="url(#g-squirrel)" />
+        <path d="M 175 100 Q 190 110 195 130 Q 190 150 175 158" fill="#f0c890" opacity={0.6} />
+        <ellipse cx={120} cy={145} rx={55} ry={55} fill="url(#g-squirrel)" />
+        <ellipse cx={120} cy={155} rx={32} ry={28} fill="#f5e0c0" />
+        <path d="M 80 95 L 75 70 L 95 90 Z" fill="#a85820" />
+        <path d="M 160 95 L 165 70 L 145 90 Z" fill="#a85820" />
+        <circle cx={120} cy={110} r={42} fill="url(#g-squirrel)" />
+        <ellipse cx={120} cy={130} rx={24} ry={20} fill="#f5e0c0" />
+        {Eye({ x: 105, y: 110, r: 5, closed: e, withHighlight: true })}
+        {Eye({ x: 135, y: 110, r: 5, closed: e, withHighlight: true })}
+        <ellipse cx={120} cy={130} rx={4} ry={3} fill="#1a1408" />
+        <path d="M 120 134 Q 115 140 110 137 M 120 134 Q 125 140 130 137" stroke="#1a1408" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        <g fill="#1a1408">
+          <rect x={114} y={138} width={5} height={7} rx={1.5} />
+          <rect x={121} y={138} width={5} height={7} rx={1.5} />
+        </g>
+        {Blush({ x: 90, y: 122 })}
+        {Blush({ x: 150, y: 122 })}
+      </>
+    ),
+  },
+
+  // === Raccoon (浣熊) ===
+  raccoon: {
+    viewBox: '30 25 180 200',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-raccoon" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#9098a0" /><stop offset="100%" stopColor="#5a6068" /></linearGradient>
+        </defs>
+        <path d="M 70 55 L 80 40 L 90 60 Z" fill="#5a6068" />
+        <path d="M 170 55 L 160 40 L 150 60 Z" fill="#5a6068" />
+        <path d="M 76 50 L 80 42 L 86 55 Z" fill="#3a4048" />
+        <path d="M 164 50 L 160 42 L 154 55 Z" fill="#3a4048" />
+        <circle cx={120} cy={100} r={60} fill="url(#g-raccoon)" />
+        <ellipse cx={120} cy={120} rx={42} ry={32} fill="#e8d8c8" />
+        <ellipse cx={100} cy={105} rx={18} ry={14} fill="#2a2a2a" transform="rotate(-10 100 105)" />
+        <ellipse cx={140} cy={105} rx={18} ry={14} fill="#2a2a2a" transform="rotate(10 140 105)" />
+        {e ? (
+          <g stroke="white" strokeWidth={2} fill="none" strokeLinecap="round">
+            <path d="M 95 105 Q 100 102 105 105" />
+            <path d="M 135 105 Q 140 102 145 105" />
+          </g>
+        ) : (
+          <g fill="white">
+            <circle cx={100} cy={105} r={3.5} />
+            <circle cx={140} cy={105} r={3.5} />
+          </g>
+        )}
+        <ellipse cx={120} cy={125} rx={5} ry={4} fill="#1a1408" />
+        <path d="M 110 138 Q 120 144 130 138" stroke="#1a1408" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+        <ellipse cx={120} cy={185} rx={50} ry={38} fill="url(#g-raccoon)" />
+        <g fill="#3a4048">
+          <ellipse cx={185} cy={185} rx={12} ry={20} />
+          <ellipse cx={195} cy={170} rx={10} ry={16} />
+        </g>
+      </>
+    ),
+  },
+
+  // === Flamingo (火烈鸟) ===
+  flamingo: {
+    viewBox: '50 10 140 220',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-flam" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ff9bc4" /><stop offset="100%" stopColor="#e870a8" /></linearGradient>
+        </defs>
+        <path d="M 130 55 Q 90 50 90 90 Q 90 120 105 130 Q 95 140 100 155 Q 110 165 130 165 Q 165 165 175 140 Q 178 110 170 90 Q 168 70 150 55 Q 140 50 130 55 Z" fill="url(#g-flam)" />
+        <path d="M 100 60 Q 110 30 145 30 Q 158 32 158 45 Q 152 50 148 55 Q 135 45 120 50 Q 105 55 100 60 Z" fill="url(#g-flam)" />
+        <path d="M 145 30 L 175 25 L 180 35 L 175 38 L 158 38 Z" fill="#ffd040" />
+        <path d="M 178 32 L 188 30 L 188 36 Z" fill="#2a2a2a" />
+        {Eye({ x: 145, y: 38, r: 3, closed: e, withHighlight: true })}
+        <g stroke="#e870a8" strokeWidth={6} strokeLinecap="round" fill="none">
+          <path d="M 135 165 Q 135 195 130 220" />
+        </g>
+        <path d="M 122 215 L 140 215 L 137 225 L 125 225 Z" fill="#ffd040" />
+        <path d="M 165 110 Q 178 105 188 115" stroke="#e870a8" strokeWidth={2} fill="#ffb0ce" strokeLinecap="round" />
+        {Blush({ x: 130, y: 50, rx: 5, ry: 3 })}
+      </>
+    ),
+  },
+
+  // === Parrot (鹦鹉) ===
+  parrot: {
+    viewBox: '40 20 170 200',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-parrot-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ff5a5a" /><stop offset="100%" stopColor="#c83030" /></linearGradient>
+          <linearGradient id="g-parrot-wing" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5ad068" /><stop offset="50%" stopColor="#3aa088" /><stop offset="100%" stopColor="#3070c8" /></linearGradient>
+        </defs>
+        <ellipse cx={120} cy={130} rx={62} ry={75} fill="url(#g-parrot-body)" />
+        <path d="M 155 105 Q 195 115 200 165 Q 195 195 165 200 Q 150 175 150 130 Z" fill="url(#g-parrot-wing)" />
+        <g stroke="#1a4030" strokeWidth={1} fill="none" opacity={0.4}>
+          <path d="M 165 130 Q 178 135 185 145" />
+          <path d="M 165 150 Q 180 155 188 165" />
+          <path d="M 162 170 Q 178 175 185 185" />
+        </g>
+        <circle cx={120} cy={85} r={42} fill="url(#g-parrot-body)" />
+        <path d="M 78 88 Q 60 85 55 95 Q 60 100 78 95 Z" fill="#1a1408" />
+        <path d="M 78 88 Q 70 88 65 92 L 78 95 Z" fill="#ffd040" />
+        {Eye({ x: 110, y: 80, r: 4.5, closed: e, withHighlight: true })}
+        <path d="M 105 100 Q 115 105 125 100" stroke="#7a1010" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        <g fill="#ffd040">
+          <path d="M 100 50 Q 105 30 115 40 Q 115 50 100 50 Z" />
+          <path d="M 125 45 Q 130 28 140 38 Q 138 48 125 45 Z" />
+        </g>
+        <g stroke="#ffd040" strokeWidth={3} strokeLinecap="round">
+          <line x1={105} y1={210} x2={105} y2={220} />
+          <line x1={135} y1={210} x2={135} y2={220} />
+        </g>
+        {Blush({ x: 88, y: 95 })}
+      </>
+    ),
+  },
+
+  // === Chick (小鸡) ===
+  chick: {
+    viewBox: '40 35 160 180',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-chick"><stop offset="0%" stopColor="#fff080" /><stop offset="100%" stopColor="#ffc830" /></radialGradient>
+        </defs>
+        <ellipse cx={120} cy={130} rx={72} ry={70} fill="url(#g-chick)" />
+        <g stroke="#e8a020" strokeWidth={1} fill="none" opacity={0.5}>
+          <path d="M 85 100 q 4 3 0 6" />
+          <path d="M 155 100 q 4 3 0 6" />
+          <path d="M 85 140 q 4 3 0 6" />
+          <path d="M 155 140 q 4 3 0 6" />
+          <path d="M 100 170 q 4 3 0 6" />
+          <path d="M 140 170 q 4 3 0 6" />
+        </g>
+        <path d="M 120 50 L 115 65 L 125 65 Z" fill="#ff9050" />
+        <path d="M 122 50 L 130 60 L 125 65 Z" fill="#ff7030" />
+        {Eye({ x: 100, y: 115, r: 5, closed: e, withHighlight: true })}
+        {Eye({ x: 140, y: 115, r: 5, closed: e, withHighlight: true })}
+        <path d="M 110 130 L 130 130 L 122 142 L 118 142 Z" fill="#ff9050" />
+        <ellipse cx={85} cy={135} rx={10} ry={20} fill="#ffc830" />
+        <g stroke="#ff9050" strokeWidth={3} strokeLinecap="round">
+          <line x1={105} y1={200} x2={100} y2={210} />
+          <line x1={105} y1={200} x2={110} y2={210} />
+          <line x1={135} y1={200} x2={130} y2={210} />
+          <line x1={135} y1={200} x2={140} y2={210} />
+        </g>
+        {Blush({ x: 80, y: 130 })}
+        {Blush({ x: 160, y: 130 })}
+      </>
+    ),
+  },
+
+  // === Peacock (孔雀) ===
+  peacock: {
+    viewBox: '15 25 220 200',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-peacock-eye"><stop offset="0%" stopColor="#1a2548" /><stop offset="50%" stopColor="#3a78b8" /><stop offset="100%" stopColor="#2a8050" /></radialGradient>
+          <linearGradient id="g-peacock-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3a78b8" /><stop offset="100%" stopColor="#1a4878" /></linearGradient>
+        </defs>
+        <g>
+          {[-50, -25, 0, 25, 50].map((a, i) => (
+            <g key={i} transform={`rotate(${a} 125 175)`}>
+              <ellipse cx={125} cy={70} rx={15} ry={65} fill="#3a8868" />
+              <ellipse cx={125} cy={55} rx={12} ry={15} fill="url(#g-peacock-eye)" />
+              <circle cx={125} cy={55} r={5} fill="#ffd040" />
+              <circle cx={125} cy={55} r={2.5} fill="#1a1408" />
+            </g>
+          ))}
+        </g>
+        <ellipse cx={125} cy={170} rx={32} ry={42} fill="url(#g-peacock-body)" />
+        <circle cx={125} cy={140} r={26} fill="url(#g-peacock-body)" />
+        <g stroke="#3a78b8" strokeWidth={2} strokeLinecap="round" fill="none">
+          <line x1={120} y1={108} x2={117} y2={98} />
+          <line x1={125} y1={108} x2={125} y2={96} />
+          <line x1={130} y1={108} x2={133} y2={98} />
+        </g>
+        <circle cx={117} cy={94} r={3} fill="#3a8868" />
+        <circle cx={125} cy={92} r={3} fill="#3a8868" />
+        <circle cx={133} cy={94} r={3} fill="#3a8868" />
+        {Eye({ x: 115, y: 138, r: 4, closed: e, withHighlight: true })}
+        {Eye({ x: 135, y: 138, r: 4, closed: e, withHighlight: true })}
+        <path d="M 118 148 L 132 148 L 125 158 Z" fill="#ffc040" />
+      </>
+    ),
+  },
+
+  // === Turtle (海龟) ===
+  turtle: {
+    viewBox: '15 65 220 130',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-turtle"><stop offset="0%" stopColor="#7ac868" /><stop offset="100%" stopColor="#3a7838" /></radialGradient>
+        </defs>
+        <ellipse cx={130} cy={130} rx={75} ry={50} fill="url(#g-turtle)" />
+        <g fill="#2a5828">
+          {[
+            [110, 110], [140, 110], [170, 115], [95, 130], [125, 130], [155, 130], [185, 130], [110, 150], [140, 150], [170, 150],
+          ].map(([x, y], i) => (
+            <polygon key={i} points={`${x-9},${y} ${x+9},${y} ${x+5},${y+9} ${x-5},${y+9}`} stroke="#2a5828" strokeWidth={0.8} />
+          ))}
+        </g>
+        <ellipse cx={50} cy={135} rx={25} ry={20} fill="#a8d090" />
+        {Eye({ x: 45, y: 128, r: 3.5, closed: e, withHighlight: true })}
+        <path d="M 35 142 Q 42 146 50 142" stroke="#1a1408" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        <ellipse cx={70} cy={170} rx={15} ry={10} fill="#a8d090" />
+        <ellipse cx={195} cy={170} rx={15} ry={10} fill="#a8d090" />
+        <ellipse cx={70} cy={95} rx={12} ry={8} fill="#a8d090" />
+        <ellipse cx={195} cy={95} rx={12} ry={8} fill="#a8d090" />
+        {Blush({ x: 30, y: 138, rx: 4, ry: 2.5 })}
+      </>
+    ),
+  },
+
+  // === Snake (蛇) ===
+  snake: {
+    viewBox: '15 50 220 160',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-snake" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#88cc60" /><stop offset="100%" stopColor="#388830" /></linearGradient>
+        </defs>
+        <path d="M 30 180 Q 30 150 65 145 Q 110 142 110 165 Q 110 185 145 185 Q 200 185 205 145 Q 210 100 175 95 Q 145 95 145 70 Q 145 50 175 50" stroke="url(#g-snake)" strokeWidth={28} fill="none" strokeLinecap="round" />
+        <g stroke="#2a5818" strokeWidth={1} fill="none" opacity={0.4}>
+          <path d="M 50 175 q 8 -4 16 0" />
+          <path d="M 80 168 q 8 -4 16 0" />
+          <path d="M 130 175 q 8 -4 16 0" />
+          <path d="M 170 180 q 8 -4 16 0" />
+          <path d="M 195 130 q 4 -8 0 -16" />
+          <path d="M 170 75 q 8 -4 16 0" />
+        </g>
+        <circle cx={178} cy={50} r={20} fill="url(#g-snake)" />
+        {Eye({ x: 184, y: 45, r: 3.5, closed: e, withHighlight: true })}
+        <path d="M 175 55 Q 165 60 158 58 Q 155 64 162 65" stroke="#d04040" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        <path d="M 158 58 L 152 54 M 158 58 L 152 62" stroke="#d04040" strokeWidth={1.5} strokeLinecap="round" />
+        {Blush({ x: 188, y: 55, rx: 4, ry: 2 })}
+      </>
+    ),
+  },
+
+  // === Bee (蜜蜂) ===
+  bee: {
+    viewBox: '30 25 180 200',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-bee" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffd840" /><stop offset="100%" stopColor="#e0a020" /></linearGradient>
+        </defs>
+        <ellipse cx={120} cy={130} rx={70} ry={85} fill="url(#g-bee)" />
+        <g fill="#1a1408">
+          <ellipse cx={120} cy={100} rx={66} ry={12} />
+          <ellipse cx={120} cy={140} rx={64} ry={12} />
+          <ellipse cx={120} cy={180} rx={50} ry={12} />
+        </g>
+        <ellipse cx={70} cy={90} rx={32} ry={22} fill="rgba(255,255,255,0.7)" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} />
+        <ellipse cx={170} cy={90} rx={32} ry={22} fill="rgba(255,255,255,0.7)" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} />
+        {Eye({ x: 100, y: 80, r: 5, closed: e, withHighlight: true })}
+        {Eye({ x: 140, y: 80, r: 5, closed: e, withHighlight: true })}
+        <path d="M 110 95 Q 120 100 130 95" stroke="#1a1408" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+        <g stroke="#1a1408" strokeWidth={2.5} fill="none" strokeLinecap="round">
+          <path d="M 100 50 L 95 35" /><circle cx={94} cy={32} r={3} fill="#1a1408" />
+          <path d="M 140 50 L 145 35" /><circle cx={146} cy={32} r={3} fill="#1a1408" />
+        </g>
+        {Blush({ x: 80, y: 95 })}
+        {Blush({ x: 160, y: 95 })}
+      </>
+    ),
+  },
+
+  // === Ladybug (瓢虫) ===
+  ladybug: {
+    viewBox: '20 35 200 180',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-lady"><stop offset="0%" stopColor="#ff5050" /><stop offset="100%" stopColor="#c01818" /></radialGradient>
+        </defs>
+        <ellipse cx={120} cy={140} rx={88} ry={75} fill="url(#g-lady)" />
+        <line x1={120} y1={75} x2={120} y2={210} stroke="#1a1408" strokeWidth={3} />
+        <g fill="#1a1408">
+          <circle cx={85} cy={120} r={11} /><circle cx={155} cy={120} r={11} />
+          <circle cx={70} cy={170} r={9} /><circle cx={170} cy={170} r={9} />
+          <circle cx={120} cy={185} r={8} />
+        </g>
+        <ellipse cx={120} cy={80} rx={48} ry={32} fill="#1a1408" />
+        {Eye({ x: 100, y: 75, r: 5, closed: e, withHighlight: true })}
+        {Eye({ x: 140, y: 75, r: 5, closed: e, withHighlight: true })}
+        <path d="M 110 90 Q 120 96 130 90" stroke="#fff" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+        <g stroke="#1a1408" strokeWidth={2.5} fill="none" strokeLinecap="round">
+          <path d="M 100 50 L 95 38" /><circle cx={94} cy={36} r={2.5} fill="#1a1408" />
+          <path d="M 140 50 L 145 38" /><circle cx={146} cy={36} r={2.5} fill="#1a1408" />
+        </g>
+        <g stroke="#1a1408" strokeWidth={2.5} strokeLinecap="round">
+          <line x1={38} y1={150} x2={20} y2={155} />
+          <line x1={202} y1={150} x2={220} y2={155} />
+          <line x1={42} y1={180} x2={25} y2={195} />
+          <line x1={198} y1={180} x2={215} y2={195} />
+        </g>
+      </>
+    ),
+  },
+
+  // === Butterfly (蝴蝶) ===
+  butterfly: {
+    viewBox: '20 35 200 180',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-but-wing1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ff9bc4" /><stop offset="100%" stopColor="#a868e8" /></linearGradient>
+          <linearGradient id="g-but-wing2" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stopColor="#88d8ff" /><stop offset="100%" stopColor="#a868e8" /></linearGradient>
+        </defs>
+        <path d="M 120 130 Q 50 50 30 90 Q 25 130 65 130 Q 100 130 120 130 Z" fill="url(#g-but-wing1)" />
+        <path d="M 120 130 Q 190 50 210 90 Q 215 130 175 130 Q 140 130 120 130 Z" fill="url(#g-but-wing1)" />
+        <path d="M 120 130 Q 50 200 35 165 Q 35 140 70 140 Q 100 140 120 130 Z" fill="url(#g-but-wing2)" />
+        <path d="M 120 130 Q 190 200 205 165 Q 205 140 170 140 Q 140 140 120 130 Z" fill="url(#g-but-wing2)" />
+        <g fill="white" opacity={0.8}>
+          <circle cx={70} cy={90} r={7} /><circle cx={170} cy={90} r={7} />
+          <circle cx={68} cy={88} r={3} fill="#5a2870" />
+          <circle cx={172} cy={88} r={3} fill="#5a2870" />
+          <circle cx={75} cy={165} r={5} /><circle cx={165} cy={165} r={5} />
+        </g>
+        <ellipse cx={120} cy={130} rx={10} ry={50} fill="#1a1408" />
+        <g stroke="#1a1408" strokeWidth={2} fill="none" strokeLinecap="round">
+          <path d="M 116 82 Q 110 65 100 60" /><circle cx={100} cy={60} r={3} fill="#1a1408" />
+          <path d="M 124 82 Q 130 65 140 60" /><circle cx={140} cy={60} r={3} fill="#1a1408" />
+        </g>
+        {Eye({ x: 115, y: 95, r: 2.5, closed: e })}
+        {Eye({ x: 125, y: 95, r: 2.5, closed: e })}
+      </>
+    ),
+  },
+
+  // === Hamster (仓鼠) ===
+  hamster: {
+    viewBox: '30 50 180 170',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-ham" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f0d8a8" /><stop offset="100%" stopColor="#c8a868" /></linearGradient>
+        </defs>
+        <ellipse cx={120} cy={140} rx={80} ry={68} fill="url(#g-ham)" />
+        <ellipse cx={120} cy={155} rx={50} ry={42} fill="#fff0d8" />
+        <ellipse cx={75} cy={88} rx={15} ry={14} fill="url(#g-ham)" />
+        <ellipse cx={165} cy={88} rx={15} ry={14} fill="url(#g-ham)" />
+        <ellipse cx={75} cy={90} rx={8} ry={8} fill="#ffc8b8" />
+        <ellipse cx={165} cy={90} rx={8} ry={8} fill="#ffc8b8" />
+        <ellipse cx={80} cy={145} rx={22} ry={20} fill="#f0c898" />
+        <ellipse cx={160} cy={145} rx={22} ry={20} fill="#f0c898" />
+        {Eye({ x: 100, y: 115, r: 4.5, closed: e, withHighlight: true })}
+        {Eye({ x: 140, y: 115, r: 4.5, closed: e, withHighlight: true })}
+        <path d="M 115 130 L 125 130 L 122 138 L 118 138 Z" fill="#ff8080" />
+        <path d="M 120 138 L 120 145" stroke="#1a1408" strokeWidth={1.2} />
+        <path d="M 120 145 Q 113 150 108 145 M 120 145 Q 127 150 132 145" stroke="#1a1408" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+        <g stroke="#1a1408" strokeWidth={0.8} strokeLinecap="round">
+          <line x1={88} y1={140} x2={75} y2={138} />
+          <line x1={88} y1={143} x2={75} y2={145} />
+          <line x1={152} y1={140} x2={165} y2={138} />
+          <line x1={152} y1={143} x2={165} y2={145} />
+        </g>
+        {Blush({ x: 105, y: 135 })}
+        {Blush({ x: 135, y: 135 })}
       </>
     ),
   },
