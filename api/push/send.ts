@@ -1,6 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import webpush from 'web-push';
 import { requireRedis } from '../_lib/redis';
+
+// 显式声明 Node runtime（web-push 依赖 Node crypto/https，不能跑在 Edge）
+export const config = {
+  runtime: 'nodejs20.x',
+  maxDuration: 30,
+};
+
+// web-push 是 CJS，动态 import 让加载错误能被 catch
+const loadWebPush = async () => {
+  const mod = await import('web-push');
+  return (mod.default ?? mod) as typeof import('web-push');
+};
 
 type SubData = {
   sub: string;
@@ -37,13 +48,20 @@ const localHour = (tz: string): number => {
 
 const MIN_INTERVAL_MIN = 55;
 
-const initVapid = (): boolean => {
+const initVapid = async (): Promise<{ ok: boolean; webpush?: typeof import('web-push'); error?: string }> => {
   const subject = process.env.VAPID_SUBJECT;
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
-  if (!subject || !pub || !priv) return false;
-  webpush.setVapidDetails(subject, pub, priv);
-  return true;
+  if (!subject || !pub || !priv) {
+    return { ok: false, error: '服务端未配置 VAPID keys (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT)' };
+  }
+  try {
+    const webpush = await loadWebPush();
+    webpush.setVapidDetails(subject, pub, priv);
+    return { ok: true, webpush };
+  } catch (e) {
+    return { ok: false, error: `web-push 加载失败：${e instanceof Error ? e.message : String(e)}` };
+  }
 };
 
 export default async function handler(req: Request): Promise<Response> {
@@ -60,12 +78,11 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
-    if (!initVapid()) {
-      return Response.json(
-        { error: '服务端未配置 VAPID keys (检查 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT)' },
-        { status: 500 },
-      );
+    const vapid = await initVapid();
+    if (!vapid.ok || !vapid.webpush) {
+      return Response.json({ error: vapid.error || 'VAPID init failed' }, { status: 500 });
     }
+    const webpush = vapid.webpush;
 
     let redis: ReturnType<typeof requireRedis>;
     try {
