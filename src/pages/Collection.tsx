@@ -213,8 +213,12 @@ export default function Collection() {
                       再 <strong>达标 {toNext} 天</strong> 就能拿到下一把
                     </div>
                     <button
-                      className="btn-pill btn-full"
-                      style={{ marginTop: 18, background: 'var(--bg-card)' }}
+                      className="btn btn-full"
+                      style={{
+                        marginTop: 18,
+                        background: 'linear-gradient(135deg, #f9a8d4, #f472b6)',
+                        color: '#fff',
+                      }}
                       onClick={closePopup}
                     >
                       我知道了
