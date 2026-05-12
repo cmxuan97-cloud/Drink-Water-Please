@@ -27,8 +27,10 @@ const validateVapidKey = (s: string | undefined, kind: 'public' | 'private'): st
   return null;
 };
 
-export default async function handler(_req: Request): Promise<Response> {
+export default async function handler(req: Request): Promise<Response> {
   try {
+    const url = new URL(req.url);
+    const inspect = url.searchParams.get('inspect') === '1';
     const env = {
       VAPID_PUBLIC_KEY: !!process.env.VAPID_PUBLIC_KEY,
       VAPID_PRIVATE_KEY: !!process.env.VAPID_PRIVATE_KEY,
@@ -48,23 +50,72 @@ export default async function handler(_req: Request): Promise<Response> {
     const privErr = validateVapidKey(process.env.VAPID_PRIVATE_KEY, 'private');
     if (privErr) vapidIssues.VAPID_PRIVATE_KEY = privErr;
 
-    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 
-    let kvPing: { ok: boolean; error?: string; subCount?: number; raw?: string } = { ok: false };
-    if (!url || !token) {
+    let kvPing: { ok: boolean; error?: string; subCount?: number; raw?: string; subs?: any[] } = { ok: false };
+    if (!redisUrl || !token) {
       kvPing = { ok: false, error: 'Redis env vars 未配置' };
     } else {
-      // 直接 REST 调用 Upstash，不用 SDK
       try {
-        const resp = await fetch(`${url}/smembers/subs:all`, {
+        const resp = await fetch(`${redisUrl}/smembers/subs:all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const text = await resp.text();
         if (resp.ok) {
           try {
             const data = JSON.parse(text);
-            kvPing = { ok: true, subCount: Array.isArray(data?.result) ? data.result.length : 0 };
+            const ids: string[] = Array.isArray(data?.result) ? data.result : [];
+            kvPing = { ok: true, subCount: ids.length };
+
+            // inspect 模式：拉每个订阅的元信息（脱敏）
+            if (inspect && ids.length > 0) {
+              const subs: any[] = [];
+              for (const id of ids.slice(0, 5)) {
+                const r = await fetch(`${redisUrl}/hgetall/sub:${id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const raw = await r.text();
+                try {
+                  const parsed = JSON.parse(raw);
+                  // result 是 array of alternating [key, value, key, value, ...]
+                  const arr = parsed.result;
+                  const obj: Record<string, any> = {};
+                  if (Array.isArray(arr)) {
+                    for (let i = 0; i < arr.length; i += 2) obj[arr[i]] = arr[i + 1];
+                  } else if (arr && typeof arr === 'object') {
+                    Object.assign(obj, arr);
+                  }
+                  // 脱敏：只显示 endpoint domain + sub 字段是否能解析
+                  let endpointHost = '?';
+                  let subParsable = false;
+                  let subType = typeof obj.sub;
+                  let keysOk = false;
+                  try {
+                    const subObj = typeof obj.sub === 'string' ? JSON.parse(obj.sub) : obj.sub;
+                    subParsable = true;
+                    endpointHost = new URL(subObj.endpoint).host;
+                    keysOk = !!(subObj.keys?.p256dh && subObj.keys?.auth);
+                  } catch (e) {
+                    endpointHost = `parse-error: ${e instanceof Error ? e.message : 'unknown'}`;
+                  }
+                  subs.push({
+                    clientId: id.slice(0, 12) + '…',
+                    subType,
+                    subParsable,
+                    endpointHost,
+                    keysOk,
+                    wake: obj.wake,
+                    sleep: obj.sleep,
+                    tz: obj.tz,
+                    hasLastSentAt: !!obj.lastSentAt,
+                  });
+                } catch (e) {
+                  subs.push({ clientId: id.slice(0, 12) + '…', error: String(e), raw: raw.slice(0, 100) });
+                }
+              }
+              kvPing.subs = subs;
+            }
           } catch {
             kvPing = { ok: false, error: 'KV 返回非 JSON', raw: text.slice(0, 200) };
           }
@@ -79,7 +130,7 @@ export default async function handler(_req: Request): Promise<Response> {
     const vapidOk = Object.keys(vapidIssues).length === 0;
     const allConfigured =
       env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT &&
-      env.CRON_SECRET && !!url && !!token && kvPing.ok && vapidOk;
+      env.CRON_SECRET && !!redisUrl && !!token && kvPing.ok && vapidOk;
 
     return new Response(
       JSON.stringify({
@@ -92,8 +143,8 @@ export default async function handler(_req: Request): Promise<Response> {
           !env.VAPID_PRIVATE_KEY && '在 Vercel env 加 VAPID_PRIVATE_KEY',
           !env.VAPID_SUBJECT && '在 Vercel env 加 VAPID_SUBJECT',
           !env.CRON_SECRET && '在 Vercel env 加 CRON_SECRET',
-          (!url || !token) && '安装 Upstash Redis 集成',
-          url && token && !kvPing.ok && `KV 连接失败: ${kvPing.error}`,
+          (!redisUrl || !token) && '安装 Upstash Redis 集成',
+          redisUrl && token && !kvPing.ok && `KV 连接失败: ${kvPing.error}`,
           !vapidOk && `VAPID 格式问题: ${JSON.stringify(vapidIssues)}`,
         ].filter(Boolean),
       }, null, 2),
