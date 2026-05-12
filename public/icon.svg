@@ -2,15 +2,15 @@
   <!-- opaque white background -->
   <rect width="512" height="512" fill="#ffffff"/>
 
-  <!-- droplet, centered, slightly tilted, hand-drawn vibe -->
-  <g transform="translate(256 280) rotate(-5)">
-    <!-- main filled body (sized for 80% maskable safe zone) -->
+  <!-- droplet, centered at (256,256), slightly tilted, hand-drawn vibe -->
+  <g transform="translate(256 256) rotate(-5)">
+    <!-- main filled body (bbox centered around 0,0) -->
     <path d="
-      M 0 -148
-      C -78 -52, -134 26, -118 96
-      C -98 166, 22 184, 96 148
-      C 156 116, 142 26, 92 -52
-      C 60 -104, 26 -138, 0 -148
+      M -11 -166
+      C -89 -70, -145 8, -129 78
+      C -109 148, 11 166, 85 130
+      C 145 98, 131 8, 81 -70
+      C 49 -122, 15 -156, -11 -166
       Z"
       fill="#1c8de8"
       stroke="#0e7dcc"
@@ -19,29 +19,29 @@
       stroke-linecap="round"/>
 
     <!-- sketchy double strokes for hand-drawn feel -->
-    <path d="M -4 -140 C -74 -46, -130 28, -112 96"
+    <path d="M -15 -158 C -85 -64, -141 10, -123 78"
           fill="none" stroke="#0e7dcc" stroke-width="4.5"
           stroke-linecap="round" opacity="0.5"/>
-    <path d="M 96 -48 C 150 28, 138 116, 90 144"
+    <path d="M 85 -66 C 139 10, 127 98, 79 126"
           fill="none" stroke="#0e7dcc" stroke-width="4.5"
           stroke-linecap="round" opacity="0.5"/>
-    <path d="M -108 104 C -70 158, 26 176, 88 146"
+    <path d="M -119 86 C -81 140, 15 158, 77 128"
           fill="none" stroke="#0e7dcc" stroke-width="4.5"
           stroke-linecap="round" opacity="0.4"/>
 
     <!-- interior white sketch highlights -->
-    <path d="M -46 -46 Q -22 -94 4 -114"
+    <path d="M -57 -64 Q -33 -112, -7 -132"
           fill="none" stroke="#ffffff" stroke-width="9"
           stroke-linecap="round" opacity="0.55"/>
-    <path d="M -98 56 Q -78 -2 -52 -34"
+    <path d="M -109 38 Q -89 -20, -63 -52"
           fill="none" stroke="#ffffff" stroke-width="6.5"
           stroke-linecap="round" opacity="0.35"/>
-    <path d="M -62 122 Q -28 148 18 152"
+    <path d="M -73 104 Q -39 130, 7 134"
           fill="none" stroke="#ffffff" stroke-width="5.5"
           stroke-linecap="round" opacity="0.4"/>
 
     <!-- two dot eyes, upper-right -->
-    <circle cx="46" cy="-38" r="7" fill="#ffffff"/>
-    <circle cx="74" cy="-32" r="7" fill="#ffffff"/>
+    <circle cx="35" cy="-56" r="7" fill="#ffffff"/>
+    <circle cx="63" cy="-50" r="7" fill="#ffffff"/>
   </g>
 </svg>
