@@ -63,12 +63,24 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
-    const subject = process.env.VAPID_SUBJECT;
-    const pub = process.env.VAPID_PUBLIC_KEY;
-    const priv = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT?.trim();
+    const pub = process.env.VAPID_PUBLIC_KEY?.trim();
+    const priv = process.env.VAPID_PRIVATE_KEY?.trim();
     if (!subject || !pub || !priv) {
       return Response.json(
         { error: '服务端未配置 VAPID keys (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT)' },
+        { status: 500 },
+      );
+    }
+    if (!subject.startsWith('mailto:') && !subject.startsWith('https:')) {
+      return Response.json(
+        { error: `VAPID_SUBJECT 格式错误: 必须以 mailto: 或 https: 开头，当前值前 8 字符: "${subject.slice(0, 8)}"` },
+        { status: 500 },
+      );
+    }
+    if (/[^A-Za-z0-9_\-=]/.test(pub) || /[^A-Za-z0-9_\-=]/.test(priv)) {
+      return Response.json(
+        { error: 'VAPID key 含有非 base64url 字符（可能复制时混入了引号或空格）' },
         { status: 500 },
       );
     }
