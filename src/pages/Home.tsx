@@ -11,11 +11,14 @@ import {
   getContainers,
   getEntries,
   getSettings,
+  getUserName,
   markDayCompleted,
   pruneOldPhotos,
+  setUserName,
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
 import { syncProgress } from '../lib/push';
+import { syncUserNameToServer } from '../lib/user';
 import { ANIMALS, unlockCount } from '../data/animals';
 
 const greetingFor = (h: number): string => {
@@ -31,6 +34,9 @@ export default function Home() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [companionId, setCompanionIdLocal] = useState<string | null>(null);
+  const [userName, setUserNameLocal] = useState<string | null>(null);
+  const [nameInput, setNameInput] = useState('');
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
 
   useEffect(() => {
     pruneOldPhotos();
@@ -38,7 +44,19 @@ export default function Home() {
     setContainers(getContainers());
     setEntries(getEntries());
     setCompanionIdLocal(getCompanionId());
+    const name = getUserName();
+    setUserNameLocal(name);
+    if (!name) setShowNamePrompt(true);
   }, []);
+
+  const onSaveName = () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    setUserName(trimmed);
+    setUserNameLocal(trimmed);
+    setShowNamePrompt(false);
+    void syncUserNameToServer(trimmed);
+  };
 
   const goalMl = useMemo(
     () => (settings ? dailyGoalMl(settings.weightKg) : 0),
@@ -96,10 +114,13 @@ export default function Home() {
     <div className="page">
       <header className="page-header">
         <div>
-          <div className="muted" style={{ fontSize: 13 }}>{greeting}，今天</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            {greeting}{userName ? `，${userName}` : '，今天'}
+          </div>
           <h1 className="page-title">和{companion.name.slice(0, 3)}一起喝水</h1>
         </div>
         <div className="row" style={{ gap: 8 }}>
+          <Link to="/stats" className="icon-btn" aria-label="记录">📊</Link>
           <Link to="/collection" className="icon-btn" aria-label="收藏">🦙</Link>
           <Link to="/settings" className="icon-btn" aria-label="设置">⚙️</Link>
         </div>
@@ -217,6 +238,58 @@ export default function Home() {
               onClick={() => setNewUnlock(null)}
             >
               先不看
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showNamePrompt && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(20, 40, 60, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 60,
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 28,
+              padding: 28,
+              maxWidth: 340,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ fontSize: 56, marginBottom: 8 }}>👋</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>嗨，认识一下吗？</div>
+            <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>
+              告诉我你的名字，我们一起开始喝水之旅
+            </div>
+            <input
+              className="input"
+              type="text"
+              placeholder="你的名字"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSaveName(); }}
+              maxLength={30}
+              autoFocus
+              style={{ marginTop: 18, textAlign: 'center', fontSize: 17 }}
+            />
+            <button
+              className="btn btn-full"
+              style={{ marginTop: 14 }}
+              onClick={onSaveName}
+              disabled={!nameInput.trim()}
+            >
+              开始
             </button>
           </div>
         </div>

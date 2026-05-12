@@ -6,6 +6,7 @@ const K_ENTRY_PREFIX = 'dw:entries:';
 const K_COMPLETED = 'dw:completedDays';
 const K_COMPANION = 'dw:companionId';
 const K_CLIENT_ID = 'dw:clientId';
+const K_USER_NAME = 'dw:userName';
 
 const todayKey = (d = new Date()): string => {
   const y = d.getFullYear();
@@ -75,6 +76,14 @@ export const getOrCreateClientId = (): string => {
     localStorage.setItem(K_CLIENT_ID, id);
   }
   return id;
+};
+
+export const getUserName = (): string | null => {
+  return localStorage.getItem(K_USER_NAME);
+};
+
+export const setUserName = (name: string): void => {
+  localStorage.setItem(K_USER_NAME, name.trim());
 };
 
 export const getCompletedDays = (): string[] => {
