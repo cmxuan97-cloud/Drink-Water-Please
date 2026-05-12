@@ -1,16 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { requireRedis } from '../_lib/redis';
+import { Redis } from '@upstash/redis';
 
-// 显式声明 Node runtime（web-push 依赖 Node crypto/https，不能跑在 Edge）
+// 显式声明 Node runtime — web-push 依赖 Node crypto/https
 export const config = {
   runtime: 'nodejs20.x',
   maxDuration: 30,
-};
-
-// web-push 是 CJS，动态 import 让加载错误能被 catch
-const loadWebPush = async () => {
-  const mod = await import('web-push');
-  return (mod.default ?? mod) as typeof import('web-push');
 };
 
 type SubData = {
@@ -48,20 +42,11 @@ const localHour = (tz: string): number => {
 
 const MIN_INTERVAL_MIN = 55;
 
-const initVapid = async (): Promise<{ ok: boolean; webpush?: typeof import('web-push'); error?: string }> => {
-  const subject = process.env.VAPID_SUBJECT;
-  const pub = process.env.VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  if (!subject || !pub || !priv) {
-    return { ok: false, error: '服务端未配置 VAPID keys (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT)' };
-  }
-  try {
-    const webpush = await loadWebPush();
-    webpush.setVapidDetails(subject, pub, priv);
-    return { ok: true, webpush };
-  } catch (e) {
-    return { ok: false, error: `web-push 加载失败：${e instanceof Error ? e.message : String(e)}` };
-  }
+const getRedis = (): Redis | null => {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
 };
 
 export default async function handler(req: Request): Promise<Response> {
@@ -78,20 +63,31 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
-    const vapid = await initVapid();
-    if (!vapid.ok || !vapid.webpush) {
-      return Response.json({ error: vapid.error || 'VAPID init failed' }, { status: 500 });
-    }
-    const webpush = vapid.webpush;
-
-    let redis: ReturnType<typeof requireRedis>;
-    try {
-      redis = requireRedis();
-    } catch (e) {
+    const subject = process.env.VAPID_SUBJECT;
+    const pub = process.env.VAPID_PUBLIC_KEY;
+    const priv = process.env.VAPID_PRIVATE_KEY;
+    if (!subject || !pub || !priv) {
       return Response.json(
-        { error: e instanceof Error ? e.message : 'Redis 初始化失败' },
+        { error: '服务端未配置 VAPID keys (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT)' },
         { status: 500 },
       );
+    }
+
+    let webpush: typeof import('web-push');
+    try {
+      const mod = await import('web-push');
+      webpush = (mod.default ?? mod) as typeof import('web-push');
+      webpush.setVapidDetails(subject, pub, priv);
+    } catch (e) {
+      return Response.json(
+        { error: `web-push 加载失败：${e instanceof Error ? e.message : String(e)}` },
+        { status: 500 },
+      );
+    }
+
+    const redis = getRedis();
+    if (!redis) {
+      return Response.json({ error: 'Redis 未配置' }, { status: 500 });
     }
 
     let allIds: string[];
@@ -172,12 +168,11 @@ export default async function handler(req: Request): Promise<Response> {
       failed: failed.slice(0, 5),
     });
   } catch (e) {
-    // 兜底 — 任何 uncaught 都返回 JSON，避免 Vercel 默认 HTML 错误页
     return Response.json(
       {
-        error: '服务端崩溃',
-        detail: e instanceof Error ? e.message : String(e),
-        stack: e instanceof Error ? e.stack?.split('\n').slice(0, 5) : undefined,
+        crash: true,
+        error: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack?.split('\n').slice(0, 8) : undefined,
       },
       { status: 500 },
     );

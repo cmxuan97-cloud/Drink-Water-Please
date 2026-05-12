@@ -1,4 +1,4 @@
-import { requireRedis } from '../_lib/redis';
+import { Redis } from '@upstash/redis';
 
 type Body = {
   clientId?: string;
@@ -8,28 +8,39 @@ type Body = {
   tz?: string;
 };
 
+const getRedis = (): Redis | null => {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+};
+
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
-  }
-
-  let body: Body;
   try {
-    body = (await req.json()) as Body;
-  } catch {
-    return Response.json({ error: 'JSON 无效' }, { status: 400 });
-  }
+    if (req.method !== 'POST') {
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
 
-  const { clientId, subscription, wakeHour, sleepHour, tz } = body;
-  if (!clientId || !subscription?.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
-    return Response.json({ error: '订阅参数缺失' }, { status: 400 });
-  }
-  if (typeof wakeHour !== 'number' || typeof sleepHour !== 'number' || !tz) {
-    return Response.json({ error: '设置参数缺失' }, { status: 400 });
-  }
+    let body: Body;
+    try {
+      body = (await req.json()) as Body;
+    } catch {
+      return Response.json({ error: 'JSON 无效' }, { status: 400 });
+    }
 
-  try {
-    const redis = requireRedis();
+    const { clientId, subscription, wakeHour, sleepHour, tz } = body;
+    if (!clientId || !subscription?.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
+      return Response.json({ error: '订阅参数缺失' }, { status: 400 });
+    }
+    if (typeof wakeHour !== 'number' || typeof sleepHour !== 'number' || !tz) {
+      return Response.json({ error: '设置参数缺失' }, { status: 400 });
+    }
+
+    const redis = getRedis();
+    if (!redis) {
+      return Response.json({ error: 'Redis 未配置 (检查 UPSTASH_REDIS_REST_URL/TOKEN 或 KV_REST_API_URL/TOKEN)' }, { status: 500 });
+    }
+
     await redis.hset(`sub:${clientId}`, {
       sub: JSON.stringify(subscription),
       wake: wakeHour,
@@ -41,7 +52,10 @@ export default async function handler(req: Request): Promise<Response> {
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json(
-      { error: `KV 写入失败：${e instanceof Error ? e.message : String(e)}` },
+      {
+        error: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack?.split('\n').slice(0, 5) : undefined,
+      },
       { status: 500 },
     );
   }
