@@ -2,8 +2,10 @@ name: Push Reminders
 
 on:
   schedule:
-    # 每小时整点（UTC）触发。GitHub cron 不保证准点，可能延迟 0-15 min。
-    - cron: '0 * * * *'
+    # 每 30 分钟触发（UTC）。GitHub cron 不保证准点，可能延迟 0-15 min。
+    # 服务端按每个用户的 mode (easy 90min / standard 60min / frequent 30min / smart 动态)
+    # 检查 lastSentAt，只在到点的时候才真正推送。
+    - cron: '*/30 * * * *'
   workflow_dispatch: {}    # 也允许手动触发
 
 jobs:

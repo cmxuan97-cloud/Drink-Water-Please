@@ -209,7 +209,45 @@ const kvFetch = async (
   try { return JSON.parse(t); } catch { return null; }
 };
 
-const MIN_INTERVAL_MIN = 55;
+const todayKey = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+type Mode = 'easy' | 'standard' | 'frequent' | 'smart';
+
+const STATIC_INTERVAL: Record<Exclude<Mode, 'smart'>, number> = {
+  easy: 90,
+  standard: 60,
+  frequent: 30,
+};
+
+const computeSmartInterval = (
+  drunkMl: number,
+  goalMl: number,
+  wakeHour: number,
+  sleepHour: number,
+  tz: string,
+): { interval: number; skip: boolean } => {
+  if (goalMl <= 0) return { interval: 60, skip: false };
+  if (drunkMl >= goalMl) return { interval: 0, skip: true };  // 已达标 → 不发
+
+  const nowHour = (() => {
+    try {
+      const h = new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+      return parseInt(h, 10);
+    } catch { return new Date().getHours(); }
+  })();
+  const awakeHours = Math.max(1, sleepHour - wakeHour);
+  const elapsed = Math.max(0, Math.min(awakeHours, nowHour - wakeHour));
+  const idealPct = elapsed / awakeHours;
+  const actualPct = drunkMl / goalMl;
+  const lag = idealPct - actualPct;
+
+  if (lag > 0.25) return { interval: 30, skip: false };       // 落后多 → 30 min
+  if (lag < -0.05) return { interval: 90, skip: false };      // 超前 → 90 min
+  return { interval: 60, skip: false };                       // 持平
+};
 
 export default async function handler(req: Request): Promise<Response> {
   try {
@@ -296,9 +334,44 @@ export default async function handler(req: Request): Promise<Response> {
       }
 
       if (!isTest) {
-        const h = localHour(obj.tz || 'Asia/Shanghai');
-        if (h < Number(obj.wake) || h >= Number(obj.sleep)) { skipped++; continue; }
-        if (obj.lastSentAt && Date.now() - Number(obj.lastSentAt) < MIN_INTERVAL_MIN * 60 * 1000) {
+        const tz = obj.tz || 'Asia/Shanghai';
+        const h = localHour(tz);
+        const wake = Number(obj.wake);
+        const sleep = Number(obj.sleep);
+        if (h < wake || h >= sleep) { skipped++; continue; }
+
+        // 按 mode 计算间隔
+        const mode = (obj.mode as Mode) || 'standard';
+        let intervalMin: number;
+        if (mode === 'smart') {
+          // 读 progress
+          let prog: { drunkMl?: number; goalMl?: number; date?: string } | null = null;
+          try {
+            const pr = await kvFetch(cfg, `/hgetall/progress:${encodeURIComponent(id)}`);
+            const arr2 = pr?.result;
+            const o: Record<string, any> = {};
+            if (Array.isArray(arr2)) {
+              for (let i = 0; i < arr2.length; i += 2) o[arr2[i]] = arr2[i + 1];
+            } else if (arr2 && typeof arr2 === 'object') {
+              Object.assign(o, arr2);
+            }
+            if (o.date === todayKey()) {
+              prog = { drunkMl: Number(o.drunkMl), goalMl: Number(o.goalMl), date: o.date };
+            }
+          } catch { /* ignore */ }
+
+          if (prog && typeof prog.drunkMl === 'number' && typeof prog.goalMl === 'number') {
+            const sm = computeSmartInterval(prog.drunkMl, prog.goalMl, wake, sleep, tz);
+            if (sm.skip) { skipped++; continue; }
+            intervalMin = sm.interval;
+          } else {
+            intervalMin = 60;  // 首次没数据 → 兜底 60 min
+          }
+        } else {
+          intervalMin = STATIC_INTERVAL[mode];
+        }
+
+        if (obj.lastSentAt && Date.now() - Number(obj.lastSentAt) < intervalMin * 60 * 1000) {
           skipped++; continue;
         }
       }

@@ -15,6 +15,7 @@ import {
   pruneOldPhotos,
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
+import { syncProgress } from '../lib/push';
 import { ANIMALS, unlockCount } from '../data/animals';
 
 const greetingFor = (h: number): string => {
@@ -49,6 +50,12 @@ export default function Home() {
     if (!settings) return null;
     return pace(progress.drunkMl, goalMl, settings.wakeHour, settings.sleepHour);
   }, [settings, progress.drunkMl, goalMl]);
+
+  // 进度变化 → 同步给服务端（智能推送会用）
+  useEffect(() => {
+    if (!settings || goalMl === 0) return;
+    syncProgress(progress.drunkMl, goalMl);
+  }, [progress.drunkMl, goalMl, settings]);
 
   const [newUnlock, setNewUnlock] = useState<typeof ANIMALS[number] | null>(null);
   useEffect(() => {

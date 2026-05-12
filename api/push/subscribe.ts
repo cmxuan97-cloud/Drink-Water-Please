@@ -8,7 +8,10 @@ type Body = {
   wakeHour?: number;
   sleepHour?: number;
   tz?: string;
+  mode?: 'easy' | 'standard' | 'frequent' | 'smart';
 };
+
+const VALID_MODES = ['easy', 'standard', 'frequent', 'smart'] as const;
 
 const getRedis = (): Redis | null => {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
@@ -43,15 +46,17 @@ export default async function handler(req: Request): Promise<Response> {
       return Response.json({ error: 'Redis 未配置 (检查 UPSTASH_REDIS_REST_URL/TOKEN 或 KV_REST_API_URL/TOKEN)' }, { status: 500 });
     }
 
+    const mode = (body.mode && VALID_MODES.includes(body.mode)) ? body.mode : 'standard';
     await redis.hset(`sub:${clientId}`, {
       sub: JSON.stringify(subscription),
       wake: wakeHour,
       sleep: sleepHour,
       tz,
+      mode,
       updatedAt: Date.now(),
     });
     await redis.sadd('subs:all', clientId);
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, mode });
   } catch (e) {
     return Response.json(
       {

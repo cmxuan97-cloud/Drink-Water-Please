@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEFAULT_SETTINGS, Settings as TSettings } from '../types';
+import { DEFAULT_SETTINGS, NotifyMode, Settings as TSettings } from '../types';
 import { getCompletedDays, getSettings, saveSettings } from '../lib/storage';
 import { dailyGoalMl } from '../lib/goal';
 import {
@@ -9,9 +9,17 @@ import {
   getCurrentSubscription,
   isPushSupported,
   sendTestPush,
+  setNotifyMode,
   syncSettingsToServer,
 } from '../lib/push';
 import { ANIMALS, unlockCount } from '../data/animals';
+
+const NOTIFY_MODES: Array<{ value: NotifyMode; label: string; sub: string }> = [
+  { value: 'easy', label: '轻松', sub: '90 min' },
+  { value: 'standard', label: '标准', sub: '60 min' },
+  { value: 'frequent', label: '频繁', sub: '30 min' },
+  { value: 'smart', label: '智能', sub: '按进度' },
+];
 
 const hourToTime = (h: number): string => `${String(h).padStart(2, '0')}:00`;
 const timeToHour = (t: string): number => {
@@ -72,6 +80,18 @@ export default function SettingsPage() {
       setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 操作失败');
     } finally {
       setPushBusy(false);
+    }
+  };
+
+  const onPickMode = async (mode: NotifyMode) => {
+    update({ notifyMode: mode });
+    if (pushEnabled) {
+      try {
+        await setNotifyMode(mode);
+        setPushMsg(`✅ 已切到「${NOTIFY_MODES.find((m) => m.value === mode)?.label}」`);
+      } catch (e) {
+        setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 切换失败');
+      }
     }
   };
 
@@ -220,6 +240,43 @@ export default function SettingsPage() {
         <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
           权限：{perm === 'granted' ? '✅ 已开启' : perm === 'denied' ? '❌ 已拒绝（请到系统设置）' : '⚪ 未设置'}
         </div>
+
+        {/* 频率 picker — 已订阅时才显示 */}
+        {pushEnabled && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>提醒频率</div>
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              {NOTIFY_MODES.map((m) => {
+                const active = (s.notifyMode ?? 'standard') === m.value;
+                return (
+                  <button
+                    key={m.value}
+                    onClick={() => onPickMode(m.value)}
+                    disabled={pushBusy}
+                    className={active ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                    style={{
+                      flex: 1,
+                      minWidth: 64,
+                      flexDirection: 'column',
+                      gap: 2,
+                      padding: '10px 8px',
+                      background: active ? undefined : 'rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{m.label}</span>
+                    <span style={{ fontSize: 11, opacity: 0.85 }}>{m.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {(s.notifyMode ?? 'standard') === 'smart' && (
+              <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
+                💡 落后会更频繁，超前会拉间隔，达标后不再打扰
+              </div>
+            )}
+          </div>
+        )}
+
         {pushEnabled && (
           <button
             className="btn-pill"

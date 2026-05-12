@@ -99,6 +99,33 @@ export default async function handler(req: Request): Promise<Response> {
                   } catch (e) {
                     endpointHost = `parse-error: ${e instanceof Error ? e.message : 'unknown'}`;
                   }
+                  // 拉一下 progress 看是否同步过
+                  let progress: any = null;
+                  try {
+                    const pr = await fetch(`${redisUrl}/hgetall/progress:${id}`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const prText = await pr.text();
+                    const prJson = JSON.parse(prText);
+                    const prArr = prJson.result;
+                    const pObj: Record<string, any> = {};
+                    if (Array.isArray(prArr)) {
+                      for (let i = 0; i < prArr.length; i += 2) pObj[prArr[i]] = prArr[i + 1];
+                    } else if (prArr && typeof prArr === 'object') {
+                      Object.assign(pObj, prArr);
+                    }
+                    if (Object.keys(pObj).length) {
+                      progress = {
+                        drunkMl: Number(pObj.drunkMl),
+                        goalMl: Number(pObj.goalMl),
+                        date: pObj.date,
+                        ageMin: pObj.updatedAt
+                          ? Math.round((Date.now() - Number(pObj.updatedAt)) / 60000)
+                          : null,
+                      };
+                    }
+                  } catch { /* ignore */ }
+
                   subs.push({
                     clientId: id.slice(0, 12) + '…',
                     subType,
@@ -108,7 +135,12 @@ export default async function handler(req: Request): Promise<Response> {
                     wake: obj.wake,
                     sleep: obj.sleep,
                     tz: obj.tz,
+                    mode: obj.mode || 'standard',
                     hasLastSentAt: !!obj.lastSentAt,
+                    lastSentMinAgo: obj.lastSentAt
+                      ? Math.round((Date.now() - Number(obj.lastSentAt)) / 60000)
+                      : null,
+                    progress,
                   });
                 } catch (e) {
                   subs.push({ clientId: id.slice(0, 12) + '…', error: String(e), raw: raw.slice(0, 100) });

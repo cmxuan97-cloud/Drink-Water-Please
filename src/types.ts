@@ -15,12 +15,15 @@ export type Entry = {
   note?: string;
 };
 
+export type NotifyMode = 'easy' | 'standard' | 'frequent' | 'smart';
+
 export type Settings = {
   weightKg: number;
   mlPerKg: number;
   wakeHour: number;
   sleepHour: number;
   notificationsEnabled: boolean;
+  notifyMode?: NotifyMode;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wakeHour: 7,
   sleepHour: 23,
   notificationsEnabled: false,
+  notifyMode: 'standard',
 };
 
 export const DEFAULT_CONTAINERS: Container[] = [
