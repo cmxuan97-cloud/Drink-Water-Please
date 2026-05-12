@@ -240,33 +240,48 @@ function DayView({
         <HourlyChart hourly={hourly} maxMl={maxBar} />
       </div>
 
-      {/* 今日记录列表 */}
+      {/* 当天记录列表 — 默认 3 条 + show more */}
       {selectedStat.entries.length > 0 && (
-        <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 10 }}>💧 当天记录</div>
-          <div className="list">
-            {selectedStat.entries.slice(0, 8).map((e) => {
-              const d = new Date(e.ts);
-              const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-              return (
-                <div key={e.id} className="list-item" style={{ padding: '10px 12px' }}>
-                  <span style={{ fontSize: 18 }}>💧</span>
-                  <div className="grow">
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{e.ml} ml</div>
-                    <div className="muted" style={{ fontSize: 11 }}>{time}</div>
-                  </div>
-                </div>
-              );
-            })}
-            {selectedStat.entries.length > 8 && (
-              <div className="muted" style={{ fontSize: 12, textAlign: 'center', padding: 6 }}>
-                还有 {selectedStat.entries.length - 8} 条
-              </div>
-            )}
-          </div>
-        </div>
+        <DayEntries entries={selectedStat.entries} />
       )}
     </>
+  );
+}
+
+function DayEntries({ entries }: { entries: DayStat['entries'] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? entries : entries.slice(0, 3);
+  return (
+    <div className="card">
+      <div className="row-between" style={{ marginBottom: 10 }}>
+        <div style={{ fontWeight: 700 }}>💧 当天记录</div>
+        <span className="muted" style={{ fontSize: 12 }}>{entries.length} 条</span>
+      </div>
+      <div className="list">
+        {visible.map((e) => {
+          const d = new Date(e.ts);
+          const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          return (
+            <div key={e.id} className="list-item" style={{ padding: '10px 12px' }}>
+              <span style={{ fontSize: 18 }}>💧</span>
+              <div className="grow">
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{e.ml} ml</div>
+                <div className="muted" style={{ fontSize: 11 }}>{time}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {entries.length > 3 && (
+        <button
+          className="btn-pill btn-full"
+          onClick={() => setShowAll((v) => !v)}
+          style={{ marginTop: 10, background: 'var(--accent-soft)' }}
+        >
+          {showAll ? '收起' : `查看全部 ${entries.length} 条`}
+        </button>
+      )}
+    </div>
   );
 }
 

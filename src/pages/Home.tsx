@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AnimalIcon from '../components/AnimalIcon';
 import Companion from '../components/Companion';
 import EntryList from '../components/EntryList';
+import TimeBackground from '../components/TimeBackground';
 import { Container, Entry, Settings } from '../types';
 import {
   deleteEntry,
@@ -37,6 +38,7 @@ export default function Home() {
   const [userName, setUserNameLocal] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
 
   useEffect(() => {
     pruneOldPhotos();
@@ -112,6 +114,7 @@ export default function Home() {
 
   return (
     <div className="page">
+      <TimeBackground />
       <header className="page-header">
         <div>
           <div className="muted" style={{ fontSize: 13 }}>
@@ -181,7 +184,20 @@ export default function Home() {
           <h2 style={{ fontSize: 17, margin: 0, fontWeight: 700 }}>今日记录</h2>
           <span className="muted">{entries.length} 条</span>
         </div>
-        <EntryList entries={entries} containers={containers} onDelete={onDelete} />
+        <EntryList
+          entries={showAllEntries ? entries : entries.slice(0, 3)}
+          containers={containers}
+          onDelete={onDelete}
+        />
+        {entries.length > 3 && (
+          <button
+            className="btn-pill btn-full"
+            onClick={() => setShowAllEntries((v) => !v)}
+            style={{ marginTop: 8, background: 'var(--bg-card)' }}
+          >
+            {showAllEntries ? '收起' : `查看全部 ${entries.length} 条`}
+          </button>
+        )}
       </div>
 
       <div className="fab">
