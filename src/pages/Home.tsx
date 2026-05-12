@@ -237,8 +237,8 @@ export default function Home() {
             <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: 1 }}>
               🎉 完成今日目标
             </div>
-            <div style={{ fontSize: 64, marginTop: 14, marginBottom: 4 }}>🎫</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>多了 1 个解锁机会</div>
+            <div style={{ fontSize: 64, marginTop: 14, marginBottom: 4 }}>🔑</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>多了 1 把解锁钥匙</div>
             <div className="muted" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
               去「我的小伙伴」<br/>挑一只你喜欢的动物加入喝水小队
             </div>
