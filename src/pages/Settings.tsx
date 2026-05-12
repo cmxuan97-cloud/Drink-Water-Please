@@ -8,8 +8,6 @@ import {
   enablePush,
   getCurrentSubscription,
   isPushSupported,
-  schedulePushIn,
-  sendTestPush,
   setNotifyMode,
   syncSettingsToServer,
 } from '../lib/push';
@@ -40,7 +38,6 @@ export default function SettingsPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     setS(getSettings());
@@ -97,39 +94,6 @@ export default function SettingsPage() {
     }
   };
 
-  const onTestPush = async () => {
-    setPushMsg(null);
-    setPushBusy(true);
-    try {
-      const r = await sendTestPush();
-      setPushMsg(r.ok ? `✅ 已发出${r.sent ? `（${r.sent} 条）` : ''}，几秒内查看通知` : `❌ ${r.error || '失败'}`);
-    } catch (e) {
-      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 失败');
-    } finally {
-      setPushBusy(false);
-    }
-  };
-
-  // 倒计时显示（视觉用，真正定时在服务端）
-  useEffect(() => {
-    if (countdown === null || countdown <= 0) return;
-    const t = setTimeout(() => setCountdown(countdown - 1), 1000);
-    return () => clearTimeout(t);
-  }, [countdown]);
-
-  const onSchedulePush = async (seconds: number) => {
-    setPushMsg(null);
-    setCountdown(seconds);
-    // 服务端 sleep N 秒后发推送 — 客户端 fire-and-forget，关闭也没事
-    try {
-      const r = await schedulePushIn(seconds);
-      setCountdown(null);
-      setPushMsg(r.ok ? `✅ ${seconds} 秒后服务端已推出，查看锁屏` : `❌ ${r.error || '失败'}`);
-    } catch (e) {
-      setCountdown(null);
-      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 失败');
-    }
-  };
 
   const goal = dailyGoalMl(s.weightKg);
 
@@ -302,41 +266,6 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {pushEnabled && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-            <button
-              className="btn-pill"
-              onClick={onTestPush}
-              disabled={pushBusy || countdown !== null}
-              style={{ flex: 1, background: 'rgba(255,255,255,0.7)' }}
-            >
-              🧪 立即推送
-            </button>
-            {countdown === null ? (
-              <button
-                className="btn-pill"
-                onClick={() => onSchedulePush(10)}
-                disabled={pushBusy}
-                style={{ flex: 1, background: 'rgba(255,255,255,0.7)' }}
-              >
-                ⏱ 10 秒后推送
-              </button>
-            ) : (
-              <button
-                className="btn-pill"
-                disabled
-                style={{ flex: 1, background: 'rgba(220, 235, 220, 0.9)' }}
-              >
-                ⏳ {countdown}s · 服务端定时中
-              </button>
-            )}
-          </div>
-        )}
-        {countdown !== null && (
-          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
-            ✨ 服务端在 Vercel 上 sleep — <strong>现在可以关闭 app</strong>，推送照常到锁屏
-          </div>
-        )}
         {pushMsg && (
           <div style={{ fontSize: 12, marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.6)', borderRadius: 8 }}>
             {pushMsg}
@@ -354,25 +283,6 @@ export default function SettingsPage() {
         )}
       </div>
 
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>🤖 AI 测量</div>
-        <div className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
-          视觉识别 (Gemini 3 Flash · preview) · 免费档<br/>
-          API key 保存在服务端 <code>.env.local</code>，前端不持有 key
-        </div>
-      </div>
-
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>关于</div>
-        <div className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
-          MVP 版本 · 数据存本机 · 换设备会丢<br/>
-          拍照测量 = 预设容器 × AI 估水位<br/>
-          智能提醒按当前进度动态调整频率<br/>
-          <span style={{ fontSize: 12 }}>
-            参考研究：专注工作或空调环境下，约 60–120 min 会出现轻度脱水倾向，60–90 min 是建立喝水习惯的甜区。
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
