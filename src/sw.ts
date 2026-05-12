@@ -28,8 +28,8 @@ type PushPayload = {
 };
 
 const FALLBACK: PushPayload = {
-  title: '💧 喝水时间',
-  body: '该喝水啦',
+  title: '🐦 小伙伴在等你',
+  body: '嘴巴干干的，陪我喝一口呗～',
   icon: '/icon.svg',
   badge: '/icon.svg',
   tag: 'drink-water',
