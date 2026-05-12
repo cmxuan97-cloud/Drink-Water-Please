@@ -272,27 +272,51 @@ a {
   min-width: 0;
 }
 
+/* iOS-style grouped menu list — single card holding multiple rows */
+.menu-group {
+  background: var(--bg-card);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
 .menu-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   background: var(--bg-card);
   border-radius: 18px;
   box-shadow: var(--shadow-card);
   font-size: 15px;
   color: var(--text);
+  text-align: left;
+  width: 100%;
+}
+
+/* When rows live inside a .menu-group, strip individual shadows/radii
+   and add a hairline divider between them — clean unified look */
+.menu-group .menu-row {
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.menu-group .menu-row + .menu-row {
+  border-top: 1px solid var(--line);
+}
+.menu-group .menu-row:active {
+  background: rgba(58, 166, 221, 0.06);
 }
 
 .menu-row .menu-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 17px;
   background: var(--accent-soft);
-  border-radius: 10px;
+  border-radius: 9px;
   flex-shrink: 0;
 }
 
@@ -309,6 +333,7 @@ a {
 .menu-row .menu-arrow {
   color: var(--text-mute);
   font-size: 18px;
+  margin-left: 2px;
 }
 
 .banner {

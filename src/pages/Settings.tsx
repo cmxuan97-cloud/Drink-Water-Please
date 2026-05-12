@@ -117,7 +117,7 @@ export default function SettingsPage() {
         <div style={{ position: 'absolute', right: -10, bottom: -10, fontSize: 80, opacity: 0.18 }}>💧</div>
       </div>
 
-      <div className="list">
+      <div className="menu-group">
         <button
           className="menu-row"
           onClick={() => setExpandedKey(expandedKey === 'weight' ? null : 'weight')}
@@ -127,24 +127,6 @@ export default function SettingsPage() {
           <span className="menu-value">{s.weightKg} kg</span>
           <span className="menu-arrow">›</span>
         </button>
-        {expandedKey === 'weight' && (
-          <div className="card">
-            <label className="label">体重 (kg)</label>
-            <input
-              className="input"
-              type="number"
-              inputMode="decimal"
-              step={0.5}
-              value={s.weightKg}
-              onChange={(e) => update({ weightKg: Math.max(0, parseFloat(e.target.value) || 0), mlPerKg: 35 })}
-              autoFocus
-            />
-            <div className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
-              每日饮水目标 = 体重 × 35 ml/kg<br/>
-              例：65 kg → 2275 ml · 70 kg → 2450 ml
-            </div>
-          </div>
-        )}
 
         <button
           className="menu-row"
@@ -155,33 +137,6 @@ export default function SettingsPage() {
           <span className="menu-value">{hourToTime(s.wakeHour)} – {hourToTime(s.sleepHour)}</span>
           <span className="menu-arrow">›</span>
         </button>
-        {expandedKey === 'sleep' && (
-          <div className="card">
-            <div className="row" style={{ gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>起床</div>
-                <input
-                  className="input"
-                  type="time"
-                  value={hourToTime(s.wakeHour)}
-                  onChange={(e) => update({ wakeHour: timeToHour(e.target.value) })}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>睡觉</div>
-                <input
-                  className="input"
-                  type="time"
-                  value={hourToTime(s.sleepHour)}
-                  onChange={(e) => update({ sleepHour: timeToHour(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              提醒会在这段时间内分布
-            </div>
-          </div>
-        )}
 
         <button
           className="menu-row"
@@ -202,6 +157,53 @@ export default function SettingsPage() {
           <span className="menu-arrow">›</span>
         </button>
       </div>
+
+      {/* 展开面板：跟着菜单组下面，不打断 group 的视觉统一 */}
+      {expandedKey === 'weight' && (
+        <div className="card">
+          <label className="label">体重 (kg)</label>
+          <input
+            className="input"
+            type="number"
+            inputMode="decimal"
+            step={0.5}
+            value={s.weightKg}
+            onChange={(e) => update({ weightKg: Math.max(0, parseFloat(e.target.value) || 0), mlPerKg: 35 })}
+            autoFocus
+          />
+          <div className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
+            每日饮水目标 = 体重 × 35 ml/kg<br/>
+            例：65 kg → 2275 ml · 70 kg → 2450 ml
+          </div>
+        </div>
+      )}
+      {expandedKey === 'sleep' && (
+        <div className="card">
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>起床</div>
+              <input
+                className="input"
+                type="time"
+                value={hourToTime(s.wakeHour)}
+                onChange={(e) => update({ wakeHour: timeToHour(e.target.value) })}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>睡觉</div>
+              <input
+                className="input"
+                type="time"
+                value={hourToTime(s.sleepHour)}
+                onChange={(e) => update({ sleepHour: timeToHour(e.target.value) })}
+              />
+            </div>
+          </div>
+          <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            提醒会在这段时间内分布
+          </div>
+        </div>
+      )}
 
       {/* reminder card with mint accent */}
       <div className="card-tinted card-mint">
