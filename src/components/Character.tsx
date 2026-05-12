@@ -10,7 +10,9 @@ export type CharacterId =
   | 'dolphin' | 'crab' | 'seahorse' | 'jellyfish' | 'koala' | 'sloth'
   | 'hedgehog' | 'rabbit' | 'squirrel' | 'raccoon' | 'flamingo' | 'parrot'
   | 'chick' | 'peacock' | 'turtle' | 'snake' | 'bee' | 'ladybug'
-  | 'butterfly' | 'hamster';
+  | 'butterfly' | 'hamster'
+  // 第三批 5 只奇葩
+  | 'zombie' | 'mummy' | 'alpaca' | 'bigfoot' | 'orangutan';
 
 type Spec = {
   viewBox: string;
@@ -1423,6 +1425,225 @@ const CHARACTERS: Record<CharacterId, Spec> = {
         </g>
         {Blush({ x: 105, y: 135 })}
         {Blush({ x: 135, y: 135 })}
+      </>
+    ),
+  },
+
+  // === Zombie (僵尸) ===
+  zombie: {
+    viewBox: '15 25 220 205',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-zombie" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a8c890" /><stop offset="100%" stopColor="#5a8848" />
+          </linearGradient>
+        </defs>
+        <ellipse cx={125} cy={170} rx={62} ry={52} fill="url(#g-zombie)" />
+        <ellipse cx={50} cy={155} rx={18} ry={42} fill="url(#g-zombie)" transform="rotate(-15 50 155)" />
+        <ellipse cx={200} cy={155} rx={18} ry={42} fill="url(#g-zombie)" transform="rotate(15 200 155)" />
+        <rect x={88} y={205} width={20} height={18} fill="#3a5828" />
+        <rect x={142} y={205} width={20} height={18} fill="#3a5828" />
+        <circle cx={125} cy={90} r={52} fill="url(#g-zombie)" />
+        <line x1={78} y1={88} x2={172} y2={88} stroke="#3a5828" strokeWidth={2.5} strokeDasharray="6 3" />
+        <line x1={95} y1={50} x2={155} y2={70} stroke="#3a5828" strokeWidth={2} strokeDasharray="4 2" />
+        <ellipse cx={100} cy={80} rx={11} ry={9} fill="white" />
+        <ellipse cx={150} cy={82} rx={9} ry={7} fill="white" />
+        {e ? (
+          <g stroke="#1a1408" strokeWidth={2.2} fill="none" strokeLinecap="round">
+            <path d="M 92 80 Q 100 76 108 80" /><path d="M 144 80 Q 150 76 156 80" />
+          </g>
+        ) : (
+          <g fill="#1a1408">
+            <circle cx={100} cy={82} r={4} /><circle cx={150} cy={82} r={3} />
+          </g>
+        )}
+        <ellipse cx={125} cy={108} rx={20} ry={10} fill="#3a1818" />
+        <g fill="white">
+          <polygon points="112,108 115,118 109,118" />
+          <polygon points="125,108 128,120 122,120" />
+          <polygon points="138,108 141,118 135,118" />
+        </g>
+        <ellipse cx={155} cy={70} rx={4} ry={3} fill="#5a3818" opacity={0.6} />
+        <path d="M 95 130 L 105 145" stroke="#3a5828" strokeWidth={1.5} />
+      </>
+    ),
+  },
+
+  // === Mummy (木乃伊) ===
+  mummy: {
+    viewBox: '40 25 160 205',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-mummy" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fff4dc" /><stop offset="100%" stopColor="#d8c898" />
+          </linearGradient>
+        </defs>
+        <ellipse cx={120} cy={130} rx={60} ry={92} fill="url(#g-mummy)" />
+        <ellipse cx={68} cy={130} rx={14} ry={38} fill="url(#g-mummy)" transform="rotate(-10 68 130)" />
+        <ellipse cx={172} cy={130} rx={14} ry={38} fill="url(#g-mummy)" transform="rotate(10 172 130)" />
+        <g stroke="#a89868" strokeWidth={1.5} fill="none" opacity={0.7}>
+          <path d="M 60 60 L 180 75" /><path d="M 60 78 L 180 92" />
+          <path d="M 65 95 L 178 110" /><path d="M 70 115 L 172 128" />
+          <path d="M 65 135 L 178 148" /><path d="M 60 155 L 180 170" />
+          <path d="M 65 175 L 175 188" /><path d="M 70 195 L 170 208" />
+        </g>
+        <g stroke="#b8a878" strokeWidth={0.8} fill="none" opacity={0.5}>
+          <path d="M 90 50 L 195 65" /><path d="M 80 200 L 185 215" />
+        </g>
+        <rect x={85} y={88} width={70} height={18} fill="#3a3020" rx={2} />
+        {e ? (
+          <g stroke="#fff" strokeWidth={2.4} fill="none" strokeLinecap="round">
+            <path d="M 95 97 Q 103 92 111 97" /><path d="M 129 97 Q 137 92 145 97" />
+          </g>
+        ) : (
+          <g fill="#fff8d8">
+            <circle cx={103} cy={97} r={5} /><circle cx={137} cy={97} r={5} />
+            <circle cx={104} cy={95} r={1.5} fill="#1a1408" />
+            <circle cx={138} cy={95} r={1.5} fill="#1a1408" />
+          </g>
+        )}
+        <path d="M 110 130 Q 120 134 130 130" stroke="#a89868" strokeWidth={1.2} fill="none" />
+      </>
+    ),
+  },
+
+  // === Alpaca / 草泥马 (alpaca) ===
+  alpaca: {
+    viewBox: '25 15 200 220',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-alpaca"><stop offset="0%" stopColor="#fff8f0" /><stop offset="100%" stopColor="#e8dcc8" /></radialGradient>
+        </defs>
+        <g fill="url(#g-alpaca)" stroke="#c8bca0" strokeWidth={1}>
+          <ellipse cx={155} cy={175} rx={62} ry={50} />
+          <ellipse cx={140} cy={120} rx={20} ry={42} />
+          <circle cx={140} cy={68} r={34} />
+        </g>
+        <path d="M 115 175 Q 125 165 140 175 Q 155 165 175 175 Q 185 180 175 195 Q 155 200 140 195 Q 125 200 115 195 Q 105 185 115 175 Z" fill="#c8484a" />
+        <g stroke="#fff8d8" strokeWidth={1} fill="none">
+          <path d="M 125 180 L 175 188" /><path d="M 125 188 L 175 195" />
+          <line x1={140} y1={175} x2={140} y2={200} />
+          <line x1={155} y1={175} x2={155} y2={200} />
+        </g>
+        <g fill="#3a2510">
+          <rect x={120} y={215} width={9} height={22} rx={2} />
+          <rect x={140} y={215} width={9} height={22} rx={2} />
+          <rect x={165} y={215} width={9} height={22} rx={2} />
+          <rect x={185} y={215} width={9} height={22} rx={2} />
+        </g>
+        <path d="M 122 38 L 116 22 L 128 32 Z" fill="url(#g-alpaca)" stroke="#c8bca0" strokeWidth={0.8} />
+        <path d="M 158 38 L 164 22 L 152 32 Z" fill="url(#g-alpaca)" stroke="#c8bca0" strokeWidth={0.8} />
+        <g stroke="#b8aa88" strokeWidth={1} fill="none" opacity={0.5}>
+          <path d="M 115 60 q 5 -3 0 -8" /><path d="M 165 60 q 5 -3 0 -8" />
+          <path d="M 110 80 q 5 -3 0 -8" /><path d="M 170 80 q 5 -3 0 -8" />
+        </g>
+        {e ? (
+          <g stroke="#1a1408" strokeWidth={2.2} fill="none" strokeLinecap="round">
+            <path d="M 122 65 Q 128 61 134 65" /><path d="M 146 65 Q 152 61 158 65" />
+          </g>
+        ) : (
+          <>
+            <ellipse cx={128} cy={68} rx={3.5} ry={5} fill="#1a1408" />
+            <ellipse cx={152} cy={68} rx={3.5} ry={5} fill="#1a1408" />
+            <circle cx={130} cy={66} r={1} fill="white" />
+            <circle cx={154} cy={66} r={1} fill="white" />
+          </>
+        )}
+        <ellipse cx={140} cy={88} rx={6} ry={4} fill="#d8a890" />
+        <path d="M 135 92 Q 140 96 145 92" stroke="#a07060" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+        <ellipse cx={210} cy={150} rx={6} ry={18} fill="url(#g-alpaca)" stroke="#c8bca0" strokeWidth={0.8} transform="rotate(20 210 150)" />
+      </>
+    ),
+  },
+
+  // === Bigfoot (大脚怪) ===
+  bigfoot: {
+    viewBox: '15 20 220 220',
+    render: (e) => (
+      <>
+        <defs>
+          <linearGradient id="g-bf" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8a6038" /><stop offset="100%" stopColor="#4a3018" />
+          </linearGradient>
+        </defs>
+        <ellipse cx={125} cy={140} rx={95} ry={100} fill="url(#g-bf)" />
+        <g stroke="#2a1808" strokeWidth={1.2} strokeLinecap="round" opacity={0.55} fill="none">
+          {[
+            [55, 90], [70, 75], [90, 65], [110, 58], [130, 55], [150, 58], [170, 65], [190, 75], [205, 90],
+            [50, 115], [205, 115], [45, 140], [210, 140], [50, 165], [205, 165], [55, 190], [200, 190],
+            [70, 210], [185, 210],
+          ].map(([x, y], i) => <line key={i} x1={x} y1={y} x2={x - 5} y2={y - 10} />)}
+        </g>
+        <ellipse cx={125} cy={130} rx={52} ry={45} fill="#e8c8a0" />
+        {e ? (
+          <g stroke="#1a1408" strokeWidth={2.4} fill="none" strokeLinecap="round">
+            <path d="M 102 120 Q 110 115 118 120" /><path d="M 132 120 Q 140 115 148 120" />
+          </g>
+        ) : (
+          <g fill="#1a1408">
+            <circle cx={110} cy={122} r={5} /><circle cx={140} cy={122} r={5} />
+            <circle cx={112} cy={120} r={1.6} fill="white" /><circle cx={142} cy={120} r={1.6} fill="white" />
+          </g>
+        )}
+        <ellipse cx={125} cy={140} rx={4} ry={3} fill="#5a3018" />
+        <path d="M 110 150 Q 125 158 140 150" stroke="#1a1408" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        <ellipse cx={75} cy={228} rx={32} ry={12} fill="#2a1808" />
+        <ellipse cx={175} cy={228} rx={32} ry={12} fill="#2a1808" />
+        <g fill="#1a0a00">
+          <circle cx={60} cy={222} r={3} /><circle cx={70} cy={221} r={3.5} /><circle cx={82} cy={222} r={3.5} /><circle cx={94} cy={222} r={3} />
+          <circle cx={160} cy={222} r={3} /><circle cx={170} cy={221} r={3.5} /><circle cx={182} cy={222} r={3.5} /><circle cx={194} cy={222} r={3} />
+        </g>
+        {Blush({ x: 92, y: 138 })}
+        {Blush({ x: 158, y: 138 })}
+      </>
+    ),
+  },
+
+  // === Orangutan (猩猩) ===
+  orangutan: {
+    viewBox: '15 25 220 200',
+    render: (e) => (
+      <>
+        <defs>
+          <radialGradient id="g-orang"><stop offset="0%" stopColor="#e88838" /><stop offset="100%" stopColor="#a04818" /></radialGradient>
+        </defs>
+        <ellipse cx={125} cy={170} rx={75} ry={62} fill="url(#g-orang)" />
+        <ellipse cx={45} cy={150} rx={20} ry={55} fill="#a04818" transform="rotate(15 45 150)" />
+        <ellipse cx={205} cy={150} rx={20} ry={55} fill="#a04818" transform="rotate(-15 205 150)" />
+        <ellipse cx={42} cy={195} rx={18} ry={10} fill="#3a1808" />
+        <ellipse cx={208} cy={195} rx={18} ry={10} fill="#3a1808" />
+        <ellipse cx={100} cy={225} rx={22} ry={10} fill="#3a1808" />
+        <ellipse cx={150} cy={225} rx={22} ry={10} fill="#3a1808" />
+        <circle cx={125} cy={90} r={55} fill="url(#g-orang)" />
+        <g fill="#e8a058">
+          <ellipse cx={75} cy={90} rx={20} ry={28} />
+          <ellipse cx={175} cy={90} rx={20} ry={28} />
+        </g>
+        <ellipse cx={125} cy={105} rx={42} ry={42} fill="#f5d8a8" />
+        {e ? (
+          <g stroke="#1a1408" strokeWidth={2.2} fill="none" strokeLinecap="round">
+            <path d="M 102 92 Q 108 88 114 92" /><path d="M 136 92 Q 142 88 148 92" />
+          </g>
+        ) : (
+          <g fill="#1a1408">
+            <circle cx={108} cy={94} r={4} /><circle cx={142} cy={94} r={4} />
+          </g>
+        )}
+        <g fill="#1a1408">
+          <circle cx={118} cy={113} r={1.6} /><circle cx={132} cy={113} r={1.6} />
+        </g>
+        <path d="M 110 125 Q 125 132 140 125" stroke="#1a1408" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        <g stroke="#a04818" strokeWidth={1.5} fill="none" opacity={0.5}>
+          <path d="M 70 75 q 8 -3 12 0" />
+          <path d="M 165 75 q 8 -3 12 0" />
+          <path d="M 95 60 q 4 -5 8 -2" />
+          <path d="M 145 60 q 4 -5 8 -2" />
+        </g>
+        {Blush({ x: 95, y: 122 })}
+        {Blush({ x: 155, y: 122 })}
       </>
     ),
   },
