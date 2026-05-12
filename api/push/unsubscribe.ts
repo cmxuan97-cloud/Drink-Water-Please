@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { requireRedis } from '../_lib/redis';
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
@@ -18,8 +18,9 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    await kv.del(`sub:${clientId}`);
-    await kv.srem('subs:all', clientId);
+    const redis = requireRedis();
+    await redis.del(`sub:${clientId}`);
+    await redis.srem('subs:all', clientId);
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json(

@@ -67,8 +67,8 @@ export const enablePush = async (): Promise<void> => {
     }),
   });
   if (!resp.ok) {
-    const err = await resp.text().catch(() => '');
-    throw new Error(`订阅服务端失败 (${resp.status}): ${err.slice(0, 100)}`);
+    const parsed = await safeJson(resp);
+    throw new Error(parsed.error || `订阅服务端失败 (${resp.status})`);
   }
 };
 
@@ -87,13 +87,31 @@ export const disablePush = async (): Promise<void> => {
   }).catch(() => {});
 };
 
+/** 安全 parse — 如果服务端返回非 JSON（如 Vercel HTML 错误页），转成可读错误 */
+const safeJson = async (resp: Response): Promise<any> => {
+  const ct = resp.headers.get('content-type') || '';
+  if (ct.includes('application/json')) {
+    try {
+      return await resp.json();
+    } catch (e) {
+      return { ok: false, error: `JSON 解析失败: ${e instanceof Error ? e.message : String(e)}` };
+    }
+  }
+  // 非 JSON：读 text 截断
+  const text = await resp.text().catch(() => '');
+  return {
+    ok: false,
+    error: `服务端返回 ${resp.status} 非 JSON: ${text.slice(0, 200)}`,
+  };
+};
+
 /** 调一次 send 端点，给当前 client 发一条测试推送 */
 export const sendTestPush = async (): Promise<{ ok: boolean; sent?: number; error?: string }> => {
   const clientId = getOrCreateClientId();
   const resp = await fetch(`/api/push/send?clientId=${encodeURIComponent(clientId)}&test=1`, {
     method: 'POST',
   });
-  return await resp.json();
+  return await safeJson(resp);
 };
 
 /** 设置改了之后同步给服务端（不重新订阅） */
