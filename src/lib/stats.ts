@@ -34,9 +34,8 @@ export const getDayStats = (days: number, endDate = new Date()): DayStat[] => {
   return results;
 };
 
-export const getTodayHourly = (): { hour: number; ml: number }[] => {
-  const today = new Date();
-  const key = `dw:entries:${dateKey(today)}`;
+export const getHourlyForDate = (date: Date): { hour: number; ml: number }[] => {
+  const key = `dw:entries:${dateKey(date)}`;
   const entries = safeParse<Entry[]>(localStorage.getItem(key), []);
   const hourly: number[] = new Array(24).fill(0);
   for (const e of entries) {
@@ -45,6 +44,28 @@ export const getTodayHourly = (): { hour: number; ml: number }[] => {
   }
   return hourly.map((ml, hour) => ({ hour, ml }));
 };
+
+export const getTodayHourly = (): { hour: number; ml: number }[] => getHourlyForDate(new Date());
+
+/** 当前周的 7 天 (周日开头) — 用于横向选择条 */
+export const getCurrentWeekDates = (): Date[] => {
+  const today = new Date();
+  const dow = today.getDay(); // 0=日
+  const start = new Date(today);
+  start.setDate(today.getDate() - dow);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+};
+
+export const sameDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+export const toDateKey = dateKey;
 
 export type Summary = {
   totalMl: number;
