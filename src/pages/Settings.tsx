@@ -8,6 +8,7 @@ import {
   enablePush,
   getCurrentSubscription,
   isPushSupported,
+  schedulePushIn,
   sendTestPush,
   setNotifyMode,
   syncSettingsToServer,
@@ -39,6 +40,8 @@ export default function SettingsPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [cancelTimer, setCancelTimer] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     setS(getSettings());
@@ -106,6 +109,32 @@ export default function SettingsPage() {
     } finally {
       setPushBusy(false);
     }
+  };
+
+  // 1 分钟倒计时推送
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  const onSchedulePush = (seconds: number) => {
+    if (cancelTimer) cancelTimer();
+    setPushMsg(null);
+    setCountdown(seconds);
+    const cancel = schedulePushIn(seconds, (r) => {
+      setCountdown(null);
+      setCancelTimer(null);
+      setPushMsg(r.ok ? '✅ 倒计时到，推送已发！查看锁屏' : `❌ ${r.error || '失败'}`);
+    });
+    setCancelTimer(() => cancel);
+  };
+
+  const onCancelSchedule = () => {
+    if (cancelTimer) cancelTimer();
+    setCancelTimer(null);
+    setCountdown(null);
+    setPushMsg('已取消倒计时');
   };
 
   const goal = dailyGoalMl(s.weightKg);
@@ -280,14 +309,39 @@ export default function SettingsPage() {
         </div>
 
         {pushEnabled && (
-          <button
-            className="btn-pill"
-            onClick={onTestPush}
-            disabled={pushBusy}
-            style={{ marginTop: 10, background: 'rgba(255,255,255,0.7)' }}
-          >
-            🧪 发一条测试推送
-          </button>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <button
+              className="btn-pill"
+              onClick={onTestPush}
+              disabled={pushBusy || countdown !== null}
+              style={{ flex: 1, background: 'rgba(255,255,255,0.7)' }}
+            >
+              🧪 立即推送
+            </button>
+            {countdown === null ? (
+              <button
+                className="btn-pill"
+                onClick={() => onSchedulePush(60)}
+                disabled={pushBusy}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.7)' }}
+              >
+                ⏱ 1 分钟后推送
+              </button>
+            ) : (
+              <button
+                className="btn-pill"
+                onClick={onCancelSchedule}
+                style={{ flex: 1, background: 'rgba(255, 220, 220, 0.9)' }}
+              >
+                ⏳ {countdown}s · 点击取消
+              </button>
+            )}
+          </div>
+        )}
+        {countdown !== null && (
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.7, lineHeight: 1.5 }}>
+            ⚠ 保持页面打开 — 计时器在浏览器里跑，关闭就停（这是测试用，真实定时推送靠服务端 cron）
+          </div>
         )}
         {pushMsg && (
           <div style={{ fontSize: 12, marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.6)', borderRadius: 8 }}>
