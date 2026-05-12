@@ -7,6 +7,7 @@ const K_COMPLETED = 'dw:completedDays';
 const K_COMPANION = 'dw:companionId';
 const K_CLIENT_ID = 'dw:clientId';
 const K_USER_NAME = 'dw:userName';
+const K_UNLOCKED_IDS = 'dw:unlockedIds';
 
 const todayKey = (d = new Date()): string => {
   const y = d.getFullYear();
@@ -92,6 +93,48 @@ export const getUserName = (): string | null => {
 
 export const setUserName = (name: string): void => {
   localStorage.setItem(K_USER_NAME, name.trim());
+};
+
+/**
+ * 已解锁动物的 ID 集合。第一个 ID 默认是 a-kiwi（起始角色）。
+ * 后续每次得到解锁机会，用户可以选择一只新动物加入。
+ */
+export const getUnlockedIds = (defaultStarterId: string): string[] => {
+  const raw = localStorage.getItem(K_UNLOCKED_IDS);
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.every((s) => typeof s === 'string')) return arr;
+    } catch { /* fallthrough */ }
+  }
+  // 首次：只解锁起始角色
+  const init = [defaultStarterId];
+  localStorage.setItem(K_UNLOCKED_IDS, JSON.stringify(init));
+  return init;
+};
+
+export const addUnlockedId = (id: string, defaultStarterId: string): string[] => {
+  const cur = getUnlockedIds(defaultStarterId);
+  if (cur.includes(id)) return cur;
+  const next = [...cur, id];
+  localStorage.setItem(K_UNLOCKED_IDS, JSON.stringify(next));
+  return next;
+};
+
+/** 旧用户迁移：如果用户有 completedDays 但没 K_UNLOCKED_IDS，
+ *  按旧的「前 N 只自动解锁」逻辑生成一份初始列表，避免回退。 */
+export const ensureUnlockedMigration = (
+  completedDays: number,
+  orderedIds: string[],
+): string[] => {
+  if (localStorage.getItem(K_UNLOCKED_IDS)) {
+    return JSON.parse(localStorage.getItem(K_UNLOCKED_IDS)!) as string[];
+  }
+  // 旧公式：1 (starter) + floor(days/2)
+  const n = Math.min(orderedIds.length, 1 + Math.floor(completedDays / 2));
+  const migrated = orderedIds.slice(0, n);
+  localStorage.setItem(K_UNLOCKED_IDS, JSON.stringify(migrated));
+  return migrated;
 };
 
 export const getCompletedDays = (): string[] => {

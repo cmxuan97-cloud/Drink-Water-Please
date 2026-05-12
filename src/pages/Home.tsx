@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import AnimalIcon from '../components/AnimalIcon';
 import Companion from '../components/Companion';
 import EntryList from '../components/EntryList';
 import TimeBackground from '../components/TimeBackground';
 import { Container, Entry, Settings } from '../types';
 import {
   deleteEntry,
+  ensureUnlockedMigration,
   getCompanionId,
   getCompletedDays,
   getContainers,
@@ -20,7 +20,7 @@ import {
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
 import { syncProgress } from '../lib/push';
 import { syncUserNameToServer } from '../lib/user';
-import { ANIMALS, unlockCount } from '../data/animals';
+import { ANIMALS, earnedTokens } from '../data/animals';
 
 const greetingFor = (h: number): string => {
   if (h < 5) return '夜深啦';
@@ -77,24 +77,26 @@ export default function Home() {
     syncProgress(progress.drunkMl, goalMl);
   }, [progress.drunkMl, goalMl, settings]);
 
-  const [newUnlock, setNewUnlock] = useState<typeof ANIMALS[number] | null>(null);
+  const [tokenEarned, setTokenEarned] = useState(false);
   useEffect(() => {
     if (!settings || goalMl === 0) return;
     if (progress.pct < 1) return;
     const { added, days } = markDayCompleted();
     if (added) {
-      const count = unlockCount(days.length);
-      const prevCount = unlockCount(days.length - 1);
-      if (count > prevCount) {
-        setNewUnlock(ANIMALS[count - 1]);
+      const newTokens = earnedTokens(days.length);
+      const prevTokens = earnedTokens(days.length - 1);
+      if (newTokens > prevTokens) {
+        setTokenEarned(true);
       }
     }
   }, [progress.pct, settings, goalMl]);
 
-  // Pick companion: explicit selection → fall back to latest unlocked
+  // 选 companion：当前的 companionId（限于已解锁），否则最后一个解锁的
   const companion = useMemo(() => {
     const completedDays = getCompletedDays().length;
-    const unlocked = ANIMALS.slice(0, unlockCount(completedDays));
+    const unlockedIds = ensureUnlockedMigration(completedDays, ANIMALS.map((a) => a.id));
+    const unlockedSet = new Set(unlockedIds);
+    const unlocked = ANIMALS.filter((a) => unlockedSet.has(a.id));
     const fromSetting = companionId ? unlocked.find((a) => a.id === companionId) : undefined;
     return fromSetting ?? unlocked[unlocked.length - 1] ?? ANIMALS[0];
   }, [companionId]);
@@ -206,9 +208,9 @@ export default function Home() {
         </Link>
       </div>
 
-      {newUnlock && (
+      {tokenEarned && (
         <div
-          onClick={() => setNewUnlock(null)}
+          onClick={() => setTokenEarned(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -226,34 +228,34 @@ export default function Home() {
               background: 'white',
               borderRadius: 28,
               padding: 28,
-              maxWidth: 320,
+              maxWidth: 340,
               width: '100%',
               textAlign: 'center',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
             }}
           >
             <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: 1 }}>
-              🎉 新伙伴解锁
+              🎉 完成今日目标
             </div>
-            <div style={{ marginTop: 10, marginBottom: 6, display: 'flex', justifyContent: 'center' }}>
-              <AnimalIcon animal={newUnlock} size={110} />
+            <div style={{ fontSize: 64, marginTop: 14, marginBottom: 4 }}>🎫</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>多了 1 个解锁机会</div>
+            <div className="muted" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
+              去「我的小伙伴」<br/>挑一只你喜欢的动物加入喝水小队
             </div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>{newUnlock.name}</div>
-            <div className="muted" style={{ marginTop: 6 }}>欢迎加入喝水小队！</div>
             <Link
               to="/collection"
               className="btn btn-full"
               style={{ marginTop: 18 }}
-              onClick={() => setNewUnlock(null)}
+              onClick={() => setTokenEarned(false)}
             >
-              查看全部伙伴
+              去挑选 →
             </Link>
             <button
               className="btn-pill"
               style={{ marginTop: 10, background: 'transparent', boxShadow: 'none' }}
-              onClick={() => setNewUnlock(null)}
+              onClick={() => setTokenEarned(false)}
             >
-              先不看
+              稍后再说
             </button>
           </div>
         </div>

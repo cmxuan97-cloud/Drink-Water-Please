@@ -389,6 +389,29 @@ a {
   animation: waveMove 2.5s linear infinite;
 }
 
+/* ===== 暗色主题（evening / night） — 卡片外的文字提亮，让深色背景上仍可读 ===== */
+body.theme-dark .page-header .page-title { color: #fff; }
+body.theme-dark .page-header .muted { color: rgba(255, 255, 255, 0.85) !important; }
+body.theme-dark .page-header .back-btn { color: rgba(255, 255, 255, 0.95); }
+body.theme-dark .page-header .icon-btn {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+body.theme-dark .page > div > .row-between > h2,
+body.theme-dark .page > div > h2 {
+  color: #fff !important;
+}
+body.theme-dark .page > div > .row-between > .muted,
+body.theme-dark .page > div > .row-between > span.muted {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+/* 空状态文案、整块独立 muted 文字（如 "今天还没喝水，快加一杯"） */
+body.theme-dark .page > div > .muted,
+body.theme-dark .page > div > div[class*='muted'] {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+/* fab 区域在暗色主题下底部按钮已经是深色，无需调整 */
+
 .float {
   animation: float 3.5s ease-in-out infinite;
 }

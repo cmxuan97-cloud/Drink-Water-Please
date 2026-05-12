@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 
-export type Mood = 'idle' | 'happy' | 'thirsty' | 'encouraging' | 'celebrating' | 'drinking';
+export type Mood = 'idle' | 'happy' | 'thirsty' | 'encouraging' | 'celebrating' | 'drinking' | 'dying';
 
 export type CharacterId =
   | 'kiwi' | 'mola' | 'dino' | 'kong' | 'godzilla' | 'robot' | 'ghost' | 'alien'
@@ -1663,6 +1663,7 @@ const squareViewBox = (vb: string): string => {
 };
 
 const animClassFor = (mood: Mood): string => {
+  if (mood === 'dying') return 'char-dying';
   if (mood === 'thirsty') return 'char-wobble';
   if (mood === 'drinking') return 'char-drink';
   if (mood === 'celebrating') return 'char-cheer';
@@ -1680,8 +1681,9 @@ type Props = {
 export default function Character({ id, mood = 'idle', size = 200, static: isStatic = false }: Props) {
   const spec = CHARACTERS[id];
   if (!spec) return null;
-  const eyeClosed = mood === 'drinking' || mood === 'celebrating';
+  const eyeClosed = mood === 'drinking' || mood === 'celebrating' || mood === 'dying';
   const cls = isStatic ? 'char-static' : `char-wrap ${animClassFor(mood)}`;
+  const isDying = mood === 'dying' && !isStatic;
 
   return (
     <div
@@ -1692,6 +1694,8 @@ export default function Character({ id, mood = 'idle', size = 200, static: isSta
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        filter: isDying ? 'grayscale(70%) brightness(0.85)' : undefined,
+        transition: 'filter 0.6s ease',
       }}
     >
       <svg
@@ -1710,10 +1714,12 @@ export default function Character({ id, mood = 'idle', size = 200, static: isSta
         @keyframes char-wobble { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
         @keyframes char-drink  { 0%,100% { transform: rotate(0); } 30%,60% { transform: rotate(-12deg); } }
         @keyframes char-cheer  { 0%,100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-10px) rotate(-3deg); } 75% { transform: translateY(-10px) rotate(3deg); } }
+        @keyframes char-dying  { 0%,100% { transform: rotate(-4deg) translateY(6px); } 50% { transform: rotate(-4deg) translateY(10px); } }
         .char-float  { animation: char-float 3.5s ease-in-out infinite; }
         .char-wobble { animation: char-wobble 1.2s ease-in-out infinite; }
         .char-drink  { animation: char-drink 1.4s ease-in-out infinite; }
         .char-cheer  { animation: char-cheer 0.9s ease-in-out infinite; }
+        .char-dying  { animation: char-dying 4.5s ease-in-out infinite; }
       `}</style>
     </div>
   );

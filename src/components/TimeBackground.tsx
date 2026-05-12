@@ -22,49 +22,38 @@ type Props = { theme?: TimeTheme };
 
 export default function TimeBackground({ theme }: Props) {
   const t = theme ?? themeFromHour(new Date().getHours());
+  const isDark = t === 'night' || t === 'evening';
 
-  // 设置 body 背景为时间主题渐变，离开页面时还原
   useEffect(() => {
     const prevBg = document.body.style.background;
     const prevAttach = document.body.style.backgroundAttachment;
     document.body.style.background = GRADIENTS[t];
     document.body.style.backgroundAttachment = 'fixed';
+    if (isDark) document.body.classList.add('theme-dark');
     return () => {
       document.body.style.background = prevBg;
       document.body.style.backgroundAttachment = prevAttach;
+      document.body.classList.remove('theme-dark');
     };
-  }, [t]);
-
-  // 暗色主题下文字颜色稍微提亮（让 muted 文字在深色背景上仍然可读）
-  const isDark = t === 'night' || t === 'evening';
+  }, [t, isDark]);
 
   return (
-    <>
-      <div
-        aria-hidden
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: -1,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
-        {t === 'dawn' && <DawnScene />}
-        {t === 'morning' && <MorningScene />}
-        {t === 'afternoon' && <AfternoonScene />}
-        {t === 'evening' && <EveningScene />}
-        {t === 'night' && <NightScene />}
-      </div>
-      {/* 暗色主题下：让顶部 page-header 文字白色，能在深色背景上看清 */}
-      {isDark && (
-        <style>{`
-          .page-header .page-title { color: #fff; }
-          .page-header .muted { color: rgba(255,255,255,0.85) !important; }
-          .page-header .icon-btn { background: rgba(255,255,255,0.18); color: #fff; }
-        `}</style>
-      )}
-    </>
+    <div
+      aria-hidden
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: -1,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}
+    >
+      {t === 'dawn' && <DawnScene />}
+      {t === 'morning' && <MorningScene />}
+      {t === 'afternoon' && <AfternoonScene />}
+      {t === 'evening' && <EveningScene />}
+      {t === 'night' && <NightScene />}
+    </div>
   );
 }
 

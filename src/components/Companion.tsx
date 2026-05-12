@@ -22,16 +22,20 @@ const MESSAGES = {
   encouraging: ['再喝一杯就追上啦', '我相信你，加油！', '别忘了喝水哦', '差一点就达标啦'],
   happy: ['节奏很棒，继续保持！', '做得很好哦', '今天的你最棒', '继续加油~'],
   idle: ['今天也要好好喝水', '我陪着你', '想喝水的时候就来找我', '记得喝水哦~'],
+  dying: ['好渴啊…快不行了…', '救命…给我水…', '我...快...枯死了...', '咕…喝口水吧…求你…'],
 } satisfies Record<Mood, string[]>;
 
 const computeMood = (args: {
   pct: number;
+  drunkMl: number;
   pace: 'behind' | 'on-track' | 'ahead' | null;
   minutesSinceLastDrink: number | null;
   drinkingPulse: boolean;
 }): Mood => {
   if (args.drinkingPulse) return 'drinking';
   if (args.pct >= 1) return 'celebrating';
+  // 今天还没喝水 → 濒死状态，等用户加水复活
+  if (args.drunkMl === 0) return 'dying';
   if (args.minutesSinceLastDrink === null || args.minutesSinceLastDrink > 90) return 'thirsty';
   if (args.pace === 'behind') return 'encouraging';
   if (args.pace === 'ahead') return 'happy';
@@ -61,8 +65,10 @@ export default function Companion({
   pace,
 }: Props) {
   const [drinkingPulse, setDrinkingPulse] = useState(false);
+  const [revivalBurst, setRevivalBurst] = useState(false);
   const [tick, setTick] = useState(0);
   const lastSeenTsRef = useRef<number | null>(null);
+  const wasDyingRef = useRef(true);
 
   useEffect(() => {
     if (lastEntryTs && lastEntryTs !== lastSeenTsRef.current) {
@@ -76,14 +82,27 @@ export default function Companion({
     }
   }, [lastEntryTs]);
 
+  // 复活：从「今天 0 ml」过渡到「有水」时，触发狂喜 emoji 爆发
+  useEffect(() => {
+    const wasDying = wasDyingRef.current;
+    const isReviving = wasDying && drunkMl > 0;
+    if (isReviving) {
+      setRevivalBurst(true);
+      const t = setTimeout(() => setRevivalBurst(false), 3000);
+      wasDyingRef.current = false;
+      return () => clearTimeout(t);
+    }
+    wasDyingRef.current = drunkMl === 0;
+  }, [drunkMl]);
+
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 25000);
     return () => clearInterval(t);
   }, []);
 
   const mood = useMemo(
-    () => computeMood({ pct, pace, minutesSinceLastDrink, drinkingPulse }),
-    [pct, pace, minutesSinceLastDrink, drinkingPulse],
+    () => computeMood({ pct, drunkMl, pace, minutesSinceLastDrink, drinkingPulse }),
+    [pct, drunkMl, pace, minutesSinceLastDrink, drinkingPulse],
   );
 
   const message = useMemo(
@@ -103,6 +122,24 @@ export default function Companion({
           <span className="fx-drop">💧</span>
           <span className="fx-drop fx-drop-2">💦</span>
           <span className="fx-drop fx-drop-3">💧</span>
+        </div>
+      )}
+      {revivalBurst && (
+        <div className="revive-fx" aria-hidden>
+          {['💧','✨','🎉','🌈','💖','🌟','🎊','💫'].map((emoji, i) => (
+            <span
+              key={i}
+              className="fx-revive"
+              style={{
+                left: '50%',
+                top: '40%',
+                animationDelay: `${i * 0.08}s`,
+                ['--ang' as any]: `${(i * 45)}deg`,
+              }}
+            >
+              {emoji}
+            </span>
+          ))}
         </div>
       )}
 
@@ -162,6 +199,26 @@ export default function Companion({
           0%   { opacity: 0; transform: translateY(0) scale(0.6); }
           25%  { opacity: 1; transform: translateY(-12px) scale(1); }
           100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+        }
+
+        /* 复活爆发：emoji 从中心向 8 个方向飞散 */
+        .revive-fx {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          overflow: visible;
+        }
+        .fx-revive {
+          position: absolute;
+          font-size: 26px;
+          transform: translate(-50%, -50%);
+          animation: fx-burst 1.6s cubic-bezier(.2,.8,.2,1) forwards;
+          opacity: 0;
+        }
+        @keyframes fx-burst {
+          0%   { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(0) rotate(calc(-1 * var(--ang))) scale(0.4); }
+          20%  { opacity: 1; }
+          100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(-120px) rotate(calc(-1 * var(--ang))) scale(1.2); }
         }
       `}</style>
     </div>

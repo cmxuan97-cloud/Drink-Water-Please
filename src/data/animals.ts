@@ -58,12 +58,28 @@ export const ANIMALS: Animal[] = [
   { id: 'a-penguin', name: '企鹅波波', emoji: '🐧', hint: '冰天雪地里的小绅士', customArt: 'penguin' },
 ];
 
+// === Token 解锁系统 ===
+// 每 2 天达标 → 获得 1 个解锁机会（token）
+// starter（kiwi）永久免费，不消耗 token
+// 用户在 collection 页用 token 选解锁哪只动物
+
+/** 累计获得的 token 总数 */
+export const earnedTokens = (completedDays: number): number =>
+  Math.floor(completedDays / 2);
+
+/** 当前可用 token = 累计获得 - 已用（已解锁数 - 1 个 starter） */
+export const availableTokens = (completedDays: number, unlockedCount: number): number =>
+  Math.max(0, earnedTokens(completedDays) - Math.max(0, unlockedCount - 1));
+
+/** 距离下一个 token 还需几天 */
+export const daysToNextToken = (completedDays: number): number => {
+  const next = (Math.floor(completedDays / 2) + 1) * 2;
+  return next - completedDays;
+};
+
+// 保留旧 API 供个别地方继续用（已解锁数显示）
 export const unlockCount = (completedDays: number): number => {
   return Math.min(ANIMALS.length, 1 + Math.floor(completedDays / 2));
 };
 
-export const daysToNextUnlock = (completedDays: number): number => {
-  if (unlockCount(completedDays) >= ANIMALS.length) return 0;
-  const next = (Math.floor(completedDays / 2) + 1) * 2;
-  return next - completedDays;
-};
+export const daysToNextUnlock = daysToNextToken;

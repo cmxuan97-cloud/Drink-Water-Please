@@ -11,7 +11,8 @@ import {
   setNotifyMode,
   syncSettingsToServer,
 } from '../lib/push';
-import { ANIMALS, unlockCount } from '../data/animals';
+import { ANIMALS } from '../data/animals';
+import { ensureUnlockedMigration } from '../lib/storage';
 
 const NOTIFY_MODES: Array<{ value: NotifyMode; label: string; sub: string }> = [
   { value: 'easy', label: '轻松', sub: '90 min' },
@@ -34,7 +35,7 @@ export default function SettingsPage() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [expandedKey, setExpandedKey] = useState<'weight' | 'sleep' | null>(null);
 
-  const [completedDays, setCompletedDays] = useState(0);
+  const [unlockedCount, setUnlockedCount] = useState(1);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
@@ -43,7 +44,8 @@ export default function SettingsPage() {
     setS(getSettings());
     if ('Notification' in window) setPerm(Notification.permission);
     setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
-    setCompletedDays(getCompletedDays().length);
+    const days = getCompletedDays().length;
+    setUnlockedCount(ensureUnlockedMigration(days, ANIMALS.map((a) => a.id)).length);
     if (isPushSupported()) {
       getCurrentSubscription().then((sub) => setPushEnabled(!!sub));
     }
@@ -153,7 +155,7 @@ export default function SettingsPage() {
         >
           <span className="menu-icon">🦙</span>
           <span className="menu-title">我的小伙伴</span>
-          <span className="menu-value">{unlockCount(completedDays)} / {ANIMALS.length}</span>
+          <span className="menu-value">{unlockedCount} / {ANIMALS.length}</span>
           <span className="menu-arrow">›</span>
         </button>
       </div>
