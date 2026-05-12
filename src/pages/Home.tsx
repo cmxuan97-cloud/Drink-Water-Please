@@ -1,0 +1,231 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import AnimalIcon from '../components/AnimalIcon';
+import Companion from '../components/Companion';
+import EntryList from '../components/EntryList';
+import { Container, Entry, Settings } from '../types';
+import {
+  deleteEntry,
+  getCompanionId,
+  getCompletedDays,
+  getContainers,
+  getEntries,
+  getSettings,
+  markDayCompleted,
+  pruneOldPhotos,
+} from '../lib/storage';
+import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
+import { reschedule } from '../lib/reminders';
+import { ANIMALS, unlockCount } from '../data/animals';
+
+const greetingFor = (h: number): string => {
+  if (h < 5) return '夜深啦';
+  if (h < 11) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  return '晚上好';
+};
+
+export default function Home() {
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [companionId, setCompanionIdLocal] = useState<string | null>(null);
+
+  useEffect(() => {
+    pruneOldPhotos();
+    setSettings(getSettings());
+    setContainers(getContainers());
+    setEntries(getEntries());
+    setCompanionIdLocal(getCompanionId());
+  }, []);
+
+  const goalMl = useMemo(
+    () => (settings ? dailyGoalMl(settings.weightKg) : 0),
+    [settings],
+  );
+  const progress = useMemo(() => calcProgress(entries, goalMl), [entries, goalMl]);
+
+  const paceInfo = useMemo(() => {
+    if (!settings) return null;
+    return pace(progress.drunkMl, goalMl, settings.wakeHour, settings.sleepHour);
+  }, [settings, progress.drunkMl, goalMl]);
+
+  useEffect(() => {
+    if (!settings) return;
+    reschedule({
+      drunkMl: progress.drunkMl,
+      goalMl,
+      wakeHour: settings.wakeHour,
+      sleepHour: settings.sleepHour,
+      enabled: settings.notificationsEnabled,
+    });
+  }, [settings, progress.drunkMl, goalMl]);
+
+  const [newUnlock, setNewUnlock] = useState<typeof ANIMALS[number] | null>(null);
+  useEffect(() => {
+    if (!settings || goalMl === 0) return;
+    if (progress.pct < 1) return;
+    const { added, days } = markDayCompleted();
+    if (added) {
+      const count = unlockCount(days.length);
+      const prevCount = unlockCount(days.length - 1);
+      if (count > prevCount) {
+        setNewUnlock(ANIMALS[count - 1]);
+      }
+    }
+  }, [progress.pct, settings, goalMl]);
+
+  // Pick companion: explicit selection → fall back to latest unlocked
+  const companion = useMemo(() => {
+    const completedDays = getCompletedDays().length;
+    const unlocked = ANIMALS.slice(0, unlockCount(completedDays));
+    const fromSetting = companionId ? unlocked.find((a) => a.id === companionId) : undefined;
+    return fromSetting ?? unlocked[unlocked.length - 1] ?? ANIMALS[0];
+  }, [companionId]);
+
+  const lastEntryTs = entries[0]?.ts ?? null;
+  const minutesSinceLastDrink = lastEntryTs
+    ? Math.floor((Date.now() - lastEntryTs) / 60000)
+    : null;
+
+  const onDelete = (id: string) => {
+    setEntries(deleteEntry(id));
+  };
+
+  if (!settings) return null;
+
+  const greeting = greetingFor(new Date().getHours());
+
+  return (
+    <div className="page">
+      <header className="page-header">
+        <div>
+          <div className="muted" style={{ fontSize: 13 }}>{greeting}，今天</div>
+          <h1 className="page-title">和{companion.name.slice(0, 3)}一起喝水</h1>
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <Link to="/collection" className="icon-btn" aria-label="收藏">🦙</Link>
+          <Link to="/settings" className="icon-btn" aria-label="设置">⚙️</Link>
+        </div>
+      </header>
+
+      {/* Stats + horizontal progress */}
+      <div className="hero-block">
+        <div className="row-between">
+          <div>
+            <div className="muted" style={{ fontSize: 12 }}>已喝 / 目标</div>
+            <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+              {progress.drunkMl}
+              <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-soft)' }}> / {goalMl} ml</span>
+            </div>
+          </div>
+          <div className="tag">
+            {progress.pct >= 1 ? '🎉 达标' : `还差 ${progress.remainingMl} ml`}
+          </div>
+        </div>
+
+        <div
+          style={{
+            height: 10,
+            background: 'var(--accent-soft)',
+            borderRadius: 999,
+            overflow: 'hidden',
+            marginTop: 14,
+          }}
+        >
+          <div
+            style={{
+              width: `${Math.min(100, progress.pct * 100)}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #7dd3fc, #3aa6dd)',
+              borderRadius: 999,
+              transition: 'width 0.6s cubic-bezier(.2,.7,.2,1)',
+            }}
+          />
+        </div>
+
+        {/* Companion */}
+        <div style={{ marginTop: 16 }}>
+          <Companion
+            animal={companion}
+            lastEntryTs={lastEntryTs}
+            drunkMl={progress.drunkMl}
+            remainingMl={progress.remainingMl}
+            goalMl={goalMl}
+            pct={progress.pct}
+            minutesSinceLastDrink={minutesSinceLastDrink}
+            pace={paceInfo?.pace ?? null}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="row-between" style={{ marginBottom: 10, paddingLeft: 4 }}>
+          <h2 style={{ fontSize: 17, margin: 0, fontWeight: 700 }}>今日记录</h2>
+          <span className="muted">{entries.length} 条</span>
+        </div>
+        <EntryList entries={entries} containers={containers} onDelete={onDelete} />
+      </div>
+
+      <div className="fab">
+        <Link to="/add" className="btn btn-full" style={{ fontSize: 17 }}>
+          + 加一杯水
+        </Link>
+      </div>
+
+      {newUnlock && (
+        <div
+          onClick={() => setNewUnlock(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(20, 40, 60, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: 28,
+              padding: 28,
+              maxWidth: 320,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: 1 }}>
+              🎉 新伙伴解锁
+            </div>
+            <div style={{ marginTop: 10, marginBottom: 6, display: 'flex', justifyContent: 'center' }}>
+              <AnimalIcon animal={newUnlock} size={110} />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>{newUnlock.name}</div>
+            <div className="muted" style={{ marginTop: 6 }}>欢迎加入喝水小队！</div>
+            <Link
+              to="/collection"
+              className="btn btn-full"
+              style={{ marginTop: 18 }}
+              onClick={() => setNewUnlock(null)}
+            >
+              查看全部伙伴
+            </Link>
+            <button
+              className="btn-pill"
+              style={{ marginTop: 10, background: 'transparent', boxShadow: 'none' }}
+              onClick={() => setNewUnlock(null)}
+            >
+              先不看
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
