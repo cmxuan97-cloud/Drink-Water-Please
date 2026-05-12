@@ -15,7 +15,6 @@ import {
   pruneOldPhotos,
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
-import { reschedule } from '../lib/reminders';
 import { ANIMALS, unlockCount } from '../data/animals';
 
 const greetingFor = (h: number): string => {
@@ -49,17 +48,6 @@ export default function Home() {
   const paceInfo = useMemo(() => {
     if (!settings) return null;
     return pace(progress.drunkMl, goalMl, settings.wakeHour, settings.sleepHour);
-  }, [settings, progress.drunkMl, goalMl]);
-
-  useEffect(() => {
-    if (!settings) return;
-    reschedule({
-      drunkMl: progress.drunkMl,
-      goalMl,
-      wakeHour: settings.wakeHour,
-      sleepHour: settings.sleepHour,
-      enabled: settings.notificationsEnabled,
-    });
   }, [settings, progress.drunkMl, goalMl]);
 
   const [newUnlock, setNewUnlock] = useState<typeof ANIMALS[number] | null>(null);

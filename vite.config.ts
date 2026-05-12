@@ -86,6 +86,9 @@ export default defineConfig(({ mode }) => {
       react(),
       geminiProxy(env.GEMINI_API_KEY),
       VitePWA({
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'icon.svg'],
         manifest: {
@@ -103,13 +106,12 @@ export default defineConfig(({ mode }) => {
             { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
           ],
         },
-        workbox: {
+        injectManifest: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//],
         },
         devOptions: {
           enabled: false,
+          type: 'module',
         },
       }),
     ],

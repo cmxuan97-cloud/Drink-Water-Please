@@ -5,6 +5,7 @@ const K_CONTAINERS = 'dw:containers';
 const K_ENTRY_PREFIX = 'dw:entries:';
 const K_COMPLETED = 'dw:completedDays';
 const K_COMPANION = 'dw:companionId';
+const K_CLIENT_ID = 'dw:clientId';
 
 const todayKey = (d = new Date()): string => {
   const y = d.getFullYear();
@@ -66,6 +67,15 @@ export const deleteEntry = (id: string, date = new Date()): Entry[] => {
 
 export const newId = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+export const getOrCreateClientId = (): string => {
+  let id = localStorage.getItem(K_CLIENT_ID);
+  if (!id) {
+    id = (crypto.randomUUID?.() ?? `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
+    localStorage.setItem(K_CLIENT_ID, id);
+  }
+  return id;
+};
 
 export const getCompletedDays = (): string[] => {
   return safeParse<string[]>(localStorage.getItem(K_COMPLETED), []);

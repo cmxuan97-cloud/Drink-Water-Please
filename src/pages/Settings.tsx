@@ -3,7 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { DEFAULT_SETTINGS, Settings as TSettings } from '../types';
 import { getCompletedDays, getSettings, saveSettings } from '../lib/storage';
 import { dailyGoalMl } from '../lib/goal';
-import { requestPermission } from '../lib/reminders';
+import {
+  disablePush,
+  enablePush,
+  getCurrentSubscription,
+  isPushSupported,
+  sendTestPush,
+  syncSettingsToServer,
+} from '../lib/push';
 import { ANIMALS, unlockCount } from '../data/animals';
 
 const hourToTime = (h: number): string => `${String(h).padStart(2, '0')}:00`;
@@ -21,27 +28,63 @@ export default function SettingsPage() {
   const [expandedKey, setExpandedKey] = useState<'weight' | 'sleep' | null>(null);
 
   const [completedDays, setCompletedDays] = useState(0);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setS(getSettings());
     if ('Notification' in window) setPerm(Notification.permission);
     setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
     setCompletedDays(getCompletedDays().length);
+    if (isPushSupported()) {
+      getCurrentSubscription().then((sub) => setPushEnabled(!!sub));
+    }
   }, []);
 
   const update = (patch: Partial<TSettings>) => {
     const next = { ...s, ...patch };
     setS(next);
     saveSettings(next);
+    // 设置变了 → 同步到服务端（如果已订阅）
+    if (pushEnabled && (patch.wakeHour !== undefined || patch.sleepHour !== undefined)) {
+      syncSettingsToServer().catch(() => {});
+    }
   };
 
   const onToggleNotif = async () => {
-    if (!s.notificationsEnabled) {
-      const p = await requestPermission();
-      setPerm(p);
-      if (p === 'granted') update({ notificationsEnabled: true });
-    } else {
-      update({ notificationsEnabled: false });
+    setPushMsg(null);
+    setPushBusy(true);
+    try {
+      if (!pushEnabled) {
+        await enablePush();
+        setPushEnabled(true);
+        setPerm('granted');
+        update({ notificationsEnabled: true });
+        setPushMsg('✅ 已订阅，等下个整点会收到');
+      } else {
+        await disablePush();
+        setPushEnabled(false);
+        update({ notificationsEnabled: false });
+        setPushMsg('已关闭推送');
+      }
+    } catch (e) {
+      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 操作失败');
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const onTestPush = async () => {
+    setPushMsg(null);
+    setPushBusy(true);
+    try {
+      const r = await sendTestPush();
+      setPushMsg(r.ok ? `✅ 已发出${r.sent ? `（${r.sent} 条）` : ''}，几秒内查看通知` : `❌ ${r.error || '失败'}`);
+    } catch (e) {
+      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 失败');
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -157,24 +200,49 @@ export default function SettingsPage() {
       <div className="card-tinted card-mint">
         <div className="row-between">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>⏰ 提醒</div>
+            <div style={{ fontWeight: 700, fontSize: 17 }}>⏰ 推送提醒</div>
             <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
-              智能提醒 · 按进度调整
+              app 关闭也能收 · 服务端推
             </div>
             <div style={{ fontSize: 12, marginTop: 2, opacity: 0.7 }}>
-              落后 60min · 持平 75min · 超前 90min
+              整点触发 · 你设的作息时间内才发
             </div>
           </div>
-          <button className={s.notificationsEnabled ? 'btn-pill btn-pill-active' : 'btn-pill'} onClick={onToggleNotif}>
-            {s.notificationsEnabled ? '已开' : '开启'}
+          <button
+            className={pushEnabled ? 'btn-pill btn-pill-active' : 'btn-pill'}
+            onClick={onToggleNotif}
+            disabled={pushBusy}
+            style={{ opacity: pushBusy ? 0.5 : 1 }}
+          >
+            {pushBusy ? '...' : pushEnabled ? '已开' : '开启'}
           </button>
         </div>
         <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
           权限：{perm === 'granted' ? '✅ 已开启' : perm === 'denied' ? '❌ 已拒绝（请到系统设置）' : '⚪ 未设置'}
         </div>
+        {pushEnabled && (
+          <button
+            className="btn-pill"
+            onClick={onTestPush}
+            disabled={pushBusy}
+            style={{ marginTop: 10, background: 'rgba(255,255,255,0.7)' }}
+          >
+            🧪 发一条测试推送
+          </button>
+        )}
+        {pushMsg && (
+          <div style={{ fontSize: 12, marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.6)', borderRadius: 8 }}>
+            {pushMsg}
+          </div>
+        )}
         {!isStandalone && (
           <div className="banner" style={{ marginTop: 10, background: 'rgba(255, 255, 255, 0.6)' }}>
-            📱 iPhone 请用 Safari「分享 → 添加到主屏幕」打开，通知才会工作
+            📱 iPhone 必须用 Safari「分享 → 添加到主屏幕」从主屏图标打开，推送才会工作（iOS 16.4+）
+          </div>
+        )}
+        {!isPushSupported() && (
+          <div className="warn" style={{ marginTop: 10 }}>
+            当前浏览器不支持 Web Push
           </div>
         )}
       </div>
