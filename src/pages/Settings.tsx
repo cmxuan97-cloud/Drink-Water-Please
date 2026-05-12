@@ -241,41 +241,43 @@ export default function SettingsPage() {
           权限：{perm === 'granted' ? '✅ 已开启' : perm === 'denied' ? '❌ 已拒绝（请到系统设置）' : '⚪ 未设置'}
         </div>
 
-        {/* 频率 picker — 已订阅时才显示 */}
-        {pushEnabled && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>提醒频率</div>
-            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-              {NOTIFY_MODES.map((m) => {
-                const active = (s.notifyMode ?? 'standard') === m.value;
-                return (
-                  <button
-                    key={m.value}
-                    onClick={() => onPickMode(m.value)}
-                    disabled={pushBusy}
-                    className={active ? 'btn-pill btn-pill-active' : 'btn-pill'}
-                    style={{
-                      flex: 1,
-                      minWidth: 64,
-                      flexDirection: 'column',
-                      gap: 2,
-                      padding: '10px 8px',
-                      background: active ? undefined : 'rgba(255,255,255,0.7)',
-                    }}
-                  >
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{m.label}</span>
-                    <span style={{ fontSize: 11, opacity: 0.85 }}>{m.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {(s.notifyMode ?? 'standard') === 'smart' && (
-              <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
-                💡 落后会更频繁，超前会拉间隔，达标后不再打扰
-              </div>
-            )}
+        {/* 频率 picker — 始终显示，让用户可以预先选择 */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
+            提醒频率{!pushEnabled && '（开启推送后生效）'}
           </div>
-        )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+            {NOTIFY_MODES.map((m) => {
+              const active = (s.notifyMode ?? 'standard') === m.value;
+              return (
+                <button
+                  key={m.value}
+                  onClick={() => onPickMode(m.value)}
+                  disabled={pushBusy}
+                  className={active ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                    padding: '10px 4px',
+                    background: active ? undefined : 'rgba(255,255,255,0.7)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{m.label}</span>
+                  <span style={{ fontSize: 11, opacity: 0.85 }}>{m.sub}</span>
+                </button>
+              );
+            })}
+          </div>
+          {(s.notifyMode ?? 'standard') === 'smart' && (
+            <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
+              💡 落后会更频繁，超前会拉间隔，达标后不再打扰
+            </div>
+          )}
+        </div>
 
         {pushEnabled && (
           <button
