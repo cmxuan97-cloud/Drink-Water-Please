@@ -38,6 +38,14 @@ export const getContainers = (): Container[] => {
     saveContainers(DEFAULT_CONTAINERS);
     return DEFAULT_CONTAINERS;
   }
+  // 迁移：自动补上用户没有的默认容器（新加的 ID）
+  const existingIds = new Set(list.map((c) => c.id));
+  const missing = DEFAULT_CONTAINERS.filter((c) => !existingIds.has(c.id));
+  if (missing.length > 0) {
+    const merged = [...list, ...missing];
+    saveContainers(merged);
+    return merged;
+  }
   return list;
 };
 

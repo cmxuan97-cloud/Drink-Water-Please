@@ -1649,6 +1649,19 @@ const CHARACTERS: Record<CharacterId, Spec> = {
   },
 };
 
+/** 把 viewBox 规整成方形 — 短边两侧均匀补空白，保持原内容居中。
+ *  这样所有动物的 SVG 容器尺寸 + 内容位置都一致，不会有的大有的小。 */
+const squareViewBox = (vb: string): string => {
+  const parts = vb.trim().split(/\s+/).map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) return vb;
+  const [x, y, w, h] = parts;
+  if (w === h) return vb;
+  const size = Math.max(w, h);
+  const dx = (size - w) / 2;
+  const dy = (size - h) / 2;
+  return `${x - dx} ${y - dy} ${size} ${size}`;
+};
+
 const animClassFor = (mood: Mood): string => {
   if (mood === 'thirsty') return 'char-wobble';
   if (mood === 'drinking') return 'char-drink';
@@ -1671,8 +1684,24 @@ export default function Character({ id, mood = 'idle', size = 200, static: isSta
   const cls = isStatic ? 'char-static' : `char-wrap ${animClassFor(mood)}`;
 
   return (
-    <div className={cls} style={{ width: size, display: 'inline-block' }}>
-      <svg viewBox={spec.viewBox} width="100%" style={{ display: 'block', overflow: 'visible' }} aria-hidden>
+    <div
+      className={cls}
+      style={{
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <svg
+        viewBox={squareViewBox(spec.viewBox)}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: 'block', overflow: 'visible' }}
+        aria-hidden
+      >
         {spec.render(eyeClosed)}
       </svg>
       <style>{`
