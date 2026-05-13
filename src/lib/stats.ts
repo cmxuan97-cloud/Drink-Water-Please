@@ -71,13 +71,17 @@ export type Summary = {
   totalMl: number;
   daysHit: number;     // 达标天数
   daysTotal: number;
+  daysWithRecord: number;
   avgPerDay: number;
   bestDay: { date: string; ml: number } | null;
+  currentStreak: number;     // 从最近一天往回数的连续达标天
+  longestStreak: number;     // 整段时间内最长连击
 };
 
 export const summarize = (stats: DayStat[], goalMl: number): Summary => {
   const totalMl = stats.reduce((s, d) => s + d.drunkMl, 0);
-  const daysHit = stats.filter((d) => d.drunkMl >= goalMl && d.drunkMl > 0).length;
+  const isHit = (d: DayStat): boolean => d.drunkMl >= goalMl && d.drunkMl > 0;
+  const daysHit = stats.filter(isHit).length;
   const daysWithRecord = stats.filter((d) => d.drunkMl > 0).length;
   const avgPerDay = daysWithRecord > 0 ? Math.round(totalMl / daysWithRecord) : 0;
   let best: { date: string; ml: number } | null = null;
@@ -85,7 +89,62 @@ export const summarize = (stats: DayStat[], goalMl: number): Summary => {
     if (!best || d.drunkMl > best.ml) best = { date: d.date, ml: d.drunkMl };
   }
   if (best && best.ml === 0) best = null;
-  return { totalMl, daysHit, daysTotal: stats.length, avgPerDay, bestDay: best };
+
+  // 当前连击：从最后一天往回数
+  let currentStreak = 0;
+  for (let i = stats.length - 1; i >= 0; i--) {
+    if (isHit(stats[i])) currentStreak++;
+    else break;
+  }
+  // 最长连击
+  let longestStreak = 0;
+  let run = 0;
+  for (const d of stats) {
+    if (isHit(d)) {
+      run++;
+      if (run > longestStreak) longestStreak = run;
+    } else {
+      run = 0;
+    }
+  }
+
+  return {
+    totalMl,
+    daysHit,
+    daysTotal: stats.length,
+    daysWithRecord,
+    avgPerDay,
+    bestDay: best,
+    currentStreak,
+    longestStreak,
+  };
+};
+
+/** 拿前一段同长度的 stats 用作环比 */
+export const getPreviousPeriodStats = (days: number, endDate = new Date()): DayStat[] => {
+  const end = new Date(endDate);
+  end.setDate(end.getDate() - days);
+  return getDayStats(days, end);
+};
+
+/** 拿当月所有日期（1 号到月末） */
+export const getCurrentMonthDates = (today = new Date()): Date[] => {
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: lastDay }, (_, i) => new Date(year, month, i + 1));
+};
+
+/** 拿当月所有日期的 stats（按日期 key 索引） */
+export const getCurrentMonthStats = (today = new Date()): Map<string, number> => {
+  const dates = getCurrentMonthDates(today);
+  const map = new Map<string, number>();
+  for (const d of dates) {
+    const key = `dw:entries:${dateKey(d)}`;
+    const entries = safeParse<Entry[]>(localStorage.getItem(key), []);
+    map.set(dateKey(d), entries.reduce((s, e) => s + e.ml, 0));
+  }
+  return map;
 };
 
 /** 格式化日期为「周一」「3/12」这种短形式 */
