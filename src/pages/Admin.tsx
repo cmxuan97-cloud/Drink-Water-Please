@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, AlertTriangle, Bell, BarChart3, Cloud, Droplet,
-  Key, LogIn, RefreshCw, Target, TrendingUp, User, Users,
+  Key, LogIn, RefreshCw, Target, Trash2, TrendingUp, User, Users,
 } from 'lucide-react';
 
 type Stats = {
@@ -52,6 +52,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<'recent' | 'drunk' | 'fails'>('recent');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchAll = async (sec: string, sortBy: string) => {
     setLoading(true);
@@ -99,6 +101,31 @@ export default function Admin() {
   const onLogin = (e: React.FormEvent) => {
     e.preventDefault();
     void fetchAll(secret, sort);
+  };
+
+  const PROTECTED = new Set(['kiwi', 'mingxuan97']);
+
+  const onDeleteUser = async (u: UserRow) => {
+    const label = u.username ? `@${u.username}` : u.clientId.slice(0, 12) + '…';
+    if (!window.confirm(`确定要删除 ${label} 的所有数据吗？此操作不可恢复。`)) return;
+    setDeletingId(u.clientId);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/admin/delete-user?secret=${encodeURIComponent(secret)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: u.clientId }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `删除失败 ${res.status}`);
+      }
+      setUsers((prev) => prev.filter((r) => r.clientId !== u.clientId));
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const onLogout = () => {
@@ -272,8 +299,17 @@ export default function Admin() {
               </div>
             </div>
 
+            {deleteError && (
+              <div className="warn" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <AlertTriangle size={13} /> {deleteError}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {users.map((u) => (
+              {users.map((u) => {
+                const isProtected = u.username ? PROTECTED.has(u.username) : false;
+                const isDeleting = deletingId === u.clientId;
+                return (
                 <div key={u.clientId} className="admin-user-row">
                   <div className="row-between">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -287,12 +323,28 @@ export default function Admin() {
                       {u.hasPush && <Bell size={11} style={{ color: '#16a34a' }} />}
                       {u.hasState && <Cloud size={11} style={{ color: '#3b82f6' }} />}
                     </div>
-                    {u.todayPct !== null && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 600,
-                        color: u.todayPct >= 100 ? '#16a34a' : u.todayPct >= 50 ? '#eab308' : '#dc2626',
-                      }}>{u.todayPct}%</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {u.todayPct !== null && (
+                        <span style={{
+                          fontSize: 11, fontWeight: 600,
+                          color: u.todayPct >= 100 ? '#16a34a' : u.todayPct >= 50 ? '#eab308' : '#dc2626',
+                        }}>{u.todayPct}%</span>
+                      )}
+                      <button
+                        onClick={() => onDeleteUser(u)}
+                        disabled={isProtected || isDeleting || deletingId !== null}
+                        title={isProtected ? '受保护账号' : '删除该用户所有数据'}
+                        style={{
+                          background: 'none', border: 'none', cursor: isProtected ? 'not-allowed' : 'pointer',
+                          padding: '2px 4px', borderRadius: 6, opacity: isProtected ? 0.25 : 1,
+                          color: '#dc2626', display: 'flex', alignItems: 'center',
+                        }}
+                      >
+                        {isDeleting
+                          ? <RefreshCw size={13} className="spin" />
+                          : <Trash2 size={13} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="row-between muted" style={{ fontSize: 11, marginTop: 4 }}>
                     <span>
@@ -309,7 +361,8 @@ export default function Admin() {
                     </span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {users.length === 0 && (
                 <div className="muted" style={{ fontSize: 12, textAlign: 'center', padding: 16 }}>
                   暂无用户数据
