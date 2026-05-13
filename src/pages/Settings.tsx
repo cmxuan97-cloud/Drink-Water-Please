@@ -52,6 +52,12 @@ export default function SettingsPage() {
   const [authUsername, setAuthUsername] = useState<string | null>(null);
   const [authDisplayName, setAuthDisplayName] = useState<string | null>(null);
   const [showAuthPanel, setShowAuthPanel] = useState<'none' | 'register' | 'login'>('none');
+  // 「账号」整张卡片默认收起，点了才展开里面所有控件
+  const [accountExpanded, setAccountExpanded] = useState(false);
+  // 「云备份」整张卡片默认收起
+  const [backupExpanded, setBackupExpanded] = useState(false);
+  // 「频率 picker」默认收起，点了才展开 4 个 pill
+  const [freqExpanded, setFreqExpanded] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMsg, setAuthMsg] = useState<string | null>(null);
   const [regUsername, setRegUsername] = useState('');
@@ -321,16 +327,13 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* reminder card with mint accent */}
+      {/* reminder card with mint accent — 默认收紧，频率 picker 折叠 */}
       <div className="card-tinted card-mint">
         <div className="row-between">
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 17 }}>⏰ 推送提醒</div>
-            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
-              app 关闭也能收 · 服务端推
-            </div>
-            <div style={{ fontSize: 12, marginTop: 2, opacity: 0.7 }}>
-              整点触发 · 你设的作息时间内才发
+            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.78 }}>
+              app 关闭也能收 · 整点触发 · 作息时段内才发
             </div>
           </div>
           <button
@@ -342,56 +345,91 @@ export default function SettingsPage() {
             {pushBusy ? '...' : pushEnabled ? '已开' : '开启'}
           </button>
         </div>
-        <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
-          权限：{perm === 'granted' ? '✅ 已开启' : perm === 'denied' ? '❌ 已拒绝（请到系统设置）' : '⚪ 未设置'}
-        </div>
 
-        {/* 频率 picker — 始终显示，让用户可以预先选择 */}
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
-            提醒频率{!pushEnabled && '（开启推送后生效）'}
+        {/* 权限提示只在出问题时显示 */}
+        {perm === 'denied' && (
+          <div style={{ fontSize: 12, marginTop: 8, opacity: 0.85 }}>
+            ❌ 系统层面已拒绝 — 去 iPhone 设置 → Safari/PWA → 通知开启
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-            {NOTIFY_MODES.map((m) => {
-              const active = (s.notifyMode ?? 'standard') === m.value;
-              return (
-                <button
-                  key={m.value}
-                  onClick={() => onPickMode(m.value)}
-                  disabled={pushBusy}
-                  className={active ? 'btn-pill btn-pill-active' : 'btn-pill'}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 2,
-                    padding: '10px 4px',
-                    background: active ? undefined : 'rgba(255,255,255,0.7)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{m.label}</span>
-                  <span style={{ fontSize: 11, opacity: 0.85 }}>{m.sub}</span>
-                </button>
-              );
-            })}
-          </div>
-          {(s.notifyMode ?? 'standard') === 'smart' && (
-            <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
-              💡 落后会更频繁，超前会拉间隔，达标后不再打扰
-            </div>
-          )}
-        </div>
+        )}
+
+        {/* 频率：折叠成一行；点击展开 4 个 pill */}
+        {pushEnabled && (
+          <>
+            <button
+              onClick={() => setFreqExpanded((v) => !v)}
+              className="btn-pill"
+              style={{
+                marginTop: 10,
+                width: '100%',
+                background: 'rgba(255,255,255,0.6)',
+                fontSize: 12,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px 14px',
+              }}
+            >
+              <span>
+                提醒频率：
+                <strong style={{ marginLeft: 6 }}>
+                  {NOTIFY_MODES.find((m) => m.value === (s.notifyMode ?? 'standard'))?.label}
+                </strong>
+                <span style={{ opacity: 0.7, marginLeft: 6 }}>
+                  · {NOTIFY_MODES.find((m) => m.value === (s.notifyMode ?? 'standard'))?.sub}
+                </span>
+              </span>
+              <span style={{ opacity: 0.5, fontSize: 11 }}>
+                {freqExpanded ? '收起 ▴' : '改 ▾'}
+              </span>
+            </button>
+            {freqExpanded && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                  {NOTIFY_MODES.map((m) => {
+                    const active = (s.notifyMode ?? 'standard') === m.value;
+                    return (
+                      <button
+                        key={m.value}
+                        onClick={() => onPickMode(m.value)}
+                        disabled={pushBusy}
+                        className={active ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 2,
+                          padding: '10px 4px',
+                          background: active ? undefined : 'rgba(255,255,255,0.7)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{m.label}</span>
+                        <span style={{ fontSize: 11, opacity: 0.85 }}>{m.sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {(s.notifyMode ?? 'standard') === 'smart' && (
+                  <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
+                    💡 落后会更频繁，超前会拉间隔，达标后不再打扰
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         {pushMsg && (
           <div style={{ fontSize: 12, marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.6)', borderRadius: 8 }}>
             {pushMsg}
           </div>
         )}
-        {!isStandalone && (
-          <div className="banner" style={{ marginTop: 10, background: 'rgba(255, 255, 255, 0.6)' }}>
-            📱 iPhone 必须用 Safari「分享 → 添加到主屏幕」从主屏图标打开，推送才会工作（iOS 16.4+）
+        {/* iPhone 安装提示：只在没装到主屏 & 也还没开推送时给（开了再说就晚了） */}
+        {!isStandalone && !pushEnabled && (
+          <div className="banner" style={{ marginTop: 10, background: 'rgba(255, 255, 255, 0.6)', fontSize: 12 }}>
+            📱 iPhone 要从主屏 PWA 打开，推送才工作（Safari → 分享 → 添加到主屏幕）
           </div>
         )}
         {!isPushSupported() && (
@@ -401,15 +439,41 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* === 账号 === */}
+      {/* === 账号 === 默认收起，点 header 展开 */}
       <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%)' }}>
+        <button
+          onClick={() => setAccountExpanded((v) => !v)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 17 }}>
+              👤 {authUsername ? `已登录 · @${authUsername}` : '账号'}
+            </div>
+            <div style={{ fontSize: 12, marginTop: 2, opacity: 0.75 }}>
+              {authUsername ? '跨设备同步已开' : '注册账号 → 跨设备同步、删 app 也不丢'}
+            </div>
+          </div>
+          <span style={{ opacity: 0.55, fontSize: 13 }}>{accountExpanded ? '▴' : '▾'}</span>
+        </button>
+
+        {accountExpanded && (
+          <div style={{ marginTop: 14 }}>
         {authUsername ? (
           // 已登录
           <>
             <div className="row-between">
               <div>
-                <div style={{ fontWeight: 700, fontSize: 17 }}>👤 已登录</div>
-                <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
+                <div style={{ fontSize: 13, opacity: 0.85 }}>
                   <strong>@{authUsername}</strong>
                   {authDisplayName && authDisplayName !== authUsername && ` · ${authDisplayName}`}
                 </div>
@@ -429,9 +493,7 @@ export default function SettingsPage() {
         ) : (
           // 未登录 → 引导注册或登录
           <>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>👤 没账号</div>
-            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>
-              注册账号可以在任何手机/电脑上登录拉回数据。<br/>
+            <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>
               <strong>建议你创建一个</strong> — 用户名 + 密码就行
             </div>
             {showAuthPanel === 'none' && (
@@ -541,14 +603,46 @@ export default function SettingsPage() {
             {authMsg}
           </div>
         )}
+          </div>
+        )}
       </div>
 
-      {/* === 云备份 === */}
+      {/* === 云备份 === 默认收起 */}
       <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
-        <div style={{ fontWeight: 700, fontSize: 17 }}>☁️ 云备份</div>
-        <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>
-          每次记水会自动备份到云端。<br/>
-          <strong>把备份码记下来</strong> — 删了 app / 换手机时输入它就能拉回全部数据
+        <button
+          onClick={() => setBackupExpanded((v) => !v)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 17 }}>☁️ 云备份</div>
+            <div style={{ fontSize: 12, marginTop: 2, opacity: 0.78 }}>
+              {lastSyncMin === null
+                ? '还未备份'
+                : lastSyncMin === 0
+                ? '刚刚备份'
+                : lastSyncMin < 60
+                ? `${lastSyncMin} 分钟前自动备份`
+                : `${Math.round(lastSyncMin / 60)} 小时前自动备份`}
+              {shortCode && ` · 备份码 ${shortCode}`}
+            </div>
+          </div>
+          <span style={{ opacity: 0.55, fontSize: 13 }}>{backupExpanded ? '▴' : '▾'}</span>
+        </button>
+
+        {backupExpanded && (
+          <div style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.5 }}>
+          每次记水自动备份。<strong>把备份码记下来</strong> — 删 app / 换手机输入它能拉回全部数据
         </div>
 
         <div style={{ marginTop: 12, padding: 14, background: 'rgba(255,255,255,0.92)', borderRadius: 14 }}>
@@ -698,6 +792,8 @@ export default function SettingsPage() {
             >
               {backupId}
             </div>
+          </div>
+        )}
           </div>
         )}
       </div>

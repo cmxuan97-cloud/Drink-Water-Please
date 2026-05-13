@@ -212,25 +212,42 @@ export default function Home() {
           </div>
         </div>
 
-        <div
-          style={{
-            height: 10,
-            background: 'var(--accent-soft)',
-            borderRadius: 999,
-            overflow: 'hidden',
-            marginTop: 14,
-          }}
-        >
-          <div
-            style={{
-              width: `${Math.min(100, progress.pct * 100)}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, #7dd3fc, #3aa6dd)',
-              borderRadius: 999,
-              transition: 'width 0.6s cubic-bezier(.2,.7,.2,1)',
-            }}
-          />
-        </div>
+        {(() => {
+          // 红黄绿渐变进度条：fill 显示 red→yellow→green 渐变。
+          // 关键：让渐变映射到「100% 目标」的宽度而不是 fill 自己的宽度，这样
+          // 50% 进度时只看到红→黄那一段，不会整条都"翻绿"。
+          const fillPct = Math.max(0, Math.min(100, progress.pct * 100));
+          const reached = progress.pct >= 1;
+          const bgScale = fillPct > 0 ? (100 / fillPct) * 100 : 100;
+          return (
+            <div
+              style={{
+                height: 12,
+                background: 'rgba(0,0,0,0.06)',
+                borderRadius: 999,
+                overflow: 'hidden',
+                marginTop: 14,
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  width: `${fillPct}%`,
+                  height: '100%',
+                  background: reached
+                    ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                    : 'linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #22c55e 100%)',
+                  backgroundSize: reached ? '100% 100%' : `${bgScale}% 100%`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'left center',
+                  borderRadius: 999,
+                  transition: 'width 0.6s cubic-bezier(.2,.7,.2,1), background-size 0.6s cubic-bezier(.2,.7,.2,1), background 0.4s ease',
+                  boxShadow: reached ? '0 0 12px rgba(34, 197, 94, 0.4)' : undefined,
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {/* Companion */}
         <div style={{ marginTop: 16 }}>
