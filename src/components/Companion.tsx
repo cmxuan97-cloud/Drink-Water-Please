@@ -388,18 +388,22 @@ export default function Companion({
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          padding-top: 8px;
+          padding-top: 88px;
         }
         .comp-bubble {
-          position: relative;
+          position: absolute;
+          top: 0;
+          left: 50%;
+          transform: translateX(-50%);
           background: white;
           border-radius: 20px;
           padding: 12px 18px;
-          box-shadow: var(--shadow-card);
+          box-shadow: 0 4px 18px rgba(31, 50, 80, 0.13);
+          border: 1px solid rgba(0, 0, 0, 0.06);
           font-size: 14px;
           font-weight: 500;
-          max-width: 240px;
+          width: max-content;
+          max-width: 260px;
           text-align: center;
           animation: bubble-pop 0.35s cubic-bezier(.2,1.4,.4,1);
           color: var(--text);
@@ -418,8 +422,8 @@ export default function Companion({
         }
         .comp-art { margin-top: 6px; }
         @keyframes bubble-pop {
-          0%   { opacity: 0; transform: scale(0.85) translateY(8px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
+          0%   { opacity: 0; transform: translateX(-50%) scale(0.85) translateY(8px); }
+          100% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
         }
         .drink-fx {
           position: absolute;
@@ -446,9 +450,9 @@ export default function Companion({
           animation: bubble-entrance 0.45s cubic-bezier(.2,1.5,.4,1);
         }
         @keyframes bubble-entrance {
-          0%   { opacity: 0; transform: scale(0.7) translateY(12px); }
-          60%  { transform: scale(1.06) translateY(-2px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
+          0%   { opacity: 0; transform: translateX(-50%) scale(0.7) translateY(12px); }
+          60%  { transform: translateX(-50%) scale(1.06) translateY(-2px); }
+          100% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
         }
 
         /* 入场动画爆发容器（dying & happy 共用） */

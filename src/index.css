@@ -135,8 +135,14 @@ a {
   box-shadow: var(--shadow-card);
 }
 
-.card-mint { background: var(--mint); color: var(--mint-text); }
-.card-sky { background: var(--sky); color: var(--accent-deep); }
+.card-mint {
+  background: rgba(211, 237, 220, 0.9);
+  color: var(--mint-text);
+}
+.card-sky {
+  background: rgba(191, 226, 241, 0.9);
+  color: var(--accent-deep);
+}
 
 .row {
   display: flex;
@@ -264,7 +270,7 @@ a {
   padding: 14px 16px;
   background: var(--bg-card);
   border-radius: 16px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 16px rgba(31, 50, 80, 0.08);
 }
 
 .list-item .grow {
@@ -276,7 +282,7 @@ a {
 .menu-group {
   background: var(--bg-card);
   border-radius: 18px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 6px 24px rgba(31, 50, 80, 0.09);
   overflow: hidden;
 }
 
@@ -287,7 +293,7 @@ a {
   padding: 14px 16px;
   background: var(--bg-card);
   border-radius: 18px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 6px 24px rgba(31, 50, 80, 0.09);
   font-size: 15px;
   color: var(--text);
   text-align: left;
@@ -389,7 +395,25 @@ a {
   animation: waveMove 2.5s linear infinite;
 }
 
-/* ===== 暗色主题（evening / night） — 卡片外的文字提亮，让深色背景上仍可读 ===== */
+/* ===== 暗色主题（evening / night） — 卡片用柔和暖色/冷色替代纯白 ===== */
+body.theme-dark .hero-block,
+body.theme-dark .card,
+body.theme-dark .list-item,
+body.theme-dark .menu-group,
+body.theme-dark .menu-row {
+  background: #fdf0e8;
+  color: var(--text);
+}
+body.theme-dark .card-mint {
+  background: #e8f5ee;
+  color: var(--mint-text);
+}
+body.theme-dark .card-sky {
+  background: #e8f0f8;
+  color: var(--accent-deep);
+}
+
+
 body.theme-dark .page-header .page-title { color: #fff; }
 body.theme-dark .page-header .muted { color: rgba(255, 255, 255, 0.85) !important; }
 body.theme-dark .page-header .back-btn { color: rgba(255, 255, 255, 0.95); }
@@ -420,7 +444,7 @@ body.theme-dark .page > div > div[class*='muted'] {
   background: var(--bg-card);
   border-radius: 28px;
   padding: 20px 18px 14px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 8px 32px rgba(31, 50, 80, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -432,6 +456,6 @@ body.theme-dark .page > div > div[class*='muted'] {
   right: -40px;
   width: 140px;
   height: 140px;
-  background: radial-gradient(circle, rgba(125, 211, 252, 0.35) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.25) 0%, transparent 70%);
   pointer-events: none;
 }

@@ -186,7 +186,7 @@ export default function Home() {
 
   return (
     <div className="page">
-      <TimeBackground />
+      <TimeBackground theme={(new URLSearchParams(window.location.search).get('theme') as any) || undefined} />
       <header className="page-header">
         <div>
           <div className="muted" style={{ fontSize: 13 }}>
@@ -202,7 +202,7 @@ export default function Home() {
       </header>
 
       {/* Stats + horizontal progress */}
-      <div className="hero-block">
+      <div className="hero-block" style={{ marginTop: 32 }}>
         <div className="row-between">
           <div>
             <div className="muted" style={{ fontSize: 12 }}>已喝 / 目标</div>
