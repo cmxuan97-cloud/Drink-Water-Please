@@ -42,17 +42,34 @@ export const saveSettings = (s: Settings): void => {
   triggerSync();
 };
 
+// 老 default 值 → 新 default 值的迁移表。只在用户没自己改过的情况下更新。
+const CAPACITY_MIGRATIONS: Array<{ id: string; oldCap: number; newCap: number }> = [
+  { id: 'c-glass', oldCap: 250, newCap: 300 },
+  { id: 'c-mug', oldCap: 350, newCap: 300 },
+];
+
 export const getContainers = (): Container[] => {
   const list = safeParse<Container[] | null>(localStorage.getItem(K_CONTAINERS), null);
   if (!list) {
     saveContainers(DEFAULT_CONTAINERS);
     return DEFAULT_CONTAINERS;
   }
-  // 迁移：自动补上用户没有的默认容器（新加的 ID）
+  let changed = false;
+  // 迁移 1：自动补上用户没有的默认容器（新加的 ID）
   const existingIds = new Set(list.map((c) => c.id));
   const missing = DEFAULT_CONTAINERS.filter((c) => !existingIds.has(c.id));
-  if (missing.length > 0) {
-    const merged = [...list, ...missing];
+  let merged: Container[] = [...list, ...missing];
+  if (missing.length > 0) changed = true;
+  // 迁移 2：把仍是旧 default 的容量更新到新 default（用户自己改过的不动）
+  merged = merged.map((c) => {
+    const m = CAPACITY_MIGRATIONS.find((x) => x.id === c.id && c.capacityMl === x.oldCap);
+    if (m) {
+      changed = true;
+      return { ...c, capacityMl: m.newCap };
+    }
+    return c;
+  });
+  if (changed) {
     saveContainers(merged);
     return merged;
   }
