@@ -350,10 +350,10 @@ function BottomPlants({
       <ellipse cx={106} cy={156} rx={2.5} ry={3} fill={dewColor} opacity={0.7} />
       <ellipse cx={348} cy={149} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
       <ellipse cx={368} cy={159} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
-      {/* 鸡蛋花树 1 — 左侧植物中间 */}
-      <FrangipaniTree x={72} leafColor={leafColor} />
-      {/* 鸡蛋花树 2 — 右侧植物中间，位置稍低 */}
-      <FrangipaniTree x={348} y={28} leafColor={leafColor} />
+      {/* 鸡蛋花树 1 — 左侧植物中间，位置稍高 */}
+      <FrangipaniTree x={72} y={-20} leafColor={leafColor} />
+      {/* 鸡蛋花树 2 — 右侧植物中间 */}
+      <FrangipaniTree x={348} y={8} leafColor={leafColor} />
     </svg>
   );
 }
