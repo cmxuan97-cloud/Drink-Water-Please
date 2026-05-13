@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DEFAULT_SETTINGS, NotifyMode, Settings as TSettings } from '../types';
-import { getCompletedDays, getSettings, saveSettings } from '../lib/storage';
+import { getCompletedDays, getOrCreateClientId, getSettings, saveSettings } from '../lib/storage';
 import { dailyGoalMl } from '../lib/goal';
 import {
   disablePush,
@@ -11,6 +11,7 @@ import {
   setNotifyMode,
   syncSettingsToServer,
 } from '../lib/push';
+import { forceSyncNow, lastSyncAt, restoreFromCode } from '../lib/sync';
 import { ANIMALS } from '../data/animals';
 import { ensureUnlockedMigration } from '../lib/storage';
 
@@ -40,6 +41,15 @@ export default function SettingsPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
 
+  // 备份/恢复
+  const [backupId, setBackupId] = useState('');
+  const [lastSyncMin, setLastSyncMin] = useState<number | null>(null);
+  const [showRestore, setShowRestore] = useState(false);
+  const [restoreCode, setRestoreCode] = useState('');
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     setS(getSettings());
     if ('Notification' in window) setPerm(Notification.permission);
@@ -49,7 +59,43 @@ export default function SettingsPage() {
     if (isPushSupported()) {
       getCurrentSubscription().then((sub) => setPushEnabled(!!sub));
     }
+    setBackupId(getOrCreateClientId());
+    const last = lastSyncAt();
+    setLastSyncMin(last ? Math.round((Date.now() - last) / 60000) : null);
   }, []);
+
+  const onCopyBackupId = async () => {
+    try {
+      await navigator.clipboard.writeText(backupId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setBackupMsg('复制失败 — 长按上面文字手动选');
+    }
+  };
+
+  const onForceBackup = async () => {
+    setBackupBusy(true);
+    setBackupMsg(null);
+    await forceSyncNow();
+    const last = lastSyncAt();
+    setLastSyncMin(last ? 0 : null);
+    setBackupMsg('✅ 已备份到云端');
+    setBackupBusy(false);
+  };
+
+  const onRestore = async () => {
+    setBackupBusy(true);
+    setBackupMsg(null);
+    const result = await restoreFromCode(restoreCode);
+    if (result.ok) {
+      setBackupMsg('✅ 恢复成功，刷新页面应用…');
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      setBackupMsg(`❌ ${result.error ?? '恢复失败'}`);
+      setBackupBusy(false);
+    }
+  };
 
   const update = (patch: Partial<TSettings>) => {
     const next = { ...s, ...patch };
@@ -283,6 +329,107 @@ export default function SettingsPage() {
         {!isPushSupported() && (
           <div className="warn" style={{ marginTop: 10 }}>
             当前浏览器不支持 Web Push
+          </div>
+        )}
+      </div>
+
+      {/* === 云备份 === */}
+      <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
+        <div style={{ fontWeight: 700, fontSize: 17 }}>☁️ 云备份</div>
+        <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>
+          每次记水会自动备份到云端。<br/>
+          <strong>把下面的备份码记下来</strong> — 删了 app / 换手机时输入它就能拉回所有数据
+        </div>
+
+        <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
+          <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4, fontWeight: 600 }}>你的备份码</div>
+          <div
+            style={{
+              fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+              fontSize: 12,
+              wordBreak: 'break-all',
+              userSelect: 'all',
+              lineHeight: 1.5,
+              padding: '6px 8px',
+              background: 'rgba(0,0,0,0.04)',
+              borderRadius: 8,
+            }}
+            onClick={(e) => {
+              const range = document.createRange();
+              range.selectNodeContents(e.currentTarget);
+              const sel = window.getSelection();
+              sel?.removeAllRanges();
+              sel?.addRange(range);
+            }}
+          >
+            {backupId}
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <button
+              className={copied ? 'btn-pill btn-pill-active' : 'btn-pill'}
+              onClick={onCopyBackupId}
+              style={{ flex: 1 }}
+            >
+              {copied ? '✓ 已复制' : '📋 复制备份码'}
+            </button>
+            <button
+              className="btn-pill"
+              onClick={onForceBackup}
+              disabled={backupBusy}
+              style={{ flex: 1, opacity: backupBusy ? 0.5 : 1 }}
+            >
+              {backupBusy ? '...' : '☁️ 立即备份'}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, marginTop: 8, opacity: 0.65 }}>
+            {lastSyncMin === null
+              ? '还未备份'
+              : lastSyncMin === 0
+              ? '刚刚备份'
+              : lastSyncMin < 60
+              ? `${lastSyncMin} 分钟前自动备份`
+              : `${Math.round(lastSyncMin / 60)} 小时前自动备份`}
+          </div>
+        </div>
+
+        <button
+          className="btn-pill btn-full"
+          style={{ marginTop: 10, background: 'rgba(255,255,255,0.7)' }}
+          onClick={() => { setShowRestore((v) => !v); setBackupMsg(null); }}
+        >
+          {showRestore ? '关闭' : '🔁 从其它设备恢复…'}
+        </button>
+
+        {showRestore && (
+          <div style={{ marginTop: 10, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8, lineHeight: 1.5 }}>
+              ⚠️ 输入旧设备的备份码，恢复后会<strong>覆盖</strong>当前所有数据
+            </div>
+            <input
+              className="input"
+              type="text"
+              placeholder="粘贴备份码"
+              value={restoreCode}
+              onChange={(e) => setRestoreCode(e.target.value)}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
+            />
+            <button
+              className="btn btn-full"
+              style={{ marginTop: 10 }}
+              onClick={onRestore}
+              disabled={backupBusy || !restoreCode.trim()}
+            >
+              {backupBusy ? '正在恢复…' : '✨ 恢复数据'}
+            </button>
+          </div>
+        )}
+
+        {backupMsg && (
+          <div style={{ fontSize: 12, marginTop: 10, padding: 8, background: 'rgba(255,255,255,0.7)', borderRadius: 8 }}>
+            {backupMsg}
           </div>
         )}
       </div>

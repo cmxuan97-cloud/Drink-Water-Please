@@ -1,5 +1,13 @@
 import { Container, DEFAULT_CONTAINERS, DEFAULT_SETTINGS, Entry, Settings } from '../types';
 
+// 注意：sync.ts 也 import 这个文件 (getOrCreateClientId)，所以这里用 lazy import
+// 避免 ESM 循环 import 的尴尬。triggerSync 只在浏览器环境会真的跑。
+const triggerSync = (): void => {
+  if (typeof window === 'undefined') return;
+  // 异步 import 让循环引用不会卡住模块加载
+  void import('./sync').then(({ triggerSync: t }) => t()).catch(() => {});
+};
+
 const K_SETTINGS = 'dw:settings';
 const K_CONTAINERS = 'dw:containers';
 const K_ENTRY_PREFIX = 'dw:entries:';
@@ -31,6 +39,7 @@ export const getSettings = (): Settings => {
 
 export const saveSettings = (s: Settings): void => {
   localStorage.setItem(K_SETTINGS, JSON.stringify(s));
+  triggerSync();
 };
 
 export const getContainers = (): Container[] => {
@@ -52,6 +61,7 @@ export const getContainers = (): Container[] => {
 
 export const saveContainers = (cs: Container[]): void => {
   localStorage.setItem(K_CONTAINERS, JSON.stringify(cs));
+  triggerSync();
 };
 
 export const getEntries = (date = new Date()): Entry[] => {
@@ -60,6 +70,7 @@ export const getEntries = (date = new Date()): Entry[] => {
 
 export const saveEntries = (entries: Entry[], date = new Date()): void => {
   localStorage.setItem(K_ENTRY_PREFIX + todayKey(date), JSON.stringify(entries));
+  triggerSync();
 };
 
 export const addEntry = (entry: Entry, date = new Date()): Entry[] => {
@@ -93,6 +104,7 @@ export const getUserName = (): string | null => {
 
 export const setUserName = (name: string): void => {
   localStorage.setItem(K_USER_NAME, name.trim());
+  triggerSync();
 };
 
 /**
@@ -118,6 +130,7 @@ export const addUnlockedId = (id: string, defaultStarterId: string): string[] =>
   if (cur.includes(id)) return cur;
   const next = [...cur, id];
   localStorage.setItem(K_UNLOCKED_IDS, JSON.stringify(next));
+  triggerSync();
   return next;
 };
 
@@ -147,6 +160,7 @@ export const getCompanionId = (): string | null => {
 
 export const setCompanionId = (id: string): void => {
   localStorage.setItem(K_COMPANION, id);
+  triggerSync();
 };
 
 export const markDayCompleted = (date = new Date()): { added: boolean; days: string[] } => {
@@ -157,6 +171,7 @@ export const markDayCompleted = (date = new Date()): { added: boolean; days: str
     days.add(key);
     const arr = Array.from(days).sort();
     localStorage.setItem(K_COMPLETED, JSON.stringify(arr));
+    triggerSync();
     return { added, days: arr };
   }
   return { added, days: Array.from(days).sort() };

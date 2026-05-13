@@ -19,6 +19,7 @@ import {
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
 import { syncCompanionToServer, syncProgress } from '../lib/push';
+import { restoreFromCode } from '../lib/sync';
 import { syncUserNameToServer } from '../lib/user';
 import { ANIMALS, earnedTokens } from '../data/animals';
 
@@ -39,6 +40,11 @@ export default function Home() {
   const [nameInput, setNameInput] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  // 名字弹窗里的「输入备份码恢复」分支
+  const [showRestoreInPrompt, setShowRestoreInPrompt] = useState(false);
+  const [restoreCodeInput, setRestoreCodeInput] = useState('');
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreErr, setRestoreErr] = useState<string | null>(null);
 
   useEffect(() => {
     pruneOldPhotos();
@@ -58,6 +64,19 @@ export default function Home() {
     setUserNameLocal(trimmed);
     setShowNamePrompt(false);
     void syncUserNameToServer(trimmed);
+  };
+
+  const onRestoreInPrompt = async () => {
+    setRestoreErr(null);
+    setRestoreBusy(true);
+    const result = await restoreFromCode(restoreCodeInput);
+    if (result.ok) {
+      // 用 reload 让所有 state 从恢复后的 localStorage 重新读
+      window.location.reload();
+    } else {
+      setRestoreErr(result.error ?? '恢复失败');
+      setRestoreBusy(false);
+    }
   };
 
   const goalMl = useMemo(
@@ -295,30 +314,79 @@ export default function Home() {
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
             }}
           >
-            <div style={{ fontSize: 56, marginBottom: 8 }}>👋</div>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>嗨，认识一下吗？</div>
-            <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>
-              告诉我你的名字，我们一起开始喝水之旅
-            </div>
-            <input
-              className="input"
-              type="text"
-              placeholder="你的名字"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
-              onKeyDown={(e) => { if (e.key === 'Enter') onSaveName(); }}
-              maxLength={30}
-              autoFocus
-              style={{ marginTop: 18, textAlign: 'center', fontSize: 17 }}
-            />
-            <button
-              className="btn btn-full"
-              style={{ marginTop: 14 }}
-              onClick={onSaveName}
-              disabled={!nameInput.trim()}
-            >
-              开始
-            </button>
+            {!showRestoreInPrompt ? (
+              <>
+                <div style={{ fontSize: 56, marginBottom: 8 }}>👋</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>嗨，认识一下吗？</div>
+                <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>
+                  告诉我你的名字，我们一起开始喝水之旅
+                </div>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="你的名字"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onSaveName(); }}
+                  maxLength={30}
+                  autoFocus
+                  style={{ marginTop: 18, textAlign: 'center', fontSize: 17 }}
+                />
+                <button
+                  className="btn btn-full"
+                  style={{ marginTop: 14 }}
+                  onClick={onSaveName}
+                  disabled={!nameInput.trim()}
+                >
+                  开始
+                </button>
+                <button
+                  className="btn-pill"
+                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 13 }}
+                  onClick={() => setShowRestoreInPrompt(true)}
+                >
+                  已经用过？输入备份码恢复 →
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 48, marginBottom: 8 }}>☁️</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>恢复数据</div>
+                <div className="muted" style={{ marginTop: 6, fontSize: 14, lineHeight: 1.5 }}>
+                  粘贴你之前保存的备份码<br/>
+                  把所有记录、动物、设置拉回来
+                </div>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="备份码（很长一串）"
+                  value={restoreCodeInput}
+                  onChange={(e) => setRestoreCodeInput(e.target.value)}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{ marginTop: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
+                />
+                {restoreErr && (
+                  <div className="warn" style={{ marginTop: 8, fontSize: 12 }}>{restoreErr}</div>
+                )}
+                <button
+                  className="btn btn-full"
+                  style={{ marginTop: 14 }}
+                  onClick={onRestoreInPrompt}
+                  disabled={restoreBusy || !restoreCodeInput.trim()}
+                >
+                  {restoreBusy ? '正在恢复…' : '✨ 恢复数据'}
+                </button>
+                <button
+                  className="btn-pill"
+                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 13 }}
+                  onClick={() => { setShowRestoreInPrompt(false); setRestoreErr(null); }}
+                >
+                  ← 我是新用户
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
