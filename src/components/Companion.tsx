@@ -350,33 +350,36 @@ export default function Companion({
         <div className="revive-fx" aria-hidden>
           {(() => {
             const items = entranceBurst === 'happy' ? HAPPY_ENTRANCE_BURST : DYING_ENTRANCE_BURST;
+            const count = items.length;
             return items.map((item, i) => {
-              // 计算每片的「速度向量」给 CSS 用
               let inlineStyle: React.CSSProperties;
               if (entranceBurst === 'happy') {
-                // 彩纸：八方向爆开 + 略向下重力，每个稍微错开
-                const ang = (i / items.length) * Math.PI * 2;
-                const dist = 150 + (i % 3) * 25;
-                const vx = Math.cos(ang) * dist;
-                const vy = Math.sin(ang) * dist + 30; // +30 → 轻微下坠重力感
+                // 开心：上半圆扇形，从中心往上抛 + 重力下坠 — 整齐不乱
+                // 角度从 -150° 到 -30°（只往上半边喷），均匀分布
+                const t = count > 1 ? i / (count - 1) : 0.5;
+                const angDeg = -150 + t * 120; // -150° (左上) → -30° (右上)
+                const angRad = (angDeg * Math.PI) / 180;
+                const dist = 140;
+                const vx = Math.cos(angRad) * dist;
+                const peakY = Math.sin(angRad) * dist; // 顶点（负数=上面）
+                const finalY = peakY + 90;             // 重力把它拉下来
                 inlineStyle = {
                   left: '50%',
-                  top: '50%',
-                  animationDelay: `${i * 0.04}s`,
+                  top: '55%',
+                  animationDelay: `${i * 0.05}s`,
                   ['--vx' as any]: `${vx}px`,
-                  ['--vy' as any]: `${vy}px`,
-                  ['--peak-x' as any]: `${vx * 0.35}px`,
-                  ['--peak-y' as any]: `${vy * 0.35 - 30}px`, // 中段轻轻往上抛
+                  ['--peak-y' as any]: `${peakY}px`,
+                  ['--final-y' as any]: `${finalY}px`,
                 };
               } else {
-                // 濒死：从角色身上慢慢往上飘 + 轻微左右抖
-                const center = (items.length - 1) / 2;
-                const drift = (i - center) * 14;
+                // 濒死：从角色周围一圈底部均匀生成，**直接向上飘**（不从身上发出）
+                // 用 left 把生成位置摊开到角色两侧，每个粒子自己只走 Y 轴
+                const center = (count - 1) / 2;
+                const spreadPx = (i - center) * 30; // -105 ~ +105px 摊开在身体两侧
                 inlineStyle = {
-                  left: '50%',
-                  top: '58%',
-                  animationDelay: `${i * 0.18}s`,
-                  ['--drift' as any]: `${drift}px`,
+                  left: `calc(50% + ${spreadPx}px)`,
+                  top: '85%', // 角色脚下
+                  animationDelay: `${i * 0.16}s`, // 错峰一个一个升起
                 };
               }
               return (
@@ -484,57 +487,59 @@ export default function Companion({
           100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(-120px) rotate(calc(-1 * var(--ang))) scale(1.2); }
         }
 
-        /* 开心进入：彩纸炸开 — 八方向爆开 + 旋转 + 轻微下坠重力 */
+        /* 开心进入：上半圆扇形喷出 → 重力下坠 — 干净不乱 */
         .fx-entrance-happy {
-          font-size: 28px;
-          animation: fx-confetti 1.8s cubic-bezier(.2,.7,.4,1) forwards !important;
+          font-size: 26px;
+          animation: fx-confetti 1.8s cubic-bezier(.25,.6,.4,1) forwards !important;
         }
         @keyframes fx-confetti {
           0% {
             opacity: 0;
-            transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.3);
+            transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.4);
           }
-          12% {
+          15% {
             opacity: 1;
           }
-          50% {
-            opacity: 1;
+          45% {
+            /* 抛物线顶点：到达 peak-y（负数=上方） */
             transform: translate(-50%, -50%)
-              translate(var(--peak-x, 0px), var(--peak-y, -30px))
-              rotate(220deg)
-              scale(1.15);
+              translate(calc(var(--vx, 0px) * 0.85), var(--peak-y, -100px))
+              rotate(180deg)
+              scale(1.1);
           }
           100% {
             opacity: 0;
+            /* 重力把它拉下来到 final-y */
             transform: translate(-50%, -50%)
-              translate(var(--vx, 100px), var(--vy, 60px))
-              rotate(540deg)
-              scale(0.7);
+              translate(var(--vx, 0px), var(--final-y, 0px))
+              rotate(280deg)
+              scale(0.75);
           }
         }
 
-        /* 濒死进入：icon + emoji 慢慢往上飘 + 渐隐（像灵魂离体） */
+        /* 濒死进入：从角色周围底部一圈生成 → 直接向上飘 + 渐隐 */
         .fx-entrance-dying {
-          font-size: 24px;
-          animation: fx-float-up 2.6s cubic-bezier(.3,.1,.5,1) forwards !important;
+          font-size: 22px;
+          animation: fx-float-up 2.4s ease-out forwards !important;
         }
         @keyframes fx-float-up {
           0% {
             opacity: 0;
-            transform: translate(-50%, -50%) translate(0, 16px) scale(0.4);
+            transform: translate(-50%, 0) scale(0.4);
             filter: blur(1px);
           }
-          20% {
-            opacity: 0.85;
-            transform: translate(-50%, -50%) translate(calc(var(--drift, 0px) * 0.2), -10px) scale(0.95);
+          18% {
+            opacity: 0.8;
+            transform: translate(-50%, -16px) scale(1);
             filter: blur(0);
           }
           70% {
             opacity: 0.5;
+            transform: translate(-50%, -140px) scale(0.95);
           }
           100% {
             opacity: 0;
-            transform: translate(-50%, -50%) translate(var(--drift, 0px), -180px) scale(0.7);
+            transform: translate(-50%, -220px) scale(0.7);
             filter: blur(2px);
           }
         }
