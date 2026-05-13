@@ -10,9 +10,10 @@ const K_PREFIX = 'dw:';
 const K_ENTRIES = 'dw:entries:';
 const K_CLIENT_ID = 'dw:clientId';
 const K_LAST_SYNC = 'dw:lastSyncAt';
+const K_BACKUP_CODE = 'dw:backupCode';
 
-// 不上传：clientId（恢复时是输入的那个，不能被自己覆盖）+ lastSyncAt（meta）
-const SKIP_KEYS = new Set([K_CLIENT_ID, K_LAST_SYNC]);
+// 不上传：clientId/lastSyncAt/backupCode（meta，恢复时不该被覆盖）
+const SKIP_KEYS = new Set([K_CLIENT_ID, K_LAST_SYNC, K_BACKUP_CODE]);
 
 export type Snapshot = {
   v: 1;
@@ -130,6 +131,37 @@ export const lastSyncAt = (): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// === 短备份码（人类友好，K3M7-P2AS 格式） ===
+export const cachedBackupCode = (): string | null => localStorage.getItem(K_BACKUP_CODE);
+
+/** 拿用户的短备份码（缓存优先，没有就向服务端申请生成） */
+export const getOrFetchBackupCode = async (): Promise<{ code: string | null; error?: string }> => {
+  const cached = localStorage.getItem(K_BACKUP_CODE);
+  if (cached) return { code: cached };
+  const clientId = getOrCreateClientId();
+  try {
+    const resp = await fetch('/api/sync/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    });
+    if (!resp.ok) {
+      let err = `获取失败 (${resp.status})`;
+      try {
+        const j = (await resp.json()) as { error?: string };
+        if (j.error) err = j.error;
+      } catch { /* ignore */ }
+      return { code: null, error: err };
+    }
+    const j = (await resp.json()) as { code?: string };
+    if (!j.code) return { code: null, error: '服务端未返回备份码' };
+    localStorage.setItem(K_BACKUP_CODE, j.code);
+    return { code: j.code };
+  } catch (e) {
+    return { code: null, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
 // === 从备份码恢复 ===
 export const restoreFromCode = async (
   code: string,
@@ -155,16 +187,19 @@ export const restoreFromCode = async (
     }
     return { ok: false, error: msg };
   }
-  let json: { state?: Snapshot };
+  let json: { state?: Snapshot; clientId?: string };
   try {
-    json = (await resp.json()) as { state?: Snapshot };
+    json = (await resp.json()) as { state?: Snapshot; clientId?: string };
   } catch {
     return { ok: false, error: '备份内容损坏' };
   }
   if (!json.state) return { ok: false, error: '备份内容为空' };
   try {
-    // 关键：把自己的 clientId 替换为这个备份码，未来同步打到同一条 KV
-    localStorage.setItem(K_CLIENT_ID, trimmed);
+    // 服务端把真正的 clientId 一起返回 — 用它而不是用户输入的（短码反查后才是真 clientId）
+    const newClientId = json.clientId || trimmed;
+    localStorage.setItem(K_CLIENT_ID, newClientId);
+    // 清掉本地缓存的短码 — 让新设备下次主动重新拉一次（其实跟旧设备同一个，但 cache 才是新鲜的）
+    localStorage.removeItem(K_BACKUP_CODE);
     applySnapshot(json.state, { keepClientId: true });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '应用备份失败' };

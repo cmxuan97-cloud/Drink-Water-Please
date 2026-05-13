@@ -359,13 +359,13 @@ export default function Home() {
                 <input
                   className="input"
                   type="text"
-                  placeholder="备份码（很长一串）"
+                  placeholder="K3M7-P2AS"
                   value={restoreCodeInput}
                   onChange={(e) => setRestoreCodeInput(e.target.value)}
-                  autoCapitalize="off"
+                  autoCapitalize="characters"
                   autoCorrect="off"
                   spellCheck={false}
-                  style={{ marginTop: 18, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
+                  style={{ marginTop: 18, fontFamily: 'ui-monospace, monospace', fontSize: 17, textAlign: 'center', letterSpacing: '0.06em' }}
                 />
                 {restoreErr && (
                   <div className="warn" style={{ marginTop: 8, fontSize: 12 }}>{restoreErr}</div>

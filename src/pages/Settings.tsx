@@ -11,7 +11,7 @@ import {
   setNotifyMode,
   syncSettingsToServer,
 } from '../lib/push';
-import { forceSyncNow, lastSyncAt, restoreFromCode } from '../lib/sync';
+import { cachedBackupCode, forceSyncNow, getOrFetchBackupCode, lastSyncAt, restoreFromCode } from '../lib/sync';
 import { ANIMALS } from '../data/animals';
 import { ensureUnlockedMigration } from '../lib/storage';
 
@@ -43,6 +43,10 @@ export default function SettingsPage() {
 
   // 备份/恢复
   const [backupId, setBackupId] = useState('');
+  const [shortCode, setShortCode] = useState<string | null>(null);
+  const [shortCodeBusy, setShortCodeBusy] = useState(false);
+  const [shortCodeError, setShortCodeError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [lastSyncMin, setLastSyncMin] = useState<number | null>(null);
   const [showRestore, setShowRestore] = useState(false);
   const [restoreCode, setRestoreCode] = useState('');
@@ -62,11 +66,23 @@ export default function SettingsPage() {
     setBackupId(getOrCreateClientId());
     const last = lastSyncAt();
     setLastSyncMin(last ? Math.round((Date.now() - last) / 60000) : null);
+    // 短码：先看本地缓存，没有就异步去拉
+    const cached = cachedBackupCode();
+    if (cached) setShortCode(cached);
+    else {
+      setShortCodeBusy(true);
+      void getOrFetchBackupCode().then((r) => {
+        if (r.code) setShortCode(r.code);
+        else setShortCodeError(r.error ?? null);
+        setShortCodeBusy(false);
+      });
+    }
   }, []);
 
-  const onCopyBackupId = async () => {
+  const onCopyShortCode = async () => {
+    if (!shortCode) return;
     try {
-      await navigator.clipboard.writeText(backupId);
+      await navigator.clipboard.writeText(shortCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -338,50 +354,83 @@ export default function SettingsPage() {
         <div style={{ fontWeight: 700, fontSize: 17 }}>☁️ 云备份</div>
         <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>
           每次记水会自动备份到云端。<br/>
-          <strong>把下面的备份码记下来</strong> — 删了 app / 换手机时输入它就能拉回所有数据
+          <strong>把备份码记下来</strong> — 删了 app / 换手机时输入它就能拉回全部数据
         </div>
 
-        <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
-          <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4, fontWeight: 600 }}>你的备份码</div>
-          <div
-            style={{
-              fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
-              fontSize: 12,
-              wordBreak: 'break-all',
-              userSelect: 'all',
-              lineHeight: 1.5,
-              padding: '6px 8px',
-              background: 'rgba(0,0,0,0.04)',
-              borderRadius: 8,
-            }}
-            onClick={(e) => {
-              const range = document.createRange();
-              range.selectNodeContents(e.currentTarget);
-              const sel = window.getSelection();
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }}
-          >
-            {backupId}
+        <div style={{ marginTop: 12, padding: 14, background: 'rgba(255,255,255,0.92)', borderRadius: 14 }}>
+          <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6, fontWeight: 600, letterSpacing: 0.5 }}>
+            你的备份码
           </div>
-          <div className="row" style={{ gap: 8, marginTop: 10 }}>
-            <button
-              className={copied ? 'btn-pill btn-pill-active' : 'btn-pill'}
-              onClick={onCopyBackupId}
-              style={{ flex: 1 }}
-            >
-              {copied ? '✓ 已复制' : '📋 复制备份码'}
-            </button>
-            <button
-              className="btn-pill"
-              onClick={onForceBackup}
-              disabled={backupBusy}
-              style={{ flex: 1, opacity: backupBusy ? 0.5 : 1 }}
-            >
-              {backupBusy ? '...' : '☁️ 立即备份'}
-            </button>
-          </div>
-          <div style={{ fontSize: 11, marginTop: 8, opacity: 0.65 }}>
+          {shortCodeBusy && (
+            <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(0,0,0,0.4)' }}>
+              生成中…
+            </div>
+          )}
+          {shortCodeError && !shortCode && (
+            <div style={{ fontSize: 12, color: '#b91c1c' }}>
+              ❌ {shortCodeError}
+              <button
+                onClick={() => {
+                  setShortCodeError(null);
+                  setShortCodeBusy(true);
+                  void getOrFetchBackupCode().then((r) => {
+                    if (r.code) setShortCode(r.code);
+                    else setShortCodeError(r.error ?? null);
+                    setShortCodeBusy(false);
+                  });
+                }}
+                className="btn-pill"
+                style={{ marginLeft: 8, fontSize: 11, padding: '4px 10px' }}
+              >
+                重试
+              </button>
+            </div>
+          )}
+          {shortCode && (
+            <>
+              <div
+                style={{
+                  fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+                  fontSize: 28,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textAlign: 'center',
+                  padding: '14px 8px',
+                  background: 'rgba(0,0,0,0.05)',
+                  borderRadius: 12,
+                  color: '#0e7dcc',
+                  userSelect: 'all',
+                }}
+                onClick={(e) => {
+                  const range = document.createRange();
+                  range.selectNodeContents(e.currentTarget);
+                  const sel = window.getSelection();
+                  sel?.removeAllRanges();
+                  sel?.addRange(range);
+                }}
+              >
+                {shortCode}
+              </div>
+              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                <button
+                  className={copied ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                  onClick={onCopyShortCode}
+                  style={{ flex: 1 }}
+                >
+                  {copied ? '✓ 已复制' : '📋 复制'}
+                </button>
+                <button
+                  className="btn-pill"
+                  onClick={onForceBackup}
+                  disabled={backupBusy}
+                  style={{ flex: 1, opacity: backupBusy ? 0.5 : 1 }}
+                >
+                  {backupBusy ? '...' : '☁️ 立即备份'}
+                </button>
+              </div>
+            </>
+          )}
+          <div style={{ fontSize: 11, marginTop: 8, opacity: 0.65, textAlign: 'center' }}>
             {lastSyncMin === null
               ? '还未备份'
               : lastSyncMin === 0
@@ -403,18 +452,18 @@ export default function SettingsPage() {
         {showRestore && (
           <div style={{ marginTop: 10, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
             <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8, lineHeight: 1.5 }}>
-              ⚠️ 输入旧设备的备份码，恢复后会<strong>覆盖</strong>当前所有数据
+              ⚠️ 输入旧设备的备份码（短码或完整 ID 都行），恢复后会<strong>覆盖</strong>当前所有数据
             </div>
             <input
               className="input"
               type="text"
-              placeholder="粘贴备份码"
+              placeholder="K3M7-P2AS"
               value={restoreCode}
               onChange={(e) => setRestoreCode(e.target.value)}
-              autoCapitalize="off"
+              autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
-              style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
+              style={{ fontFamily: 'ui-monospace, monospace', fontSize: 17, letterSpacing: '0.06em', textAlign: 'center' }}
             />
             <button
               className="btn btn-full"
@@ -430,6 +479,31 @@ export default function SettingsPage() {
         {backupMsg && (
           <div style={{ fontSize: 12, marginTop: 10, padding: 8, background: 'rgba(255,255,255,0.7)', borderRadius: 8 }}>
             {backupMsg}
+          </div>
+        )}
+
+        {/* 高级：完整 UUID（兼容老备份方式） */}
+        <button
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="btn-pill"
+          style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 11, opacity: 0.65 }}
+        >
+          {showAdvanced ? '收起' : '高级'}
+        </button>
+        {showAdvanced && (
+          <div style={{ marginTop: 8, padding: 10, background: 'rgba(255,255,255,0.6)', borderRadius: 10 }}>
+            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>完整 device ID（也可以当备份码用）</div>
+            <div
+              style={{
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: 10,
+                wordBreak: 'break-all',
+                userSelect: 'all',
+                opacity: 0.7,
+              }}
+            >
+              {backupId}
+            </div>
           </div>
         )}
       </div>
