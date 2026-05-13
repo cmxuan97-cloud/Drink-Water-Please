@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   AlertTriangle, Coffee, Droplet, Flame, GlassWater, Heart,
   PartyPopper, Sparkles, Star, ThumbsUp, Trophy, Zap,
@@ -20,6 +20,33 @@ const REVIVE_BURST: BurstItem[] = [
   { Icon: Star, color: '#facc15' },
   { Icon: Heart, color: '#ec4899' },
   { Icon: Trophy, color: '#f59e0b' },
+];
+
+// 进入动画：开心（<30min）和濒死（>=30min）两套
+const HAPPY_ENTRANCE_BURST: BurstItem[] = [
+  '✨', '☀️', '⭐', '💫',
+  { Icon: Sparkles, color: '#facc15' },
+  { Icon: Star, color: '#f59e0b' },
+  { Icon: Zap, color: '#fbbf24' },
+  { Icon: Heart, color: '#ec4899' },
+];
+const DYING_ENTRANCE_BURST: BurstItem[] = [
+  '💀', '🦴', '😵', '☠️', '💀', '🦴', '😵', '☠️',
+];
+
+const HAPPY_ENTRANCE_MSGS = [
+  '你终于回来了！快告诉我你喝水了吗！！',
+  '欸欸欸！你回来啦！喝水了没！',
+  '我等你好久了！你喝水了吗！很重要！',
+  '终于！我以为你忘了我！喝了多少？',
+  '啊！是你！你喝水了吧！！快说！',
+];
+const DYING_ENTRANCE_MSGS = [
+  '你……你终于回来了……我快不行了……',
+  '呜……来得太晚了……我……我要死了……',
+  '好久……好久没见……渴死了……救我……',
+  '我以为你……不要我了……好渴……',
+  '你回来了……我……还撑着……快给水……',
 ];
 
 type Props = {
@@ -179,9 +206,12 @@ export default function Companion({
 }: Props) {
   const [drinkingPulse, setDrinkingPulse] = useState(false);
   const [revivalBurst, setRevivalBurst] = useState(false);
+  const [entranceBurst, setEntranceBurst] = useState<'happy' | 'dying' | null>(null);
+  const [entranceMsg, setEntranceMsg] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const lastSeenTsRef = useRef<number | null>(null);
   const wasDyingRef = useRef(true);
+  const hiddenAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (lastEntryTs && lastEntryTs !== lastSeenTsRef.current) {
@@ -201,18 +231,47 @@ export default function Companion({
     return () => clearInterval(t);
   }, []);
 
-  // 用户切回 tab / 从后台回到 app → 立刻重算（避免后台被浏览器节流）
+  // 触发进入动画（首次挂载 or 从后台返回 > 5s）
+  const triggerEntrance = useCallback((ts: number | null) => {
+    const minsSince = ts ? Math.floor((Date.now() - ts) / 60000) : null;
+    const type = (minsSince !== null && minsSince < 30) ? 'happy' : 'dying';
+    const msgs = type === 'happy' ? HAPPY_ENTRANCE_MSGS : DYING_ENTRANCE_MSGS;
+    const msg = msgs[Math.floor(Math.random() * msgs.length)];
+    setEntranceBurst(type);
+    setEntranceMsg(msg);
+    const t1 = setTimeout(() => setEntranceBurst(null), 3200);
+    const t2 = setTimeout(() => setEntranceMsg(null), 4000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  // 首次挂载 → 触发进入动画
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') setTick((x) => x + 1);
+    return triggerEntrance(lastEntryTs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 用户切回 tab / 从后台回到 app → 立刻重算 + 触发进入动画
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') hiddenAtRef.current = Date.now();
     };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTick((x) => x + 1);
+        const hiddenFor = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : Infinity;
+        if (hiddenFor > 5000) triggerEntrance(lastEntryTs);
+        hiddenAtRef.current = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onHide);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
     return () => {
+      document.removeEventListener('visibilitychange', onHide);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
     };
-  }, []);
+  }, [lastEntryTs, triggerEntrance]);
 
   // 自己算 minutesSinceLastDrink，依赖 tick 让它每 30s 自动新鲜
   const liveMinutesSinceLastDrink = useMemo(() => {
@@ -250,9 +309,13 @@ export default function Companion({
     [mood, tick, remainingMl, drunkMl],
   );
 
+  const displayMsg = entranceMsg
+    ? { id: `entrance-${entranceMsg}`, node: entranceMsg as ReactNode }
+    : message;
+
   return (
     <div className="comp-wrap">
-      <div className="comp-bubble" key={`${mood}-${message.id}`}>{message.node}</div>
+      <div className={`comp-bubble${entranceMsg ? ' comp-bubble--entrance' : ''}`} key={`${mood}-${displayMsg.id}`}>{displayMsg.node}</div>
       <div className="comp-art">
         <Character id={animal.customArt} mood={mood} size={220} />
       </div>
@@ -281,6 +344,54 @@ export default function Companion({
                 : <item.Icon size={26} color={item.color} fill={item.color} fillOpacity={0.25} strokeWidth={2.2} />}
             </span>
           ))}
+        </div>
+      )}
+      {entranceBurst && (
+        <div className="revive-fx" aria-hidden>
+          {(() => {
+            const items = entranceBurst === 'happy' ? HAPPY_ENTRANCE_BURST : DYING_ENTRANCE_BURST;
+            return items.map((item, i) => {
+              // 计算每片的「速度向量」给 CSS 用
+              let inlineStyle: React.CSSProperties;
+              if (entranceBurst === 'happy') {
+                // 彩纸：八方向爆开 + 略向下重力，每个稍微错开
+                const ang = (i / items.length) * Math.PI * 2;
+                const dist = 150 + (i % 3) * 25;
+                const vx = Math.cos(ang) * dist;
+                const vy = Math.sin(ang) * dist + 30; // +30 → 轻微下坠重力感
+                inlineStyle = {
+                  left: '50%',
+                  top: '50%',
+                  animationDelay: `${i * 0.04}s`,
+                  ['--vx' as any]: `${vx}px`,
+                  ['--vy' as any]: `${vy}px`,
+                  ['--peak-x' as any]: `${vx * 0.35}px`,
+                  ['--peak-y' as any]: `${vy * 0.35 - 30}px`, // 中段轻轻往上抛
+                };
+              } else {
+                // 濒死：从角色身上慢慢往上飘 + 轻微左右抖
+                const center = (items.length - 1) / 2;
+                const drift = (i - center) * 14;
+                inlineStyle = {
+                  left: '50%',
+                  top: '58%',
+                  animationDelay: `${i * 0.18}s`,
+                  ['--drift' as any]: `${drift}px`,
+                };
+              }
+              return (
+                <span
+                  key={i}
+                  className={`fx-revive fx-entrance-${entranceBurst}`}
+                  style={inlineStyle}
+                >
+                  {typeof item === 'string'
+                    ? item
+                    : <item.Icon size={26} color={item.color} fill={item.color} fillOpacity={0.25} strokeWidth={2.2} />}
+                </span>
+              );
+            });
+          })()}
         </div>
       )}
 
@@ -342,6 +453,17 @@ export default function Companion({
           100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
         }
 
+        /* 进入气泡：稍大一点 + 轻微高亮 */
+        .comp-bubble--entrance {
+          font-size: 15px;
+          animation: bubble-entrance 0.45s cubic-bezier(.2,1.5,.4,1);
+        }
+        @keyframes bubble-entrance {
+          0%   { opacity: 0; transform: scale(0.7) translateY(12px); }
+          60%  { transform: scale(1.06) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
         /* 复活爆发：emoji 从中心向 8 个方向飞散 */
         .revive-fx {
           position: absolute;
@@ -360,6 +482,61 @@ export default function Companion({
           0%   { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(0) rotate(calc(-1 * var(--ang))) scale(0.4); }
           20%  { opacity: 1; }
           100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(-120px) rotate(calc(-1 * var(--ang))) scale(1.2); }
+        }
+
+        /* 开心进入：彩纸炸开 — 八方向爆开 + 旋转 + 轻微下坠重力 */
+        .fx-entrance-happy {
+          font-size: 28px;
+          animation: fx-confetti 1.8s cubic-bezier(.2,.7,.4,1) forwards !important;
+        }
+        @keyframes fx-confetti {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.3);
+          }
+          12% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+            transform: translate(-50%, -50%)
+              translate(var(--peak-x, 0px), var(--peak-y, -30px))
+              rotate(220deg)
+              scale(1.15);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%)
+              translate(var(--vx, 100px), var(--vy, 60px))
+              rotate(540deg)
+              scale(0.7);
+          }
+        }
+
+        /* 濒死进入：icon + emoji 慢慢往上飘 + 渐隐（像灵魂离体） */
+        .fx-entrance-dying {
+          font-size: 24px;
+          animation: fx-float-up 2.6s cubic-bezier(.3,.1,.5,1) forwards !important;
+        }
+        @keyframes fx-float-up {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) translate(0, 16px) scale(0.4);
+            filter: blur(1px);
+          }
+          20% {
+            opacity: 0.85;
+            transform: translate(-50%, -50%) translate(calc(var(--drift, 0px) * 0.2), -10px) scale(0.95);
+            filter: blur(0);
+          }
+          70% {
+            opacity: 0.5;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) translate(var(--drift, 0px), -180px) scale(0.7);
+            filter: blur(2px);
+          }
         }
       `}</style>
     </div>
