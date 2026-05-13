@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Bell, Cloud, Copy, Droplet, LogIn, Moon, RotateCcw,
+  Scale, Smartphone, Sparkles, User, UserPlus,
+  CupSoda, AlertCircle, Check, PawPrint,
+} from 'lucide-react';
 import { DEFAULT_SETTINGS, NotifyMode, Settings as TSettings } from '../types';
 import { getCompletedDays, getOrCreateClientId, getSettings, saveSettings } from '../lib/storage';
 import { dailyGoalMl } from '../lib/goal';
@@ -110,10 +115,10 @@ export default function SettingsPage() {
     setAuthBusy(true);
     const result = await authRegister(regUsername.trim(), regPassword, regUsername.trim());
     if (result.ok) {
-      setAuthMsg('✅ 账号创建成功，刷新中…');
+      setAuthMsg('账号创建成功，刷新中…');
       setTimeout(() => window.location.reload(), 800);
     } else {
-      setAuthMsg(`❌ ${result.error ?? '注册失败'}`);
+      setAuthMsg(`${result.error ?? '注册失败'}`);
       setAuthBusy(false);
     }
   };
@@ -123,10 +128,10 @@ export default function SettingsPage() {
     setAuthBusy(true);
     const result = await authLogin(loginUsername.trim(), loginPassword);
     if (result.ok) {
-      setAuthMsg('✅ 登录成功，刷新中…');
+      setAuthMsg('登录成功，刷新中…');
       setTimeout(() => window.location.reload(), 800);
     } else {
-      setAuthMsg(`❌ ${result.error ?? '登录失败'}`);
+      setAuthMsg(`${result.error ?? '登录失败'}`);
       setAuthBusy(false);
     }
   };
@@ -154,7 +159,7 @@ export default function SettingsPage() {
     await forceSyncNow();
     const last = lastSyncAt();
     setLastSyncMin(last ? 0 : null);
-    setBackupMsg('✅ 已备份到云端');
+    setBackupMsg('已备份到云端');
     setBackupBusy(false);
   };
 
@@ -163,10 +168,10 @@ export default function SettingsPage() {
     setBackupMsg(null);
     const result = await restoreFromCode(restoreCode);
     if (result.ok) {
-      setBackupMsg('✅ 恢复成功，刷新页面应用…');
+      setBackupMsg('恢复成功，刷新页面应用…');
       setTimeout(() => window.location.reload(), 800);
     } else {
-      setBackupMsg(`❌ ${result.error ?? '恢复失败'}`);
+      setBackupMsg(`${result.error ?? '恢复失败'}`);
       setBackupBusy(false);
     }
   };
@@ -190,7 +195,7 @@ export default function SettingsPage() {
         setPushEnabled(true);
         setPerm('granted');
         update({ notificationsEnabled: true });
-        setPushMsg('✅ 已订阅，等下个整点会收到');
+        setPushMsg('已订阅，等下个整点会收到');
       } else {
         await disablePush();
         setPushEnabled(false);
@@ -198,7 +203,7 @@ export default function SettingsPage() {
         setPushMsg('已关闭推送');
       }
     } catch (e) {
-      setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 操作失败');
+      setPushMsg(e instanceof Error ? `${e.message}` : '操作失败');
     } finally {
       setPushBusy(false);
     }
@@ -211,7 +216,7 @@ export default function SettingsPage() {
         await setNotifyMode(mode);
         setPushMsg(`✅ 已切到「${NOTIFY_MODES.find((m) => m.value === mode)?.label}」`);
       } catch (e) {
-        setPushMsg(e instanceof Error ? `❌ ${e.message}` : '❌ 切换失败');
+        setPushMsg(e instanceof Error ? `${e.message}` : '切换失败');
       }
     }
   };
@@ -236,7 +241,7 @@ export default function SettingsPage() {
         <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
           按 {s.weightKg} kg 体重自动算
         </div>
-        <div style={{ position: 'absolute', right: -10, bottom: -10, fontSize: 80, opacity: 0.18 }}>💧</div>
+        <Droplet size={96} strokeWidth={1.5} style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.18 }} />
       </div>
 
       <div className="menu-group">
@@ -244,7 +249,7 @@ export default function SettingsPage() {
           className="menu-row"
           onClick={() => setExpandedKey(expandedKey === 'weight' ? null : 'weight')}
         >
-          <span className="menu-icon">⚖️</span>
+          <span className="menu-icon"><Scale size={18} strokeWidth={2} /></span>
           <span className="menu-title">体重</span>
           <span className="menu-value">{s.weightKg} kg</span>
           <span className="menu-arrow">›</span>
@@ -254,7 +259,7 @@ export default function SettingsPage() {
           className="menu-row"
           onClick={() => setExpandedKey(expandedKey === 'sleep' ? null : 'sleep')}
         >
-          <span className="menu-icon">🌙</span>
+          <span className="menu-icon"><Moon size={18} strokeWidth={2} /></span>
           <span className="menu-title">作息时间</span>
           <span className="menu-value">{hourToTime(s.wakeHour)} – {hourToTime(s.sleepHour)}</span>
           <span className="menu-arrow">›</span>
@@ -264,7 +269,7 @@ export default function SettingsPage() {
           className="menu-row"
           onClick={() => navigate('/containers')}
         >
-          <span className="menu-icon">🥤</span>
+          <span className="menu-icon"><CupSoda size={18} strokeWidth={2} /></span>
           <span className="menu-title">添加/编辑容器</span>
           <span className="menu-arrow">›</span>
         </button>
@@ -273,7 +278,7 @@ export default function SettingsPage() {
           className="menu-row"
           onClick={() => navigate('/collection')}
         >
-          <span className="menu-icon">🦙</span>
+          <span className="menu-icon"><PawPrint size={18} strokeWidth={2} /></span>
           <span className="menu-title">我的小伙伴</span>
           <span className="menu-value">{unlockedCount} / {ANIMALS.length}</span>
           <span className="menu-arrow">›</span>
@@ -331,7 +336,9 @@ export default function SettingsPage() {
       <div className="card-tinted card-mint">
         <div className="row-between">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>⏰ 推送提醒</div>
+            <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Bell size={18} strokeWidth={2} /> 推送提醒
+            </div>
             <div style={{ fontSize: 12, marginTop: 4, opacity: 0.78 }}>
               app 关闭也能收 · 整点触发 · 作息时段内才发
             </div>
@@ -348,8 +355,8 @@ export default function SettingsPage() {
 
         {/* 权限提示只在出问题时显示 */}
         {perm === 'denied' && (
-          <div style={{ fontSize: 12, marginTop: 8, opacity: 0.85 }}>
-            ❌ 系统层面已拒绝 — 去 iPhone 设置 → Safari/PWA → 通知开启
+          <div style={{ fontSize: 12, marginTop: 8, opacity: 0.85, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertCircle size={14} color="#dc2626" /> 系统层面已拒绝 — 去 iPhone 设置 → Safari/PWA → 通知开启
           </div>
         )}
 
@@ -413,7 +420,7 @@ export default function SettingsPage() {
                 </div>
                 {(s.notifyMode ?? 'standard') === 'smart' && (
                   <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75, lineHeight: 1.5 }}>
-                    💡 落后会更频繁，超前会拉间隔，达标后不再打扰
+                    落后会更频繁，超前会拉间隔，达标后不再打扰
                   </div>
                 )}
               </div>
@@ -428,8 +435,9 @@ export default function SettingsPage() {
         )}
         {/* iPhone 安装提示：只在没装到主屏 & 也还没开推送时给（开了再说就晚了） */}
         {!isStandalone && !pushEnabled && (
-          <div className="banner" style={{ marginTop: 10, background: 'rgba(255, 255, 255, 0.6)', fontSize: 12 }}>
-            📱 iPhone 要从主屏 PWA 打开，推送才工作（Safari → 分享 → 添加到主屏幕）
+          <div className="banner" style={{ marginTop: 10, background: 'rgba(255, 255, 255, 0.6)', fontSize: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <Smartphone size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>iPhone 要从主屏 PWA 打开，推送才工作（Safari → 分享 → 添加到主屏幕）</span>
           </div>
         )}
         {!isPushSupported() && (
@@ -456,8 +464,9 @@ export default function SettingsPage() {
           }}
         >
           <div>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>
-              👤 {authUsername ? `已登录 · @${authUsername}` : '账号'}
+            <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <User size={18} strokeWidth={2} />
+              <span>{authUsername ? `已登录 · @${authUsername}` : '账号'}</span>
             </div>
             <div style={{ fontSize: 12, marginTop: 2, opacity: 0.75 }}>
               {authUsername ? '跨设备同步已开' : '注册账号 → 跨设备同步、删 app 也不丢'}
@@ -500,17 +509,17 @@ export default function SettingsPage() {
               <div className="row" style={{ gap: 8, marginTop: 12 }}>
                 <button
                   className="btn-pill btn-full"
-                  style={{ background: 'rgba(255,255,255,0.85)', fontWeight: 600 }}
+                  style={{ background: 'rgba(255,255,255,0.85)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   onClick={() => { setShowAuthPanel('register'); setAuthMsg(null); }}
                 >
-                  ✨ 注册账号
+                  <UserPlus size={15} /> 注册账号
                 </button>
                 <button
                   className="btn-pill btn-full"
-                  style={{ background: 'rgba(255,255,255,0.6)' }}
+                  style={{ background: 'rgba(255,255,255,0.6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   onClick={() => { setShowAuthPanel('login'); setAuthMsg(null); }}
                 >
-                  🔓 登录
+                  <LogIn size={15} /> 登录
                 </button>
               </div>
             )}
@@ -548,9 +557,9 @@ export default function SettingsPage() {
                     className="btn btn-full"
                     onClick={onRegisterFromSettings}
                     disabled={authBusy || !regUsername.trim() || regPassword.length < 6}
-                    style={{ flex: 2 }}
+                    style={{ flex: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   >
-                    {authBusy ? '...' : '✨ 创建'}
+                    {authBusy ? '...' : (<><Sparkles size={15} /> 创建</>)}
                   </button>
                 </div>
               </div>
@@ -558,7 +567,8 @@ export default function SettingsPage() {
             {showAuthPanel === 'login' && (
               <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
                 <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
-                  ⚠️ 登录后<strong>当前本地数据会被覆盖</strong>，先想清楚
+                  <AlertCircle size={12} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} color="#f59e0b" />
+                  登录后<strong>当前本地数据会被覆盖</strong>，先想清楚
                 </div>
                 <input
                   className="input"
@@ -589,9 +599,9 @@ export default function SettingsPage() {
                     className="btn btn-full"
                     onClick={onLoginFromSettings}
                     disabled={authBusy || !loginUsername.trim() || !loginPassword}
-                    style={{ flex: 2 }}
+                    style={{ flex: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   >
-                    {authBusy ? '...' : '🔓 登录'}
+                    {authBusy ? '...' : (<><LogIn size={15} /> 登录</>)}
                   </button>
                 </div>
               </div>
@@ -624,7 +634,9 @@ export default function SettingsPage() {
           }}
         >
           <div>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>☁️ 云备份</div>
+            <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Cloud size={18} strokeWidth={2} /> 云备份
+            </div>
             <div style={{ fontSize: 12, marginTop: 2, opacity: 0.78 }}>
               {lastSyncMin === null
                 ? '还未备份'
@@ -656,7 +668,8 @@ export default function SettingsPage() {
           )}
           {shortCodeError && !shortCode && (
             <div style={{ fontSize: 12, color: '#b91c1c' }}>
-              ❌ {shortCodeError}
+              <AlertCircle size={12} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} color="#dc2626" />
+              {shortCodeError}
               <button
                 onClick={() => {
                   setShortCodeError(null);
@@ -703,17 +716,19 @@ export default function SettingsPage() {
                 <button
                   className={copied ? 'btn-pill btn-pill-active' : 'btn-pill'}
                   onClick={onCopyShortCode}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  {copied ? '✓ 已复制' : '📋 复制'}
+                  {copied
+                    ? (<><Check size={14} /> 已复制</>)
+                    : (<><Copy size={14} /> 复制</>)}
                 </button>
                 <button
                   className="btn-pill"
                   onClick={onForceBackup}
                   disabled={backupBusy}
-                  style={{ flex: 1, opacity: backupBusy ? 0.5 : 1 }}
+                  style={{ flex: 1, opacity: backupBusy ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  {backupBusy ? '...' : '☁️ 立即备份'}
+                  {backupBusy ? '...' : (<><Cloud size={14} /> 立即备份</>)}
                 </button>
               </div>
             </>
@@ -731,16 +746,17 @@ export default function SettingsPage() {
 
         <button
           className="btn-pill btn-full"
-          style={{ marginTop: 10, background: 'rgba(255,255,255,0.7)' }}
+          style={{ marginTop: 10, background: 'rgba(255,255,255,0.7)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           onClick={() => { setShowRestore((v) => !v); setBackupMsg(null); }}
         >
-          {showRestore ? '关闭' : '🔁 从其它设备恢复…'}
+          {showRestore ? '关闭' : (<><RotateCcw size={14} /> 从其它设备恢复…</>)}
         </button>
 
         {showRestore && (
           <div style={{ marginTop: 10, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
             <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8, lineHeight: 1.5 }}>
-              ⚠️ 输入旧设备的备份码（短码或完整 ID 都行），恢复后会<strong>覆盖</strong>当前所有数据
+              <AlertCircle size={12} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} color="#f59e0b" />
+              输入旧设备的备份码（短码或完整 ID 都行），恢复后会<strong>覆盖</strong>当前所有数据
             </div>
             <input
               className="input"
@@ -755,11 +771,11 @@ export default function SettingsPage() {
             />
             <button
               className="btn btn-full"
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               onClick={onRestore}
               disabled={backupBusy || !restoreCode.trim()}
             >
-              {backupBusy ? '正在恢复…' : '✨ 恢复数据'}
+              {backupBusy ? '正在恢复…' : (<><Sparkles size={15} /> 恢复数据</>)}
             </button>
           </div>
         )}

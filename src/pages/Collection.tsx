@@ -10,6 +10,7 @@ import {
 } from '../lib/storage';
 import AnimalIcon from '../components/AnimalIcon';
 import { syncCompanionToServer } from '../lib/push';
+import { Home, Key, Lock, PartyPopper, Trophy, X } from 'lucide-react';
 
 const CELEBRATE_EMOJIS = ['🎉', '🎊', '✨', '🌟', '💖', '🎈', '⭐', '💫', '🌈', '🎁', '💕', '🥳'];
 
@@ -109,21 +110,21 @@ export default function Collection() {
       <div className={tokens > 0 ? 'card-tinted card-mint' : 'card'}>
         <div className="row-between">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 17 }}>
-              🔑 解锁钥匙：{tokens}
+            <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Key size={18} color="#f59e0b" /> 解锁钥匙：{tokens}
             </div>
-            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.78 }}>
+            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.78, display: 'flex', alignItems: 'center', gap: 4 }}>
               {tokens > 0
                 ? '点下面任意未解锁动物 → 用钥匙解锁'
                 : unlockedCount >= ANIMALS.length
-                  ? '🎉 全部收集完毕，你是真正的喝水冠军'
+                  ? (<><Trophy size={12} color="#f59e0b" /> 全部收集完毕，你是真正的喝水冠军</>)
                   : `距离下一把钥匙还需 ${toNext} 天饮水达标`}
             </div>
             <div style={{ fontSize: 11, marginTop: 2, opacity: 0.6 }}>
               累计获得 {earned} 把 · 已使用 {Math.max(0, unlockedCount - 1)} 把
             </div>
           </div>
-          <div style={{ fontSize: 40 }}>🔑</div>
+          <Key size={40} strokeWidth={1.6} color="#f59e0b" />
         </div>
         {unlockedCount < ANIMALS.length && (
           <div
@@ -167,9 +168,15 @@ export default function Collection() {
               aria-label={locked ? '未解锁' : a.name}
             >
               <AnimalIcon animal={a} size={58} locked={locked} />
-              {locked && !canUnlock && <span className="animal-lock" aria-hidden>🔒</span>}
-              {canUnlock && <span className="animal-token" aria-hidden>🔑</span>}
-              {!locked && isCompanion && <span className="animal-badge" aria-hidden>🏠</span>}
+              {locked && !canUnlock && (
+                <span className="animal-lock" aria-hidden><Lock size={12} strokeWidth={2.4} /></span>
+              )}
+              {canUnlock && (
+                <span className="animal-token" aria-hidden><Key size={12} strokeWidth={2.4} /></span>
+              )}
+              {!locked && isCompanion && (
+                <span className="animal-badge" aria-hidden><Home size={11} strokeWidth={2.4} /></span>
+              )}
             </button>
           );
         })}
@@ -182,7 +189,7 @@ export default function Collection() {
             className={`animal-modal${popupStage === 'unlocked' ? ' just-unlocked' : ''}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <button className="animal-modal-close" onClick={closePopup} aria-label="关闭">✕</button>
+            <button className="animal-modal-close" onClick={closePopup} aria-label="关闭"><X size={18} /></button>
 
             <div className="animal-modal-art">
               <AnimalIcon
@@ -198,15 +205,15 @@ export default function Collection() {
                 {tokens > 0 ? (
                   <>
                     <div className="muted" style={{ marginTop: 6, fontSize: 14, lineHeight: 1.6 }}>
-                      用 <strong style={{ color: 'var(--accent-deep)' }}>1 把 🔑 钥匙</strong> 解锁<br />
+                      用 <strong style={{ color: 'var(--accent-deep)' }}>1 把钥匙</strong> 解锁<br />
                       让它加入你的喝水小队
                     </div>
                     <button
                       className="btn btn-full"
-                      style={{ marginTop: 18 }}
+                      style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                       onClick={() => onUnlock(popupAnimal.id)}
                     >
-                      🔑 用钥匙解锁
+                      <Key size={16} /> 用钥匙解锁
                     </button>
                   </>
                 ) : (
@@ -241,7 +248,8 @@ export default function Collection() {
                       marginTop: 4,
                     }}
                   >
-                    🎉 新伙伴解锁
+                    <PartyPopper size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />
+                    新伙伴解锁
                   </div>
                 )}
                 <div style={{ fontWeight: 700, fontSize: 22, marginTop: 4 }}>{popupAnimal.name}</div>

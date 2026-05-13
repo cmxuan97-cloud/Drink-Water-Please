@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container } from '../types';
 import { addEntry, getContainers, newId } from '../lib/storage';
 import { compressImage, estimateFill, type FillEstimate } from '../lib/vision';
+import {
+  Camera, Coffee, CupSoda, Droplet, GlassWater, Milk, type LucideProps,
+} from 'lucide-react';
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  water: '💧',
-  coffee: '☕',
-  tea: '🍵',
-  juice: '🧃',
-  soda: '🥤',
-  milk: '🥛',
-  other: '🥤',
+const CATEGORY_ICON: Record<string, ComponentType<LucideProps>> = {
+  water: Droplet,
+  coffee: Coffee,
+  tea: GlassWater,
+  juice: CupSoda,
+  soda: CupSoda,
+  milk: Milk,
+  other: GlassWater,
 };
 
 const STEP_MS = 50;
@@ -209,7 +212,7 @@ export default function Add() {
             className="photo-cta"
             onClick={() => fileRef.current?.click()}
           >
-            <span style={{ fontSize: 18 }}>📷</span>
+            <Camera size={18} />
             <span>拍一张让 AI 帮我算</span>
           </button>
         </section>
@@ -231,7 +234,10 @@ export default function Add() {
           {det && (
             <div className="detect-panel" style={{ marginTop: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 26 }}>{CATEGORY_EMOJI[det.category] ?? '🥤'}</span>
+                {(() => {
+                  const Icon = CATEGORY_ICON[det.category] ?? GlassWater;
+                  return <Icon size={26} strokeWidth={1.8} color="#0e7dcc" />;
+                })()}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, opacity: 0.65, fontWeight: 600, letterSpacing: 0.5 }}>
                     {det.isCommon ? '识别到' : '不太认识，目测是'}
@@ -327,8 +333,12 @@ export default function Add() {
           )}
 
           <div className="row" style={{ gap: 8, marginTop: 12 }}>
-            <button className="btn-pill btn-full" onClick={() => fileRef.current?.click()}>
-              📷 重拍
+            <button
+              className="btn-pill btn-full"
+              onClick={() => fileRef.current?.click()}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            >
+              <Camera size={14} /> 重拍
             </button>
             <button className="btn-pill btn-full" onClick={exitPhoto}>
               ← 回到手动

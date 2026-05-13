@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  BarChart3, Calendar, CalendarDays, Droplet, Flame,
+  Sparkles, Target, ThumbsUp, TrendingUp, Trophy,
+  type LucideProps,
+} from 'lucide-react';
 import { getSettings } from '../lib/storage';
 import { dailyGoalMl } from '../lib/goal';
 import {
@@ -227,7 +232,9 @@ function DayView({
 
       <div className="card">
         <div className="row-between" style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 700 }}>📊 24 小时分布</div>
+          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <BarChart3 size={16} /> 24 小时分布
+          </div>
           <div className="muted" style={{ fontSize: 12 }}>{activeHours} 个时段</div>
         </div>
         <HourlyChart hourly={hourly} maxMl={maxBar} />
@@ -244,7 +251,9 @@ function DayEntries({ entries }: { entries: DayStat['entries'] }) {
   return (
     <div className="card">
       <div className="row-between" style={{ marginBottom: 10 }}>
-        <div style={{ fontWeight: 700 }}>💧 当天记录</div>
+        <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Droplet size={16} /> 当天记录
+        </div>
         <span className="muted" style={{ fontSize: 12 }}>{entries.length} 条</span>
       </div>
       <div className="list">
@@ -253,7 +262,7 @@ function DayEntries({ entries }: { entries: DayStat['entries'] }) {
           const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
           return (
             <div key={e.id} className="list-item" style={{ padding: '10px 12px' }}>
-              <span style={{ fontSize: 18 }}>💧</span>
+              <Droplet size={18} color="#3aa6dd" />
               <div className="grow">
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{e.ml} ml</div>
                 <div className="muted" style={{ fontSize: 11 }}>{time}</div>
@@ -279,21 +288,22 @@ function CuteBubble({ drunk, goalMl }: { drunk: number; goalMl: number }) {
   const remaining = Math.max(0, goalMl - drunk);
   const done = drunk >= goalMl && drunk > 0;
   const empty = drunk === 0;
-  const text = done
-    ? ['🎉', '今天达标', '太棒了']
-    : empty
-      ? ['💧', '还差', `${goalMl} ml`]
-      : ['💪', '还差', `${remaining} ml`];
+  const Icon = done ? Trophy : empty ? Droplet : Target;
+  const iconColor = done ? '#16a34a' : empty ? '#3aa6dd' : '#3aa6dd';
+  const label = done ? '今天达标' : '还差';
+  const big = done ? '太棒了' : empty ? `${goalMl} ml` : `${remaining} ml`;
   return (
     <div style={{
       position: 'relative', background: 'white', borderRadius: 18,
       padding: '8px 12px', boxShadow: '0 2px 8px rgba(31,42,68,0.1)',
       fontSize: 12, textAlign: 'center', minWidth: 80,
     }}>
-      <div style={{ fontSize: 20, lineHeight: 1 }}>{text[0]}</div>
-      <div style={{ marginTop: 2, color: 'var(--text-soft)', fontSize: 11 }}>{text[1]}</div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Icon size={20} strokeWidth={1.8} color={iconColor} />
+      </div>
+      <div style={{ marginTop: 4, color: 'var(--text-soft)', fontSize: 11 }}>{label}</div>
       <div style={{ fontWeight: 700, fontSize: 14, color: done ? 'var(--mint-text)' : 'var(--accent-deep)' }}>
-        {text[2]}
+        {big}
       </div>
       <div style={{
         position: 'absolute', left: -7, top: '50%',
@@ -335,26 +345,26 @@ function WeekView({ stats, summary, prev, goalMl }: {
             <DeltaBadge delta={totalDelta} label="vs 上周" />
           )}
         </div>
-        <div style={{ position: 'absolute', right: -16, bottom: -16, fontSize: 100, opacity: 0.1 }}>💧</div>
+        <Droplet size={120} strokeWidth={1.4} style={{ position: 'absolute', right: -10, bottom: -10, opacity: 0.12 }} color="white" />
       </div>
 
       {/* Stats 网格 2x2 */}
       <div className="stats-grid">
-        <StatTile emoji="🎯" label="达标天" value={`${summary.daysHit}/7`} accent="#22c55e" />
+        <StatTile Icon={Target} label="达标天" value={`${summary.daysHit}/7`} accent="#22c55e" />
         <StatTile
-          emoji="🔥"
+          Icon={Flame}
           label={summary.currentStreak > 0 ? '当前连击' : '最长连击'}
           value={`${summary.currentStreak > 0 ? summary.currentStreak : summary.longestStreak} 天`}
           accent="#f97316"
         />
         <StatTile
-          emoji="📊"
+          Icon={BarChart3}
           label="日均"
           value={`${summary.avgPerDay > 0 ? Math.round(summary.avgPerDay / 100) / 10 : 0} L`}
           accent="#3b82f6"
         />
         <StatTile
-          emoji="🏆"
+          Icon={Trophy}
           label="最佳一天"
           value={summary.bestDay ? `${(summary.bestDay.ml / 100) / 10 || (summary.bestDay.ml / 1000).toFixed(1)} L` : '—'}
           accent="#a855f7"
@@ -364,7 +374,9 @@ function WeekView({ stats, summary, prev, goalMl }: {
       {/* 7 天纵向柱状图，更鲜艳 */}
       <div className="card">
         <div className="row-between" style={{ marginBottom: 14 }}>
-          <div style={{ fontWeight: 700 }}>📈 这 7 天</div>
+          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TrendingUp size={16} /> 这 7 天
+          </div>
           <div className="muted" style={{ fontSize: 11 }}>红→黄→绿 = 0%→100% 目标</div>
         </div>
         <WeekBars stats={stats} goalMl={goalMl} today={today} />
@@ -376,8 +388,8 @@ function WeekView({ stats, summary, prev, goalMl }: {
           className="card-tinted"
           style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}
         >
-          <div style={{ display: 'flex', gap: 10 }}>
-            <span style={{ fontSize: 22 }}>{insight.emoji}</span>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <insight.Icon size={22} strokeWidth={1.8} color={insight.color} style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{insight.title}</div>
               <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>{insight.body}</div>
@@ -435,31 +447,31 @@ function MonthView({ stats, summary, prev, goalMl }: {
             <DeltaBadge delta={totalDelta} label="vs 上月" />
           )}
         </div>
-        <div style={{ position: 'absolute', right: -16, bottom: -16, fontSize: 100, opacity: 0.1 }}>📅</div>
+        <CalendarDays size={120} strokeWidth={1.4} style={{ position: 'absolute', right: -10, bottom: -10, opacity: 0.12 }} color="white" />
       </div>
 
       {/* Stats 网格 */}
       <div className="stats-grid">
         <StatTile
-          emoji="🎯"
+          Icon={Target}
           label="达标率"
           value={monthSoFar.length > 0 ? `${Math.round((monthSoFarSummary.daysHit / monthSoFar.length) * 100)}%` : '—'}
           accent="#22c55e"
         />
         <StatTile
-          emoji="🔥"
+          Icon={Flame}
           label="最长连击"
           value={`${monthSoFarSummary.longestStreak} 天`}
           accent="#f97316"
         />
         <StatTile
-          emoji="📊"
+          Icon={BarChart3}
           label="日均"
           value={`${monthSoFarSummary.avgPerDay > 0 ? (monthSoFarSummary.avgPerDay / 1000).toFixed(1) : 0} L`}
           accent="#3b82f6"
         />
         <StatTile
-          emoji="🏆"
+          Icon={Trophy}
           label="最佳"
           value={monthSoFarSummary.bestDay ? `${(monthSoFarSummary.bestDay.ml / 1000).toFixed(1)} L` : '—'}
           accent="#a855f7"
@@ -469,7 +481,9 @@ function MonthView({ stats, summary, prev, goalMl }: {
       {/* 月历热力图 */}
       <div className="card">
         <div className="row-between" style={{ marginBottom: 14 }}>
-          <div style={{ fontWeight: 700 }}>📅 月历热力图</div>
+          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={16} /> 月历热力图
+          </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 10, color: 'var(--text-soft)' }}>
             <span>少</span>
             <HeatLegend />
@@ -482,7 +496,9 @@ function MonthView({ stats, summary, prev, goalMl }: {
       {/* 过去 30 天 趋势 bar */}
       <div className="card">
         <div className="row-between" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700 }}>📈 过去 30 天趋势</div>
+          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TrendingUp size={16} /> 过去 30 天趋势
+          </div>
           <div className="muted" style={{ fontSize: 11 }}>虚线 = 目标</div>
         </div>
         <DayBarChart stats={stats} goalMl={goalMl} labelMode="mmdd" />
@@ -496,13 +512,15 @@ function MonthView({ stats, summary, prev, goalMl }: {
 // =====================================================
 // === 共用组件 ===
 // =====================================================
-function StatTile({ emoji, label, value, accent }: {
-  emoji: string; label: string; value: string; accent: string;
+function StatTile({ Icon, label, value, accent }: {
+  Icon: ComponentType<LucideProps>; label: string; value: string; accent: string;
 }) {
   return (
     <div className="stat-tile">
-      <div style={{ fontSize: 22 }}>{emoji}</div>
-      <div style={{ fontSize: 19, fontWeight: 800, color: accent, letterSpacing: '-0.01em', marginTop: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Icon size={22} strokeWidth={1.8} color={accent} />
+      </div>
+      <div style={{ fontSize: 19, fontWeight: 800, color: accent, letterSpacing: '-0.01em', marginTop: 6 }}>
         {value}
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2 }}>{label}</div>
@@ -557,7 +575,11 @@ function WeekBars({ stats, goalMl, today }: {
         return (
           <div key={s.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1, height: '100%' }}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', width: '100%' }}>
-              {hit && <div style={{ textAlign: 'center', fontSize: 14, marginBottom: 2 }}>🏆</div>}
+              {hit && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+                  <Trophy size={13} color="#f59e0b" strokeWidth={2.2} />
+                </div>
+              )}
               <div
                 style={{
                   width: '100%',
@@ -668,22 +690,23 @@ function HeatLegend() {
   );
 }
 
-function makeWeekInsight(summary: Sum, prev: Sum): { emoji: string; title: string; body: string } | null {
+type Insight = { Icon: ComponentType<LucideProps>; color: string; title: string; body: string };
+function makeWeekInsight(summary: Sum, prev: Sum): Insight | null {
   if (summary.daysWithRecord === 0) return null;
   if (summary.daysHit === 7) {
-    return { emoji: '🏆', title: '完美一周！', body: '7 天全部达标，节奏稳得不行 — 继续保持哦' };
+    return { Icon: Trophy, color: '#f59e0b', title: '完美一周！', body: '7 天全部达标，节奏稳得不行 — 继续保持哦' };
   }
   if (summary.currentStreak >= 3) {
-    return { emoji: '🔥', title: `连击 ${summary.currentStreak} 天`, body: '已经连续达标 3 天以上，这就是好习惯诞生的样子' };
+    return { Icon: Flame, color: '#f97316', title: `连击 ${summary.currentStreak} 天`, body: '已经连续达标 3 天以上，这就是好习惯诞生的样子' };
   }
   if (prev.totalMl > 0 && summary.totalMl > prev.totalMl * 1.2) {
-    return { emoji: '📈', title: '比上周喝得多', body: '本周喝水量比上周高了 20% 以上，进步明显' };
+    return { Icon: TrendingUp, color: '#16a34a', title: '比上周喝得多', body: '本周喝水量比上周高了 20% 以上，进步明显' };
   }
   if (summary.daysHit === 0 && summary.daysWithRecord > 0) {
-    return { emoji: '💪', title: '还在路上', body: '本周有记录但还没达标，下一杯就能开始连击' };
+    return { Icon: Sparkles, color: '#3b82f6', title: '还在路上', body: '本周有记录但还没达标，下一杯就能开始连击' };
   }
   if (summary.daysHit >= 4) {
-    return { emoji: '👍', title: `这周达标 ${summary.daysHit} 天`, body: '一半以上的日子都喝够了，节奏不错' };
+    return { Icon: ThumbsUp, color: '#16a34a', title: `这周达标 ${summary.daysHit} 天`, body: '一半以上的日子都喝够了，节奏不错' };
   }
   return null;
 }

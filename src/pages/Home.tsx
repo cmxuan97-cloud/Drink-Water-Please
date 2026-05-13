@@ -22,6 +22,10 @@ import { syncCompanionToServer, syncProgress } from '../lib/push';
 import { restoreFromCode } from '../lib/sync';
 import { login as authLogin, register as authRegister } from '../lib/auth';
 import { syncUserNameToServer } from '../lib/user';
+import {
+  BarChart3, Cloud, Hand, Key, LogIn, PartyPopper, PawPrint,
+  Settings as SettingsIcon, Sparkles, Trophy, UserPlus,
+} from 'lucide-react';
 import { ANIMALS, earnedTokens } from '../data/animals';
 
 const greetingFor = (h: number): string => {
@@ -191,9 +195,9 @@ export default function Home() {
           <h1 className="page-title">和{companion.name.slice(0, 3)}一起喝水</h1>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <Link to="/stats" className="icon-btn" aria-label="记录">📊</Link>
-          <Link to="/collection" className="icon-btn" aria-label="收藏">🦙</Link>
-          <Link to="/settings" className="icon-btn" aria-label="设置">⚙️</Link>
+          <Link to="/stats" className="icon-btn" aria-label="记录"><BarChart3 size={20} strokeWidth={1.8} /></Link>
+          <Link to="/collection" className="icon-btn" aria-label="收藏"><PawPrint size={20} strokeWidth={1.8} /></Link>
+          <Link to="/settings" className="icon-btn" aria-label="设置"><SettingsIcon size={20} strokeWidth={1.8} /></Link>
         </div>
       </header>
 
@@ -208,7 +212,9 @@ export default function Home() {
             </div>
           </div>
           <div className="tag">
-            {progress.pct >= 1 ? '🎉 达标' : `还差 ${progress.remainingMl} ml`}
+            {progress.pct >= 1
+              ? (<><Trophy size={13} style={{ display: 'inline', verticalAlign: -2 }} /> 达标</>)
+              : `还差 ${progress.remainingMl} ml`}
           </div>
         </div>
 
@@ -317,10 +323,12 @@ export default function Home() {
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
             }}
           >
-            <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: 1 }}>
-              🎉 完成今日目标
+            <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <PartyPopper size={14} color="#f59e0b" /> 完成今日目标
             </div>
-            <div style={{ fontSize: 64, marginTop: 14, marginBottom: 4 }}>🔑</div>
+            <div style={{ marginTop: 18, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+              <Key size={56} strokeWidth={1.6} color="#f59e0b" />
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>多了 1 把解锁钥匙</div>
             <div className="muted" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
               去「我的小伙伴」<br/>挑一只你喜欢的动物加入喝水小队
@@ -368,11 +376,11 @@ export default function Home() {
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
             }}
           >
-            <div style={{ fontSize: 48, marginBottom: 6 }}>
-              {authMode === 'quick' && '👋'}
-              {authMode === 'register' && '✨'}
-              {authMode === 'login' && '🔓'}
-              {authMode === 'restore' && '☁️'}
+            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+              {authMode === 'quick' && <Hand size={42} strokeWidth={1.6} color="#3aa6dd" />}
+              {authMode === 'register' && <Sparkles size={42} strokeWidth={1.6} color="#f59e0b" />}
+              {authMode === 'login' && <LogIn size={42} strokeWidth={1.6} color="#3aa6dd" />}
+              {authMode === 'restore' && <Cloud size={42} strokeWidth={1.6} color="#3aa6dd" />}
             </div>
             <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 4 }}>
               {authMode === 'quick' && '嗨，新朋友'}
@@ -466,11 +474,11 @@ export default function Home() {
                 {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
                 <button
                   className="btn btn-full"
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   onClick={onRegister}
                   disabled={authBusy || !regUsername.trim() || regPassword.length < 6}
                 >
-                  {authBusy ? '正在创建…' : '✨ 创建账号'}
+                  {authBusy ? '正在创建…' : (<><UserPlus size={16} /> 创建账号</>)}
                 </button>
               </>
             )}
@@ -501,11 +509,11 @@ export default function Home() {
                 {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
                 <button
                   className="btn btn-full"
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   onClick={onLogin}
                   disabled={authBusy || !loginUsername.trim() || !loginPassword}
                 >
-                  {authBusy ? '正在登录…' : '🔓 登录'}
+                  {authBusy ? '正在登录…' : (<><LogIn size={16} /> 登录</>)}
                 </button>
                 <button
                   className="btn-pill"
@@ -534,11 +542,11 @@ export default function Home() {
                 {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
                 <button
                   className="btn btn-full"
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   onClick={onRestoreInPrompt}
                   disabled={authBusy || !restoreCodeInput.trim()}
                 >
-                  {authBusy ? '正在恢复…' : '✨ 恢复数据'}
+                  {authBusy ? '正在恢复…' : (<><Sparkles size={16} /> 恢复数据</>)}
                 </button>
                 <button
                   className="btn-pill"
