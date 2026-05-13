@@ -32,9 +32,11 @@ export default async function handler(req: Request): Promise<Response> {
   if (!redis) return Response.json({ error: 'Redis 未配置' }, { status: 500 });
 
   // 同时记录「最近收到」和「app 是否在前台」（前台不显示 system notification）
+  // 收到 ack → failedAcks 重置为 0（彻底干净，连续失败计数清零）
   await redis.hset(`sub:${clientId}`, {
     lastAckAt: Date.now(),
     lastAckVisible: body.visible ? 1 : 0,
+    failedAcks: 0,
   });
   return Response.json({ ok: true });
 }

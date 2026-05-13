@@ -155,6 +155,7 @@ export default async function handler(req: Request): Promise<Response> {
                       : null,
                     lastAckMinAgo,
                     lastAckVisible: obj.lastAckVisible === '1' || obj.lastAckVisible === 1,
+                    failedAcks: Number(obj.failedAcks) || 0,
                     deliveryStatus: !lastSentAt
                       ? 'never_sent'
                       : !lastAckAt

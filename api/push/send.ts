@@ -368,7 +368,14 @@ export default async function handler(req: Request): Promise<Response> {
 
     let sent = 0;
     let skipped = 0;
+    let autoCleaned = 0;
     const failed: any[] = [];
+
+    // 连续多少次发了但 SW 没 ack 就判定为僵尸订阅
+    // 50 次 ≈ frequent mode 1 天 / standard 2 天 / easy 3 天，给真用户出差/周末足够缓冲
+    const ZOMBIE_THRESHOLD = 50;
+    // 上次发了多久才能算「这次也失败」— 5 分钟内 Apple/FCM 应该已经送达
+    const ACK_GRACE_MS = 5 * 60 * 1000;
 
     for (const id of allIds) {
       let raw: any;
@@ -384,6 +391,32 @@ export default async function handler(req: Request): Promise<Response> {
         for (let i = 0; i < arr.length; i += 2) obj[arr[i]] = arr[i + 1];
       } else if (arr && typeof arr === 'object') {
         Object.assign(obj, arr);
+      }
+
+      // === 僵尸检测：连续 ZOMBIE_THRESHOLD 次发了没 ack → 删 ===
+      // 测试推送（test=1）不做这个检查，方便 debug
+      if (!isTest) {
+        const lastSent = Number(obj.lastSentAt) || 0;
+        const lastAck = Number(obj.lastAckAt) || 0;
+        let failedAcks = Number(obj.failedAcks) || 0;
+
+        // 上次发了，超过 5 min 还没 ack 来 → 算一次失败
+        if (lastSent > 0 && lastSent > lastAck && (Date.now() - lastSent) > ACK_GRACE_MS) {
+          failedAcks++;
+        }
+
+        if (failedAcks >= ZOMBIE_THRESHOLD) {
+          await kvFetch(cfg, `/del/sub:${id}`).catch(() => {});
+          await kvFetch(cfg, `/srem/subs:all/${id}`).catch(() => {});
+          autoCleaned++;
+          failed.push(`${id.slice(0, 8)}:auto-cleaned(${failedAcks} fails)`);
+          continue;
+        }
+
+        // 把新值写回（即使没到阈值也要持久化 increment）
+        if (failedAcks !== Number(obj.failedAcks || 0)) {
+          obj.failedAcks = failedAcks;  // 内存里也更新，下面写 KV 时一起写
+        }
       }
 
       let subObj: { endpoint: string; keys: { p256dh: string; auth: string } };
@@ -458,8 +491,9 @@ export default async function handler(req: Request): Promise<Response> {
         const result = await sendPushWithPayload(subObj, payload, jwt, pub);
         if (result.status >= 200 && result.status < 300) {
           sent++;
-          // update lastSentAt
-          await kvFetch(cfg, `/hset/sub:${id}/lastSentAt/${Date.now()}`).catch(() => {});
+          // 更新 lastSentAt 和 failedAcks（如果上面 increment 过）
+          const newFailedAcks = Number(obj.failedAcks) || 0;
+          await kvFetch(cfg, `/hset/sub:${id}/lastSentAt/${Date.now()}/failedAcks/${newFailedAcks}`).catch(() => {});
         } else {
           failed.push(`${id.slice(0, 8)}:${result.status}:${result.body || ''}`);
           if (result.status === 404 || result.status === 410) {
@@ -472,7 +506,14 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
-    return Response.json({ ok: true, total: allIds.length, sent, skipped, failed: failed.slice(0, 5) });
+    return Response.json({
+      ok: true,
+      total: allIds.length,
+      sent,
+      skipped,
+      autoCleaned,
+      failed: failed.slice(0, 5),
+    });
   } catch (e) {
     return Response.json(
       {
