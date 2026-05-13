@@ -448,7 +448,9 @@ export default async function handler(req: Request): Promise<Response> {
       const msg = isTest
         ? { title: '🧪 测试推送', body: '看到这条说明 push 通了！' }
         : buildMessageFor(companionId);
-      const payload = JSON.stringify({ ...msg, url: '/' });
+      // clientId 也塞进 payload — SW 收到后会用它打 /api/push/ack 反馈，让我们能在 diag 里
+      // 看到「Apple 收下了」vs「设备真的收到了」是不是同一件事。
+      const payload = JSON.stringify({ ...msg, url: '/', clientId: id });
 
       try {
         const audience = new URL(subObj.endpoint).origin;

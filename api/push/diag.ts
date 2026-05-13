@@ -126,6 +126,18 @@ export default async function handler(req: Request): Promise<Response> {
                     }
                   } catch { /* ignore */ }
 
+                  // 「SW 收到 push 后回调」的最新时间 + 当时 app 是否在前台
+                  // sent 但没 ack → Apple/FCM 没把推送送到设备
+                  // ack 来了但用户没看到 → 通常是 app 在前台 / 系统通知被关
+                  const lastAckAt = obj.lastAckAt ? Number(obj.lastAckAt) : null;
+                  const lastAckMinAgo = lastAckAt
+                    ? Math.round((Date.now() - lastAckAt) / 60000)
+                    : null;
+                  const lastSentAt = obj.lastSentAt ? Number(obj.lastSentAt) : null;
+                  // 「最近发了但没 ack」= 推送丢了（5 min 内 sent 但还没 ack）
+                  const lostInFlight = lastSentAt && (!lastAckAt || lastAckAt < lastSentAt)
+                    && (Date.now() - lastSentAt) > 60_000;
+
                   subs.push({
                     clientId: id.slice(0, 12) + '…',
                     subType,
@@ -138,9 +150,20 @@ export default async function handler(req: Request): Promise<Response> {
                     mode: obj.mode || 'standard',
                     companion: obj.companion || '(none → fallback a-kiwi)',
                     hasLastSentAt: !!obj.lastSentAt,
-                    lastSentMinAgo: obj.lastSentAt
-                      ? Math.round((Date.now() - Number(obj.lastSentAt)) / 60000)
+                    lastSentMinAgo: lastSentAt
+                      ? Math.round((Date.now() - lastSentAt) / 60000)
                       : null,
+                    lastAckMinAgo,
+                    lastAckVisible: obj.lastAckVisible === '1' || obj.lastAckVisible === 1,
+                    deliveryStatus: !lastSentAt
+                      ? 'never_sent'
+                      : !lastAckAt
+                        ? '⚠️ sent_but_never_ack (Apple/FCM 把推送吞了 OR SW 没注册)'
+                        : lostInFlight
+                          ? '⚠️ recent_send_no_ack (最近一次推送可能丢了)'
+                          : obj.lastAckVisible === '1' || obj.lastAckVisible === 1
+                            ? 'ack_in_foreground (收到了但 app 在前台 → 不显示系统通知)'
+                            : 'ok (✅ SW 已收到推送)',
                     progress,
                   });
                 } catch (e) {

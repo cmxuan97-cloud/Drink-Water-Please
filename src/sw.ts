@@ -25,6 +25,7 @@ type PushPayload = {
   badge?: string;
   url?: string;
   tag?: string;
+  clientId?: string;  // 用来打 /api/push/ack 反馈接收成功
 };
 
 const FALLBACK: PushPayload = {
@@ -34,6 +35,24 @@ const FALLBACK: PushPayload = {
   badge: '/icon.svg',
   tag: 'drink-water',
   url: '/',
+};
+
+// 上报：「SW 真的收到了这条 push」+「当时 app 在前台没」
+// 跟服务端 lastSentAt 对比就能定位问题：sent 成功但 ack 没来 = Apple/FCM 没送达
+const reportAck = async (clientId: string | undefined): Promise<void> => {
+  if (!clientId) return;
+  try {
+    // 看看是否有打开的客户端窗口（用来判断是不是「前台收到，所以不显示通知」）
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const anyVisible = allClients.some((c) => (c as { visibilityState?: string }).visibilityState === 'visible');
+    await fetch('/api/push/ack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, visible: anyVisible }),
+    });
+  } catch {
+    // 静默失败 — ack 不可达不影响通知本体
+  }
 };
 
 self.addEventListener('push', (event) => {
@@ -47,13 +66,16 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || FALLBACK.title!, {
-      body: payload.body,
-      icon: payload.icon,
-      badge: payload.badge,
-      tag: payload.tag,
-      data: { url: payload.url || '/' },
-    } as any),
+    Promise.all([
+      self.registration.showNotification(payload.title || FALLBACK.title!, {
+        body: payload.body,
+        icon: payload.icon,
+        badge: payload.badge,
+        tag: payload.tag,
+        data: { url: payload.url || '/' },
+      } as any),
+      reportAck(payload.clientId),
+    ]),
   );
 });
 
