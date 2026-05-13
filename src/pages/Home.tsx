@@ -20,6 +20,7 @@ import {
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
 import { syncCompanionToServer, syncProgress } from '../lib/push';
 import { restoreFromCode } from '../lib/sync';
+import { login as authLogin, register as authRegister } from '../lib/auth';
 import { syncUserNameToServer } from '../lib/user';
 import { ANIMALS, earnedTokens } from '../data/animals';
 
@@ -40,11 +41,18 @@ export default function Home() {
   const [nameInput, setNameInput] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
-  // 名字弹窗里的「输入备份码恢复」分支
-  const [showRestoreInPrompt, setShowRestoreInPrompt] = useState(false);
+
+  // === 首次开屏的认证流 ===
+  type AuthMode = 'quick' | 'register' | 'login' | 'restore';
+  const [authMode, setAuthMode] = useState<AuthMode>('quick');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authErr, setAuthErr] = useState<string | null>(null);
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regDisplayName, setRegDisplayName] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [restoreCodeInput, setRestoreCodeInput] = useState('');
-  const [restoreBusy, setRestoreBusy] = useState(false);
-  const [restoreErr, setRestoreErr] = useState<string | null>(null);
 
   useEffect(() => {
     pruneOldPhotos();
@@ -66,17 +74,46 @@ export default function Home() {
     void syncUserNameToServer(trimmed);
   };
 
-  const onRestoreInPrompt = async () => {
-    setRestoreErr(null);
-    setRestoreBusy(true);
-    const result = await restoreFromCode(restoreCodeInput);
+  const onRegister = async () => {
+    setAuthErr(null);
+    setAuthBusy(true);
+    const dn = regDisplayName.trim() || regUsername.trim();
+    const result = await authRegister(regUsername.trim(), regPassword, dn);
     if (result.ok) {
-      // 用 reload 让所有 state 从恢复后的 localStorage 重新读
+      window.location.reload();  // 让 state 从新身份重新加载
+    } else {
+      setAuthErr(result.error ?? '注册失败');
+      setAuthBusy(false);
+    }
+  };
+
+  const onLogin = async () => {
+    setAuthErr(null);
+    setAuthBusy(true);
+    const result = await authLogin(loginUsername.trim(), loginPassword);
+    if (result.ok) {
       window.location.reload();
     } else {
-      setRestoreErr(result.error ?? '恢复失败');
-      setRestoreBusy(false);
+      setAuthErr(result.error ?? '登录失败');
+      setAuthBusy(false);
     }
+  };
+
+  const onRestoreInPrompt = async () => {
+    setAuthErr(null);
+    setAuthBusy(true);
+    const result = await restoreFromCode(restoreCodeInput);
+    if (result.ok) {
+      window.location.reload();
+    } else {
+      setAuthErr(result.error ?? '恢复失败');
+      setAuthBusy(false);
+    }
+  };
+
+  const switchAuthMode = (m: AuthMode) => {
+    setAuthMode(m);
+    setAuthErr(null);
   };
 
   const goalMl = useMemo(
@@ -314,48 +351,158 @@ export default function Home() {
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
             }}
           >
-            {!showRestoreInPrompt ? (
+            <div style={{ fontSize: 48, marginBottom: 6 }}>
+              {authMode === 'quick' && '👋'}
+              {authMode === 'register' && '✨'}
+              {authMode === 'login' && '🔓'}
+              {authMode === 'restore' && '☁️'}
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 4 }}>
+              {authMode === 'quick' && '嗨，新朋友'}
+              {authMode === 'register' && '创建账号'}
+              {authMode === 'login' && '欢迎回来'}
+              {authMode === 'restore' && '用备份码恢复'}
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 14, lineHeight: 1.5 }}>
+              {authMode === 'quick' && '直接开始用 — 数据存这台手机上'}
+              {authMode === 'register' && '账号能跨设备同步，删 app 也不丢'}
+              {authMode === 'login' && '输入用户名密码，把数据拉回来'}
+              {authMode === 'restore' && '老用户的恢复方式 — 用备份码'}
+            </div>
+
+            {/* 三档主选择 */}
+            <div className="row" style={{ gap: 6, marginBottom: 14 }}>
+              <button
+                className={authMode === 'quick' ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                onClick={() => switchAuthMode('quick')}
+                style={{ flex: 1, fontSize: 12, padding: '8px 4px' }}
+              >直接用</button>
+              <button
+                className={authMode === 'register' ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                onClick={() => switchAuthMode('register')}
+                style={{ flex: 1, fontSize: 12, padding: '8px 4px' }}
+              >注册</button>
+              <button
+                className={authMode === 'login' || authMode === 'restore' ? 'btn-pill btn-pill-active' : 'btn-pill'}
+                onClick={() => switchAuthMode('login')}
+                style={{ flex: 1, fontSize: 12, padding: '8px 4px' }}
+              >登录</button>
+            </div>
+
+            {/* 「直接用」: 输名字开始 */}
+            {authMode === 'quick' && (
               <>
-                <div style={{ fontSize: 56, marginBottom: 8 }}>👋</div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>嗨，认识一下吗？</div>
-                <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>
-                  告诉我你的名字，我们一起开始喝水之旅
-                </div>
                 <input
                   className="input"
                   type="text"
-                  placeholder="你的名字"
+                  placeholder="你叫什么"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
                   onKeyDown={(e) => { if (e.key === 'Enter') onSaveName(); }}
                   maxLength={30}
-                  autoFocus
-                  style={{ marginTop: 18, textAlign: 'center', fontSize: 17 }}
+                  style={{ textAlign: 'center', fontSize: 17 }}
                 />
                 <button
                   className="btn btn-full"
-                  style={{ marginTop: 14 }}
+                  style={{ marginTop: 12 }}
                   onClick={onSaveName}
                   disabled={!nameInput.trim()}
                 >
                   开始
                 </button>
+                <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+                  之后想跨设备同步可以在「设置」里随时注册账号
+                </div>
+              </>
+            )}
+
+            {/* 「注册」 */}
+            {authMode === 'register' && (
+              <>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="用户名（3-30 字母数字）"
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value.slice(0, 30))}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{ textAlign: 'center', fontSize: 15 }}
+                />
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="密码（≥6 位）"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  style={{ textAlign: 'center', fontSize: 15, marginTop: 8 }}
+                />
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="显示名字（可选，给小伙伴叫）"
+                  value={regDisplayName}
+                  onChange={(e) => setRegDisplayName(e.target.value.slice(0, 30))}
+                  style={{ textAlign: 'center', fontSize: 15, marginTop: 8 }}
+                />
+                {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
                 <button
-                  className="btn-pill"
-                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 13 }}
-                  onClick={() => setShowRestoreInPrompt(true)}
+                  className="btn btn-full"
+                  style={{ marginTop: 12 }}
+                  onClick={onRegister}
+                  disabled={authBusy || !regUsername.trim() || regPassword.length < 6}
                 >
-                  已经用过？输入备份码恢复 →
+                  {authBusy ? '正在创建…' : '✨ 创建账号'}
                 </button>
               </>
-            ) : (
+            )}
+
+            {/* 「登录」 */}
+            {authMode === 'login' && (
               <>
-                <div style={{ fontSize: 48, marginBottom: 8 }}>☁️</div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>恢复数据</div>
-                <div className="muted" style={{ marginTop: 6, fontSize: 14, lineHeight: 1.5 }}>
-                  粘贴你之前保存的备份码<br/>
-                  把所有记录、动物、设置拉回来
-                </div>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="用户名"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value.slice(0, 30))}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{ textAlign: 'center', fontSize: 15 }}
+                />
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="密码"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && loginUsername && loginPassword) onLogin(); }}
+                  style={{ textAlign: 'center', fontSize: 15, marginTop: 8 }}
+                />
+                {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
+                <button
+                  className="btn btn-full"
+                  style={{ marginTop: 12 }}
+                  onClick={onLogin}
+                  disabled={authBusy || !loginUsername.trim() || !loginPassword}
+                >
+                  {authBusy ? '正在登录…' : '🔓 登录'}
+                </button>
+                <button
+                  className="btn-pill"
+                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 12 }}
+                  onClick={() => switchAuthMode('restore')}
+                >
+                  忘了密码？用备份码恢复 →
+                </button>
+              </>
+            )}
+
+            {/* 「用备份码」 — 兼容旧用户 */}
+            {authMode === 'restore' && (
+              <>
                 <input
                   className="input"
                   type="text"
@@ -365,25 +512,23 @@ export default function Home() {
                   autoCapitalize="characters"
                   autoCorrect="off"
                   spellCheck={false}
-                  style={{ marginTop: 18, fontFamily: 'ui-monospace, monospace', fontSize: 17, textAlign: 'center', letterSpacing: '0.06em' }}
+                  style={{ fontFamily: 'ui-monospace, monospace', fontSize: 17, textAlign: 'center', letterSpacing: '0.06em' }}
                 />
-                {restoreErr && (
-                  <div className="warn" style={{ marginTop: 8, fontSize: 12 }}>{restoreErr}</div>
-                )}
+                {authErr && <div className="warn" style={{ marginTop: 10, fontSize: 12 }}>{authErr}</div>}
                 <button
                   className="btn btn-full"
-                  style={{ marginTop: 14 }}
+                  style={{ marginTop: 12 }}
                   onClick={onRestoreInPrompt}
-                  disabled={restoreBusy || !restoreCodeInput.trim()}
+                  disabled={authBusy || !restoreCodeInput.trim()}
                 >
-                  {restoreBusy ? '正在恢复…' : '✨ 恢复数据'}
+                  {authBusy ? '正在恢复…' : '✨ 恢复数据'}
                 </button>
                 <button
                   className="btn-pill"
-                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 13 }}
-                  onClick={() => { setShowRestoreInPrompt(false); setRestoreErr(null); }}
+                  style={{ marginTop: 10, background: 'transparent', boxShadow: 'none', fontSize: 12 }}
+                  onClick={() => switchAuthMode('login')}
                 >
-                  ← 我是新用户
+                  ← 用账号登录
                 </button>
               </>
             )}

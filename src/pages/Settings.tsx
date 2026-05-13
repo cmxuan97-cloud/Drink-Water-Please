@@ -12,6 +12,13 @@ import {
   syncSettingsToServer,
 } from '../lib/push';
 import { cachedBackupCode, forceSyncNow, getOrFetchBackupCode, lastSyncAt, restoreFromCode } from '../lib/sync';
+import {
+  getCurrentDisplayName,
+  getCurrentUsername,
+  login as authLogin,
+  logout as authLogout,
+  register as authRegister,
+} from '../lib/auth';
 import { ANIMALS } from '../data/animals';
 import { ensureUnlockedMigration } from '../lib/storage';
 
@@ -41,6 +48,17 @@ export default function SettingsPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
 
+  // 账号
+  const [authUsername, setAuthUsername] = useState<string | null>(null);
+  const [authDisplayName, setAuthDisplayName] = useState<string | null>(null);
+  const [showAuthPanel, setShowAuthPanel] = useState<'none' | 'register' | 'login'>('none');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMsg, setAuthMsg] = useState<string | null>(null);
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
   // 备份/恢复
   const [backupId, setBackupId] = useState('');
   const [shortCode, setShortCode] = useState<string | null>(null);
@@ -64,6 +82,8 @@ export default function SettingsPage() {
       getCurrentSubscription().then((sub) => setPushEnabled(!!sub));
     }
     setBackupId(getOrCreateClientId());
+    setAuthUsername(getCurrentUsername());
+    setAuthDisplayName(getCurrentDisplayName());
     const last = lastSyncAt();
     setLastSyncMin(last ? Math.round((Date.now() - last) / 60000) : null);
     // 短码：先看本地缓存，没有就异步去拉
@@ -78,6 +98,38 @@ export default function SettingsPage() {
       });
     }
   }, []);
+
+  const onRegisterFromSettings = async () => {
+    setAuthMsg(null);
+    setAuthBusy(true);
+    const result = await authRegister(regUsername.trim(), regPassword, regUsername.trim());
+    if (result.ok) {
+      setAuthMsg('✅ 账号创建成功，刷新中…');
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      setAuthMsg(`❌ ${result.error ?? '注册失败'}`);
+      setAuthBusy(false);
+    }
+  };
+
+  const onLoginFromSettings = async () => {
+    setAuthMsg(null);
+    setAuthBusy(true);
+    const result = await authLogin(loginUsername.trim(), loginPassword);
+    if (result.ok) {
+      setAuthMsg('✅ 登录成功，刷新中…');
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      setAuthMsg(`❌ ${result.error ?? '登录失败'}`);
+      setAuthBusy(false);
+    }
+  };
+
+  const onLogout = () => {
+    if (!confirm('确定要登出？\n本地数据会清空（云端数据保留），下次登录可以拉回来。')) return;
+    authLogout();
+    window.location.reload();
+  };
 
   const onCopyShortCode = async () => {
     if (!shortCode) return;
@@ -345,6 +397,148 @@ export default function SettingsPage() {
         {!isPushSupported() && (
           <div className="warn" style={{ marginTop: 10 }}>
             当前浏览器不支持 Web Push
+          </div>
+        )}
+      </div>
+
+      {/* === 账号 === */}
+      <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%)' }}>
+        {authUsername ? (
+          // 已登录
+          <>
+            <div className="row-between">
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 17 }}>👤 已登录</div>
+                <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
+                  <strong>@{authUsername}</strong>
+                  {authDisplayName && authDisplayName !== authUsername && ` · ${authDisplayName}`}
+                </div>
+                <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>
+                  在任何手机上用同样账号登录都能拉到这些数据
+                </div>
+              </div>
+              <button
+                className="btn-pill"
+                onClick={onLogout}
+                style={{ background: 'rgba(255,255,255,0.7)' }}
+              >
+                登出
+              </button>
+            </div>
+          </>
+        ) : (
+          // 未登录 → 引导注册或登录
+          <>
+            <div style={{ fontWeight: 700, fontSize: 17 }}>👤 没账号</div>
+            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85, lineHeight: 1.5 }}>
+              注册账号可以在任何手机/电脑上登录拉回数据。<br/>
+              <strong>建议你创建一个</strong> — 用户名 + 密码就行
+            </div>
+            {showAuthPanel === 'none' && (
+              <div className="row" style={{ gap: 8, marginTop: 12 }}>
+                <button
+                  className="btn-pill btn-full"
+                  style={{ background: 'rgba(255,255,255,0.85)', fontWeight: 600 }}
+                  onClick={() => { setShowAuthPanel('register'); setAuthMsg(null); }}
+                >
+                  ✨ 注册账号
+                </button>
+                <button
+                  className="btn-pill btn-full"
+                  style={{ background: 'rgba(255,255,255,0.6)' }}
+                  onClick={() => { setShowAuthPanel('login'); setAuthMsg(null); }}
+                >
+                  🔓 登录
+                </button>
+              </div>
+            )}
+            {showAuthPanel === 'register' && (
+              <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
+                <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+                  当前数据会跟新账号绑定，不会丢
+                </div>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="用户名（3-30 字母数字）"
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value.slice(0, 30))}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{ fontSize: 15 }}
+                />
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="密码（≥6 位）"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  style={{ fontSize: 15, marginTop: 8 }}
+                />
+                <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                  <button
+                    className="btn-pill"
+                    onClick={() => setShowAuthPanel('none')}
+                    style={{ flex: 1 }}
+                  >取消</button>
+                  <button
+                    className="btn btn-full"
+                    onClick={onRegisterFromSettings}
+                    disabled={authBusy || !regUsername.trim() || regPassword.length < 6}
+                    style={{ flex: 2 }}
+                  >
+                    {authBusy ? '...' : '✨ 创建'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {showAuthPanel === 'login' && (
+              <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 12 }}>
+                <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+                  ⚠️ 登录后<strong>当前本地数据会被覆盖</strong>，先想清楚
+                </div>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="用户名"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value.slice(0, 30))}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{ fontSize: 15 }}
+                />
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="密码"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  style={{ fontSize: 15, marginTop: 8 }}
+                />
+                <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                  <button
+                    className="btn-pill"
+                    onClick={() => setShowAuthPanel('none')}
+                    style={{ flex: 1 }}
+                  >取消</button>
+                  <button
+                    className="btn btn-full"
+                    onClick={onLoginFromSettings}
+                    disabled={authBusy || !loginUsername.trim() || !loginPassword}
+                    style={{ flex: 2 }}
+                  >
+                    {authBusy ? '...' : '🔓 登录'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {authMsg && (
+          <div style={{ fontSize: 12, marginTop: 10, padding: 8, background: 'rgba(255,255,255,0.7)', borderRadius: 8 }}>
+            {authMsg}
           </div>
         )}
       </div>
