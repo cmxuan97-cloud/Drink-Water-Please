@@ -261,20 +261,38 @@ function NightScene() {
   return (
     <>
       <Style />
-      {/* 月亮 */}
+      {/* 弯月 — 暖色渐变 + 月坑 (镜面反转) */}
       <svg
         viewBox="0 0 100 100"
-        style={{ position: 'absolute', right: 30, top: 80, width: 100, height: 100, animation: 'tbg-float 5s ease-in-out infinite' }}
+        style={{ position: 'absolute', right: 22, top: 16, width: 110, height: 110, animation: 'tbg-float 5s ease-in-out infinite' }}
       >
         <defs>
           <radialGradient id="moon-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stopColor="#fff8d8" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#fff8d8" stopOpacity={0} />
+            <stop offset="0%" stopColor="#fff5c8" stopOpacity={0.55} />
+            <stop offset="55%" stopColor="#fff0a8" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#fff0a8" stopOpacity={0} />
+          </radialGradient>
+          <radialGradient id="moon-body" cx="0.38" cy="0.4" r="0.7">
+            <stop offset="0%" stopColor="#fffaf0" />
+            <stop offset="55%" stopColor="#fff0c0" />
+            <stop offset="100%" stopColor="#f0d078" />
+          </radialGradient>
+          <radialGradient id="moon-shade" cx="0.7" cy="0.55" r="0.55">
+            <stop offset="0%" stopColor="#000" stopOpacity={0} />
+            <stop offset="100%" stopColor="#a07028" stopOpacity={0.22} />
           </radialGradient>
         </defs>
-        <circle cx={50} cy={50} r={45} fill="url(#moon-glow)" />
-        <circle cx={50} cy={50} r={28} fill="#fff8d8" />
-        <circle cx={58} cy={42} r={26} fill="#1a2548" />
+        <g transform="translate(100,0) scale(-1,1)">
+          <circle cx={50} cy={50} r={48} fill="url(#moon-glow)" />
+          <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-body)" />
+          <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-shade)" />
+          {/* 月坑 */}
+          <ellipse cx={36} cy={42} rx={3.2} ry={2.6} fill="#e2bd72" opacity={0.5} />
+          <ellipse cx={42} cy={64} rx={2.5} ry={2} fill="#e2bd72" opacity={0.45} />
+          <ellipse cx={30} cy={56} rx={1.8} ry={1.6} fill="#e2bd72" opacity={0.4} />
+          <ellipse cx={40} cy={30} rx={1.6} ry={1.4} fill="#e2bd72" opacity={0.45} />
+          <ellipse cx={34} cy={72} rx={1.5} ry={1.2} fill="#e2bd72" opacity={0.4} />
+        </g>
       </svg>
       {/* 星星 */}
       {stars.map((s, i) => (
@@ -312,24 +330,79 @@ function BottomPlants({
 }: { leafColor?: string; dewColor?: string; opacity?: number }) {
   return (
     <svg
-      viewBox="0 0 400 160"
+      viewBox="0 0 400 200"
       preserveAspectRatio="xMidYMax meet"
-      style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 160, overflow: 'visible', opacity }}
+      style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 200, overflow: 'visible', opacity }}
     >
-      <path d="M 40 160 Q 30 120 50 95" stroke={leafColor} fill="none" strokeWidth="3.5" strokeLinecap="round" />
-      <path d="M 40 160 Q 55 125 70 108" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
-      <path d="M 80 160 Q 72 130 88 112" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
-      <path d="M 80 160 Q 92 128 106 115" stroke={leafColor} fill="none" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M 340 160 Q 330 128 348 108" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
-      <path d="M 340 160 Q 355 132 368 118" stroke={leafColor} fill="none" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M 370 160 Q 362 136 376 120" stroke={leafColor} fill="none" strokeWidth="2.5" strokeLinecap="round" />
-      <ellipse cx={50} cy={96} rx={4.5} ry={5.5} fill={dewColor} opacity={0.88} />
-      <ellipse cx={70} cy={109} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
-      <ellipse cx={88} cy={113} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
-      <ellipse cx={106} cy={116} rx={2.5} ry={3} fill={dewColor} opacity={0.7} />
-      <ellipse cx={348} cy={109} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
-      <ellipse cx={368} cy={119} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
+      {/* 左侧草叶 */}
+      <path d="M 40 200 Q 30 160 50 135" stroke={leafColor} fill="none" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M 40 200 Q 55 165 70 148" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
+      <path d="M 80 200 Q 72 170 88 152" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
+      <path d="M 80 200 Q 92 168 106 155" stroke={leafColor} fill="none" strokeWidth="2.5" strokeLinecap="round" />
+      {/* 右侧草叶 */}
+      <path d="M 340 200 Q 330 168 348 148" stroke={leafColor} fill="none" strokeWidth="3" strokeLinecap="round" />
+      <path d="M 340 200 Q 355 172 368 158" stroke={leafColor} fill="none" strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M 370 200 Q 362 176 376 160" stroke={leafColor} fill="none" strokeWidth="2.5" strokeLinecap="round" />
+      {/* 露珠 */}
+      <ellipse cx={50} cy={136} rx={4.5} ry={5.5} fill={dewColor} opacity={0.88} />
+      <ellipse cx={70} cy={149} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
+      <ellipse cx={88} cy={153} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
+      <ellipse cx={106} cy={156} rx={2.5} ry={3} fill={dewColor} opacity={0.7} />
+      <ellipse cx={348} cy={149} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
+      <ellipse cx={368} cy={159} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
+      {/* 鸡蛋花树 1 — 左侧植物中间 */}
+      <FrangipaniTree x={72} leafColor={leafColor} />
+      {/* 鸡蛋花树 2 — 右侧植物中间，位置稍低 */}
+      <FrangipaniTree x={348} y={28} leafColor={leafColor} />
     </svg>
+  );
+}
+
+function FrangipaniTree({ x, y = 0, leafColor }: { x: number; y?: number; leafColor: string }) {
+  const flowers = [
+    { dx: -14, dy: 108, r: 6.5 },
+    { dx: 14,  dy: 102, r: 6 },
+    { dx: 2,   dy: 122, r: 5.5 },
+    { dx: -18, dy: 124, r: 5.5 },
+    { dx: 20,  dy: 124, r: 6 },
+    { dx: -4,  dy: 92,  r: 4.5 },
+    { dx: 8,   dy: 116, r: 4.5 },
+  ];
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      {/* 树干 */}
+      <path d="M -2 200 Q -4 158 0 118 Q 4 158 2 200 Z" fill="#7a4f2c" opacity={0.92} />
+      {/* 树冠 — 多层圆叠出蓬松感 */}
+      <circle cx={0}   cy={108} r={26} fill={leafColor} opacity={0.92} />
+      <circle cx={-20} cy={118} r={19} fill={leafColor} opacity={0.85} />
+      <circle cx={20}  cy={118} r={19} fill={leafColor} opacity={0.85} />
+      <circle cx={-10} cy={92}  r={17} fill={leafColor} opacity={0.88} />
+      <circle cx={12}  cy={94}  r={17} fill={leafColor} opacity={0.88} />
+      {/* 鸡蛋花 — 5 瓣风车形 */}
+      {flowers.map(({ dx, dy, r }, i) => <Frangipani key={i} cx={dx} cy={dy} r={r} />)}
+    </g>
+  );
+}
+
+function Frangipani({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  return (
+    <g transform={`translate(${cx}, ${cy})`}>
+      {/* 5 片白色花瓣 — 风车形 */}
+      {[0, 72, 144, 216, 288].map((angle) => (
+        <ellipse
+          key={angle}
+          cx={0}
+          cy={-r * 0.55}
+          rx={r * 0.42}
+          ry={r * 0.85}
+          fill="#ffffff"
+          transform={`rotate(${angle})`}
+        />
+      ))}
+      {/* 中心黄色辐射 */}
+      <circle cx={0} cy={0} r={r * 0.55} fill="#fde68a" opacity={0.7} />
+      <circle cx={0} cy={0} r={r * 0.32} fill="#f5b91e" opacity={0.9} />
+    </g>
   );
 }
 

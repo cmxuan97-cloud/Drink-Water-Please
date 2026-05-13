@@ -188,11 +188,9 @@ export default function Home() {
     <div className="page">
       <TimeBackground theme={(new URLSearchParams(window.location.search).get('theme') as any) || undefined} />
       <header className="page-header">
-        <div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {greeting}{userName ? `，${userName}` : '，今天'}
-          </div>
-          <h1 className="page-title">和{companion.name.slice(0, 3)}一起喝水</h1>
+        <div className="muted" style={{ fontSize: 13 }}>
+          {greeting}
+          {userName ? <>，<span style={{ fontStyle: 'italic' }}>{userName}</span></> : '，今天'}
         </div>
         <div className="row" style={{ gap: 8 }}>
           <Link to="/stats" className="icon-btn" aria-label="记录"><BarChart3 size={20} strokeWidth={1.8} /></Link>
@@ -200,6 +198,7 @@ export default function Home() {
           <Link to="/settings" className="icon-btn" aria-label="设置"><SettingsIcon size={20} strokeWidth={1.8} /></Link>
         </div>
       </header>
+      <h1 className="page-title" style={{ marginTop: -20 }}>和{companion.name.slice(0, 3)}一起喝水</h1>
 
       {/* Stats + horizontal progress */}
       <div className="hero-block" style={{ marginTop: 32 }}>

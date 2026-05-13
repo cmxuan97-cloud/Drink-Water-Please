@@ -414,7 +414,7 @@ body.theme-dark .card-sky {
 }
 
 
-body.theme-dark .page-header .page-title { color: #fff; }
+body.theme-dark .page-title { color: #fff; }
 body.theme-dark .page-header .muted { color: rgba(255, 255, 255, 0.85) !important; }
 body.theme-dark .page-header .back-btn { color: rgba(255, 255, 255, 0.95); }
 body.theme-dark .page-header .icon-btn {
