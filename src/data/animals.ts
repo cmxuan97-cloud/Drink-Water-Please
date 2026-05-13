@@ -59,13 +59,14 @@ export const ANIMALS: Animal[] = [
 ];
 
 // === Token 解锁系统 ===
-// 每 2 天达标 → 获得 1 个解锁机会（token）
+// 首把钥匙：达标 1 天即可
+// 之后：每 2 天达标再得 1 把
 // starter（kiwi）永久免费，不消耗 token
 // 用户在 collection 页用 token 选解锁哪只动物
 
-/** 累计获得的 token 总数 */
+/** 累计获得的 token 总数 — 第一天就发一把，之后每 2 天一把 */
 export const earnedTokens = (completedDays: number): number =>
-  Math.floor(completedDays / 2);
+  Math.floor((completedDays + 1) / 2);
 
 /** 当前可用 token = 累计获得 - 已用（已解锁数 - 1 个 starter） */
 export const availableTokens = (completedDays: number, unlockedCount: number): number =>
@@ -73,13 +74,14 @@ export const availableTokens = (completedDays: number, unlockedCount: number): n
 
 /** 距离下一个 token 还需几天 */
 export const daysToNextToken = (completedDays: number): number => {
-  const next = (Math.floor(completedDays / 2) + 1) * 2;
-  return next - completedDays;
+  const currentTokens = earnedTokens(completedDays);
+  const nextDay = 2 * currentTokens + 1;
+  return Math.max(1, nextDay - completedDays);
 };
 
 // 保留旧 API 供个别地方继续用（已解锁数显示）
 export const unlockCount = (completedDays: number): number => {
-  return Math.min(ANIMALS.length, 1 + Math.floor(completedDays / 2));
+  return Math.min(ANIMALS.length, 1 + earnedTokens(completedDays));
 };
 
 export const daysToNextUnlock = daysToNextToken;

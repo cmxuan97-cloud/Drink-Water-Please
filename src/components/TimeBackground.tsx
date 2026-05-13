@@ -264,7 +264,7 @@ function NightScene() {
       {/* 弯月 — 暖色渐变 + 月坑 (镜面反转) */}
       <svg
         viewBox="0 0 100 100"
-        style={{ position: 'absolute', right: 22, top: 16, width: 110, height: 110, animation: 'tbg-float 5s ease-in-out infinite' }}
+        style={{ position: 'absolute', right: 22, top: 48, width: 110, height: 110, animation: 'tbg-float 5s ease-in-out infinite' }}
       >
         <defs>
           <radialGradient id="moon-glow" cx="0.5" cy="0.5" r="0.5">

@@ -192,7 +192,7 @@ export default function Home() {
           {greeting}
           {userName ? <>，<span style={{ fontStyle: 'italic' }}>{userName}</span></> : '，今天'}
         </div>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row" style={{ gap: 8, marginTop: 14 }}>
           <Link to="/stats" className="icon-btn" aria-label="记录"><BarChart3 size={20} strokeWidth={1.8} /></Link>
           <Link to="/collection" className="icon-btn" aria-label="收藏"><PawPrint size={20} strokeWidth={1.8} /></Link>
           <Link to="/settings" className="icon-btn" aria-label="设置"><SettingsIcon size={20} strokeWidth={1.8} /></Link>
