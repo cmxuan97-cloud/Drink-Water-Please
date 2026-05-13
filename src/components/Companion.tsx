@@ -15,6 +15,11 @@ type Props = {
   pace: 'behind' | 'on-track' | 'ahead' | null;
 };
 
+// 30 min 没喝水 → 濒死（动物变灰）
+const DYING_THRESHOLD_MIN = 30;
+// 15 min 没喝水 → 喊渴（还没死）
+const THIRSTY_THRESHOLD_MIN = 15;
+
 const MESSAGES = {
   drinking: ['咕咚~ 我也来一口', '嗯~ 真甜！', '一起喝水真好~', '哇 这水真好喝'],
   celebrating: ['🎉 我们做到了！', '今天目标完成，棒棒！', '喝够啦，开心~', '你真厉害！'],
@@ -22,7 +27,10 @@ const MESSAGES = {
   encouraging: ['再喝一杯就追上啦', '我相信你，加油！', '别忘了喝水哦', '差一点就达标啦'],
   happy: ['节奏很棒，继续保持！', '做得很好哦', '今天的你最棒', '继续加油~'],
   idle: ['今天也要好好喝水', '我陪着你', '想喝水的时候就来找我', '记得喝水哦~'],
-  dying: ['好渴啊…快不行了…', '救命…给我水…', '我...快...枯死了...', '咕…喝口水吧…求你…'],
+  dying: [
+    '好渴啊…快不行了…', '救命…给我水…', '我...快...枯死了...', '咕…喝口水吧…求你…',
+    '你回来了…我快撑不住了…', '半小时没喝了…我灰了…', '我等你等到变灰了…一杯水救命…',
+  ],
 } satisfies Record<Mood, string[]>;
 
 const computeMood = (args: {
@@ -34,9 +42,12 @@ const computeMood = (args: {
 }): Mood => {
   if (args.drinkingPulse) return 'drinking';
   if (args.pct >= 1) return 'celebrating';
-  // 今天还没喝水 → 濒死状态，等用户加水复活
+  // 今天还没喝水 → 濒死
   if (args.drunkMl === 0) return 'dying';
-  if (args.minutesSinceLastDrink === null || args.minutesSinceLastDrink > 90) return 'thirsty';
+  // 30 min 以上没喝 → 濒死
+  if (args.minutesSinceLastDrink !== null && args.minutesSinceLastDrink >= DYING_THRESHOLD_MIN) return 'dying';
+  // 15-30 min → 渴
+  if (args.minutesSinceLastDrink !== null && args.minutesSinceLastDrink >= THIRSTY_THRESHOLD_MIN) return 'thirsty';
   if (args.pace === 'behind') return 'encouraging';
   if (args.pace === 'ahead') return 'happy';
   return 'idle';
@@ -61,7 +72,7 @@ export default function Companion({
   remainingMl,
   goalMl: _goalMl,
   pct,
-  minutesSinceLastDrink,
+  minutesSinceLastDrink: _minutesSinceLastDrinkProp,
   pace,
 }: Props) {
   const [drinkingPulse, setDrinkingPulse] = useState(false);
@@ -82,28 +93,54 @@ export default function Companion({
     }
   }, [lastEntryTs]);
 
-  // 复活：从「今天 0 ml」过渡到「有水」时，触发狂喜 emoji 爆发
+  // 每 30 秒 tick 一次，让 mood 自己重算（30 min 阈值 → 至少每 30s 检查一次）
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // 用户切回 tab / 从后台回到 app → 立刻重算（避免后台被浏览器节流）
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setTick((x) => x + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, []);
+
+  // 自己算 minutesSinceLastDrink，依赖 tick 让它每 30s 自动新鲜
+  const liveMinutesSinceLastDrink = useMemo(() => {
+    if (!lastEntryTs) return null;
+    return Math.floor((Date.now() - lastEntryTs) / 60000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastEntryTs, tick]);
+
+  const mood = useMemo(
+    () => computeMood({
+      pct,
+      drunkMl,
+      pace,
+      minutesSinceLastDrink: liveMinutesSinceLastDrink,
+      drinkingPulse,
+    }),
+    [pct, drunkMl, pace, liveMinutesSinceLastDrink, drinkingPulse],
+  );
+
+  // 复活：mood 从 dying 转到任何其它状态 → 触发狂喜 emoji 爆发
   useEffect(() => {
     const wasDying = wasDyingRef.current;
-    const isReviving = wasDying && drunkMl > 0;
-    if (isReviving) {
+    if (wasDying && mood !== 'dying') {
       setRevivalBurst(true);
       const t = setTimeout(() => setRevivalBurst(false), 3000);
       wasDyingRef.current = false;
       return () => clearTimeout(t);
     }
-    wasDyingRef.current = drunkMl === 0;
-  }, [drunkMl]);
-
-  useEffect(() => {
-    const t = setInterval(() => setTick((x) => x + 1), 25000);
-    return () => clearInterval(t);
-  }, []);
-
-  const mood = useMemo(
-    () => computeMood({ pct, drunkMl, pace, minutesSinceLastDrink, drinkingPulse }),
-    [pct, drunkMl, pace, minutesSinceLastDrink, drinkingPulse],
-  );
+    wasDyingRef.current = mood === 'dying';
+  }, [mood]);
 
   const message = useMemo(
     () => pickMessage(mood, { remainingMl, drunkMl }),
