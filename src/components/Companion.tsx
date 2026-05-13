@@ -1,8 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import {
+  AlertTriangle, Coffee, Droplet, Flame, GlassWater, Heart,
+  PartyPopper, Sparkles, Star, ThumbsUp, Trophy, Zap,
+  type LucideProps,
+} from 'lucide-react';
 import Character, { Mood } from './Character';
 import { Animal } from '../data/animals';
 
 export type { Mood };
+
+// 一条台词：纯文本（继续用 emoji 也行）或带 icon 前缀的对象
+type Line = string | { icon: ComponentType<LucideProps>; text: string; color?: string };
+
+// 复活爆发：4 emoji + 4 lucide icon 混排
+type BurstItem = string | { Icon: ComponentType<LucideProps>; color: string };
+const REVIVE_BURST: BurstItem[] = [
+  '💧', '🎉', '🌈', '💖',
+  { Icon: Sparkles, color: '#3b82f6' },
+  { Icon: Star, color: '#facc15' },
+  { Icon: Heart, color: '#ec4899' },
+  { Icon: Trophy, color: '#f59e0b' },
+];
 
 type Props = {
   animal: Animal;
@@ -20,18 +38,83 @@ const DYING_THRESHOLD_MIN = 30;
 // 15 min 没喝水 → 喊渴（还没死）
 const THIRSTY_THRESHOLD_MIN = 15;
 
-const MESSAGES = {
-  drinking: ['咕咚~ 我也来一口', '嗯~ 真甜！', '一起喝水真好~', '哇 这水真好喝'],
-  celebrating: ['🎉 我们做到了！', '今天目标完成，棒棒！', '喝够啦，开心~', '你真厉害！'],
-  thirsty: ['我口渴了…', '好久没喝水了，要不要来一杯？', '嘴巴干干的，咕嘟咕嘟…', '我们一起喝一杯吧？'],
-  encouraging: ['再喝一杯就追上啦', '我相信你，加油！', '别忘了喝水哦', '差一点就达标啦'],
-  happy: ['节奏很棒，继续保持！', '做得很好哦', '今天的你最棒', '继续加油~'],
-  idle: ['今天也要好好喝水', '我陪着你', '想喝水的时候就来找我', '记得喝水哦~'],
+const MESSAGES: Record<Mood, Line[]> = {
+  drinking: [
+    '咕咚~ 我也来一口', '嗯~ 真甜！', '一起喝水真好~', '哇 这水真好喝',
+    '咕咚咕咚……好喝！', '这口水喝得我飘飘然', '喝水的声音好治愈啊',
+    '啊～ 比奶茶还香', '我就知道你会喝的！', '喝了这口，今天值了',
+    '这才对嘛，早就该喝了', '终于！等你等到花都谢了',
+    { icon: GlassWater, text: '干杯！', color: '#3aa6dd' },
+    { icon: Droplet, text: '清凉一口，治愈我了', color: '#3aa6dd' },
+    { icon: Coffee, text: '嗯，比咖啡更让我精神', color: '#92400e' },
+  ],
+  celebrating: [
+    '🎉 我们做到了！', '今天目标完成，棒棒！', '喝够啦，开心~', '你真厉害！',
+    '我就说你行的吧！', '收工！今天完美！', '我要帮你颁奖！虽然我没有奖',
+    '完成！可以骄傲一下了', '你今天的表现让我热泪盈眶（眼泪是水）',
+    '目标达成，今晚可以睡个好觉了', '我们是最棒的搭档！',
+    '哼，早知道你能喝完，我就不担心了（才没有）',
+    '你看，听我的没错吧', '感动，终于不让我操心了',
+    { icon: Trophy, text: '今天达标，我给你颁奖', color: '#f59e0b' },
+    { icon: PartyPopper, text: '完美收工！', color: '#ec4899' },
+    { icon: Sparkles, text: '完成！闪闪发光的你', color: '#a855f7' },
+    { icon: Star, text: '满分日，记下这一天', color: '#facc15' },
+  ],
+  thirsty: [
+    '我口渴了…', '好久没喝水了，要不要来一杯？', '嘴巴干干的，咕嘟咕嘟…', '我们一起喝一杯吧？',
+    '嗨……喝口水嘛', '我感觉我快变成干货了', '水呢水呢……',
+    '就一小口也好嘛', '喉咙已经开始抗议了', '风一吹我就碎了那种渴',
+    '求求了，喝一口吧', '我在这里发呆其实是在等你喝水',
+    '你是不是忘了我的存在？！', '这都不喝，你皮肤不要了？',
+    '不喝水的人类我见过，但没见过这么不喝的',
+    { icon: Droplet, text: '一口水的距离', color: '#3aa6dd' },
+    { icon: AlertTriangle, text: '渴情提示：嘴干舌燥', color: '#f59e0b' },
+  ],
+  encouraging: [
+    '再喝一杯就追上啦', '我相信你，加油！', '别忘了喝水哦', '差一点就达标啦',
+    '慢慢来，但别太慢', '你可以的！（我觉得）', '加把劲，水等着你呢',
+    '别放弃，我都没放弃你', '今天还有机会追回来的！', '一杯一杯慢慢来嘛',
+    '我在给你加油，虽然你可能没注意', '不急不急，但是要喝',
+    '落后了哦，有点丢人', '这进度……说出去我都不好意思',
+    '追不上的话，今晚别想睡好觉', '喝水都懒，那你干嘛都懒？',
+    { icon: Flame, text: '冲一下，别让我担心', color: '#f97316' },
+    { icon: Zap, text: '动起来，再来一杯', color: '#eab308' },
+    { icon: Heart, text: '加油 加油，我陪你', color: '#ec4899' },
+  ],
+  happy: [
+    '节奏很棒，继续保持！', '做得很好哦', '今天的你最棒', '继续加油~',
+    '哇 你今天好厉害', '就该这样！很满意', '我为你感到骄傲（认真的）',
+    '这节奏，稳了！', '你喝水的样子特别帅', '完美！我无话可说',
+    '超出我的预期了！', '继续这样，我就放心了',
+    '这才是正常人该有的样子', '行，总算没让我失望',
+    '我就知道你不是那种不喝水的废物', '哼，勉强及格',
+    { icon: ThumbsUp, text: '今天的你状态满分', color: '#16a34a' },
+    { icon: Star, text: '稳得不行，继续', color: '#facc15' },
+    { icon: Sparkles, text: '小步快跑，节奏漂亮', color: '#3b82f6' },
+  ],
+  idle: [
+    '今天也要好好喝水', '我陪着你', '想喝水的时候就来找我', '记得喝水哦~',
+    '……（在发呆）', '我刚才在想什么来着……算了', '你在干嘛，我在这里呢',
+    '就这样待着也挺好的', '有我在你不会渴到的', '我数了一下，今天云有点多',
+    '喝水这件事，交给我来提醒', '没事，我不急，你不急就行了……（其实有点急）',
+    '闲着闲着，来喝口水？',
+    '别以为我没在盯着你', '不喝水的人我见不起，你不会是吧？',
+    '我在看着你呢，不许偷懒', '就算忙，水也是要喝的，懂吗',
+    { icon: Heart, text: '我在这等你呢', color: '#ec4899' },
+    { icon: Coffee, text: '咖啡可以，但水更要', color: '#92400e' },
+  ],
   dying: [
     '好渴啊…快不行了…', '救命…给我水…', '我...快...枯死了...', '咕…喝口水吧…求你…',
     '你回来了…我快撑不住了…', '半小时没喝了…我灰了…', '我等你等到变灰了…一杯水救命…',
+    '…………（已无力说话）', '我的灵魂在渴望水分……', '就算一滴也好……',
+    '我感觉我在慢慢消失……', '下辈子……我要做一条鱼……',
+    '如果我不行了……记得多喝水……', '快……救……我……',
+    '你……你还有脸不喝水……', '我都这样了……你还不动……',
+    '等我死透了你会后悔的……', '不喝水……真的……很蠢……（最后的力气说完了）',
+    { icon: AlertTriangle, text: '快...不行了...', color: '#dc2626' },
+    { icon: Zap, text: '能量耗尽中…', color: '#a16207' },
   ],
-} satisfies Record<Mood, string[]>;
+};
 
 const computeMood = (args: {
   pct: number;
@@ -53,16 +136,35 @@ const computeMood = (args: {
   return 'idle';
 };
 
-const pickMessage = (mood: Mood, ctx: { remainingMl: number; drunkMl: number }): string => {
+const renderLine = (line: Line): { id: string; node: ReactNode } => {
+  if (typeof line === 'string') return { id: line, node: line };
+  const Icon = line.icon;
+  return {
+    id: `${line.icon.displayName ?? 'icon'}::${line.text}`,
+    node: (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <Icon size={14} strokeWidth={2} color={line.color ?? 'currentColor'} />
+        <span>{line.text}</span>
+      </span>
+    ),
+  };
+};
+
+const pickMessage = (mood: Mood, ctx: { remainingMl: number; drunkMl: number }): { id: string; node: ReactNode } => {
   const list = MESSAGES[mood];
-  const base = list[Math.floor(Math.random() * list.length)];
-  if (mood === 'encouraging' && ctx.remainingMl > 0) {
-    return Math.random() < 0.5 ? `还差 ${ctx.remainingMl} ml，${base}` : base;
+  const idx = Math.floor(Math.random() * list.length);
+  const item = list[idx];
+  // 字符串型才能拼前缀；icon 型保持原样不修改
+  if (typeof item === 'string') {
+    let text = item;
+    if (mood === 'encouraging' && ctx.remainingMl > 0 && Math.random() < 0.5) {
+      text = `还差 ${ctx.remainingMl} ml，${item}`;
+    } else if (mood === 'celebrating' && ctx.drunkMl > 0 && Math.random() < 0.4) {
+      text = `今天喝了 ${ctx.drunkMl} ml，${item}`;
+    }
+    return { id: `${mood}-${idx}-${text}`, node: text };
   }
-  if (mood === 'celebrating' && ctx.drunkMl > 0) {
-    return Math.random() < 0.4 ? `今天喝了 ${ctx.drunkMl} ml，${base}` : base;
-  }
-  return base;
+  return renderLine(item);
 };
 
 export default function Companion({
@@ -150,7 +252,7 @@ export default function Companion({
 
   return (
     <div className="comp-wrap">
-      <div className="comp-bubble" key={`${mood}-${message}`}>{message}</div>
+      <div className="comp-bubble" key={`${mood}-${message.id}`}>{message.node}</div>
       <div className="comp-art">
         <Character id={animal.customArt} mood={mood} size={220} />
       </div>
@@ -163,7 +265,7 @@ export default function Companion({
       )}
       {revivalBurst && (
         <div className="revive-fx" aria-hidden>
-          {['💧','✨','🎉','🌈','💖','🌟','🎊','💫'].map((emoji, i) => (
+          {REVIVE_BURST.map((item, i) => (
             <span
               key={i}
               className="fx-revive"
@@ -174,7 +276,9 @@ export default function Companion({
                 ['--ang' as any]: `${(i * 45)}deg`,
               }}
             >
-              {emoji}
+              {typeof item === 'string'
+                ? item
+                : <item.Icon size={26} color={item.color} fill={item.color} fillOpacity={0.25} strokeWidth={2.2} />}
             </span>
           ))}
         </div>

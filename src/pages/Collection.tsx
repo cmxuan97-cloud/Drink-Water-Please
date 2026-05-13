@@ -10,9 +10,24 @@ import {
 } from '../lib/storage';
 import AnimalIcon from '../components/AnimalIcon';
 import { syncCompanionToServer } from '../lib/push';
-import { Home, Key, Lock, PartyPopper, Trophy, X } from 'lucide-react';
+import {
+  Award, Heart, Home, Key, Lock, PartyPopper, Sparkle, Sparkles,
+  Star, Trophy, X, type LucideProps,
+} from 'lucide-react';
+import type { ComponentType } from 'react';
 
-const CELEBRATE_EMOJIS = ['🎉', '🎊', '✨', '🌟', '💖', '🎈', '⭐', '💫', '🌈', '🎁', '💕', '🥳'];
+// 解锁爆发：保留一半 emoji（颜色丰富），另一半换成 lucide icon（线条干净）
+type CeItem = string | { Icon: ComponentType<LucideProps>; color: string };
+const CELEBRATE_ITEMS: CeItem[] = [
+  '🎉', '🎊', '🎈', '🌈', '🎁', '🥳',  // 6 emoji 保留（彩色装饰感）
+  { Icon: Star, color: '#facc15' },
+  { Icon: Heart, color: '#ec4899' },
+  { Icon: Sparkles, color: '#3b82f6' },
+  { Icon: Trophy, color: '#f59e0b' },
+  { Icon: PartyPopper, color: '#10b981' },
+  { Icon: Award, color: '#a855f7' },
+  { Icon: Sparkle, color: '#06b6d4' },
+];
 
 export default function Collection() {
   const navigate = useNavigate();
@@ -269,10 +284,10 @@ export default function Collection() {
         </div>
       )}
 
-      {/* === 解锁庆祝 emoji 爆发 — 全屏覆盖 === */}
+      {/* === 解锁庆祝爆发 — 全屏覆盖，emoji + lucide icon 混合 === */}
       {celebrate && (
         <div className="celebrate-fx" aria-hidden>
-          {CELEBRATE_EMOJIS.map((emoji, i) => (
+          {CELEBRATE_ITEMS.map((item, i) => (
             <span
               key={i}
               className="ce-emoji"
@@ -280,11 +295,13 @@ export default function Collection() {
                 left: `${50 + (Math.random() - 0.5) * 10}%`,
                 top: `${50 + (Math.random() - 0.5) * 10}%`,
                 animationDelay: `${i * 0.06}s`,
-                ['--ang' as any]: `${(360 / CELEBRATE_EMOJIS.length) * i}deg`,
+                ['--ang' as any]: `${(360 / CELEBRATE_ITEMS.length) * i}deg`,
                 ['--dist' as any]: `${180 + (i % 3) * 60}px`,
               }}
             >
-              {emoji}
+              {typeof item === 'string'
+                ? item
+                : <item.Icon size={28} color={item.color} fill={item.color} fillOpacity={0.25} strokeWidth={2.2} />}
             </span>
           ))}
         </div>
