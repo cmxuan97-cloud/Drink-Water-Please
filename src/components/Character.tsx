@@ -1150,8 +1150,8 @@ const CHARACTERS: Record<CharacterId, Spec> = {
         </g>
         <ellipse cx={88} cy={105} rx={18} ry={14} fill="#5a3818" />
         <ellipse cx={152} cy={105} rx={18} ry={14} fill="#5a3818" />
-        {Eye({ x: 88, y: 105, r: 3, closed: true })}
-        {Eye({ x: 152, y: 105, r: 3, closed: true })}
+        {Eye({ x: 88, y: 105, r: 3, mood: 'happy' })}
+        {Eye({ x: 152, y: 105, r: 3, mood: 'happy' })}
         <ellipse cx={120} cy={130} rx={6} ry={5} fill="#1a1408" />
         <path d="M 110 145 Q 120 152 130 145" stroke="#1a1408" strokeWidth={1.8} fill="none" strokeLinecap="round" />
         <g stroke="#5a3818" strokeWidth={1.5} fill="none" strokeLinecap="round">
