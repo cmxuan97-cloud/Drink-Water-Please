@@ -69,6 +69,14 @@ export const getContainers = (): Container[] => {
     }
     return c;
   });
+  // 迁移 3：给玻璃杯补上 maxCapacityMl（AI 测百分比用满杯容量 320ml）
+  merged = merged.map((c) => {
+    if (c.id === 'c-glass' && c.capacityMl === 300 && c.maxCapacityMl === undefined) {
+      changed = true;
+      return { ...c, maxCapacityMl: 320 };
+    }
+    return c;
+  });
   if (changed) {
     saveContainers(merged);
     return merged;

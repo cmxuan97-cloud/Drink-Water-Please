@@ -54,13 +54,15 @@ export default function Add() {
   };
 
   // 拍照模式下当前用的总容量：优先用户手动 > 选中尺寸 > AI 估算
+  // 注意：fallback 到本地容器时优先用 maxCapacityMl（满杯容量），因为 AI 的 fillPercent
+  // 是按整个容器的物理满载算的，不是日常饮用量
   const photoCapacityMl = useMemo(() => {
     if (manualCapacityMl !== null) return manualCapacityMl;
     const det = estimate?.detected;
     if (det && det.sizes.length > 0) {
       return det.sizes[Math.min(pickedSizeIndex, det.sizes.length - 1)]?.capacityMl ?? 0;
     }
-    return det?.estimatedCapacityMl ?? selected?.capacityMl ?? 0;
+    return det?.estimatedCapacityMl ?? selected?.maxCapacityMl ?? selected?.capacityMl ?? 0;
   }, [manualCapacityMl, estimate, pickedSizeIndex, selected]);
 
   const photoMl = Math.round((photoCapacityMl * fillPct) / 100);
@@ -77,7 +79,7 @@ export default function Add() {
     try {
       const dataUrl = await compressImage(file, 800, 0.78);
       setPhotoUrl(dataUrl);
-      const est = await estimateFill(dataUrl, selected?.name, selected?.capacityMl);
+      const est = await estimateFill(dataUrl, selected?.name, selected?.maxCapacityMl ?? selected?.capacityMl);
       setEstimate(est);
       setFillPct(est.fillPercent);
       if (est.detected && est.detected.sizes.length > 0) {

@@ -1,7 +1,8 @@
 export type Container = {
   id: string;
   name: string;
-  capacityMl: number;
+  capacityMl: number;        // 通常饮用量（手动 +1 杯用）
+  maxCapacityMl?: number;    // 满杯实际总容量（用于 AI 拍照测百分比换算）
   emoji?: string;
 };
 
@@ -36,7 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export const DEFAULT_CONTAINERS: Container[] = [
-  { id: 'c-glass', name: '玻璃杯', capacityMl: 300, emoji: '🥛' },
+  { id: 'c-glass', name: '玻璃杯', capacityMl: 300, maxCapacityMl: 320, emoji: '🥛' },
   { id: 'c-mug', name: '马克杯', capacityMl: 300, emoji: '☕' },
   { id: 'c-bottle', name: '矿泉水瓶', capacityMl: 500, emoji: '💧' },
   { id: 'c-coffee', name: '咖啡', capacityMl: 200, emoji: '☕' },
