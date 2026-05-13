@@ -1,14 +1,44 @@
-// Vercel Edge Function — Gemini vision proxy for production deploy.
+// Vercel Edge Function — Gemini vision proxy.
+// 同时做：(a) 估液位 (b) 识别品牌/容器 (c) 给标准尺寸选项
 // Mirrors the Vite dev middleware in vite.config.ts.
-// Reads GEMINI_API_KEY from Vercel env vars (set in Project Settings).
 
 export const config = { runtime: 'edge' };
 
-const SYSTEM = `你是一个测量助手。用户会上传一张图片，里面有一个容器(杯/瓶)装着水或饮料。
-你的任务：仅估计容器里液体占容器**总容量**的百分比（0-100整数）。
-忽略容器材质、品牌、背景。如果容器是不透明的或看不清液面，给低 confidence。
-**只输出一个 JSON 对象**，格式严格如下，不要任何解释文字、不要 markdown：
-{"fillPercent": 0-100, "confidence": "low"|"medium"|"high", "note": "可选简短说明"}`;
+const SYSTEM = `你是一个饮料容器识别 + 容量估算助手。看用户上传的图片，做三件事：
+
+1. 估液位：液体占容器总容量的百分比 (0-100 整数)
+2. 识别这是什么饮料/容器（最好能认出品牌，例如麦当劳/星巴克/可口可乐/依云/农夫山泉/瓶装水/自带保温杯）
+3. 如果是常见连锁/品牌商品 → 列出该品牌官方常见尺寸 (用你的训练知识，覆盖马来西亚 / 大中华 / 美区，能多列就多列)
+   如果是自带容器（保温杯/家里水杯/不可识别瓶子）→ sizes 给空数组 []，让用户手动输入
+
+**只输出一个 JSON 对象，严格按以下格式，不要 markdown 不要解释**:
+
+{
+  "fillPercent": 0-100,
+  "confidence": "low" | "medium" | "high",
+  "detected": {
+    "label": "短描述，如「麦当劳大杯可口可乐」「星巴克 Grande 拿铁」「依云 500ml」「自带保温杯」",
+    "brand": "品牌名 或 null",
+    "category": "water" | "coffee" | "tea" | "juice" | "soda" | "milk" | "other",
+    "isCommon": true | false,
+    "sizes": [
+      { "label": "尺寸名（如 Small / Medium / Large 或 中杯）", "capacityMl": 整数 }
+    ],
+    "mostLikelyIndex": 整数,
+    "estimatedCapacityMl": 整数
+  },
+  "note": "可选简短说明"
+}
+
+注意：
+- mostLikelyIndex 是 sizes 数组里最像图中那杯的 index (0-based)。如果只有一个 size 就是 0。如果 sizes 是 [] 给 0
+- estimatedCapacityMl 必填：你目测这个容器**总容量**多少 ml。即使 sizes 为空也要给一个估算
+- 不要拒答。看不清就给低 confidence + 合理猜测
+- 麦当劳常见杯型：Small ~350ml, Medium ~500ml, Large ~650ml, XL ~750ml
+- 星巴克：Short 240ml, Tall 354ml, Grande 473ml, Venti 591ml, Trenta 887ml
+- KFC: Regular 400ml, Large 600ml
+- 可口可乐瓶/罐：罐 330ml, 小瓶 500ml, 大瓶 1500ml/2000ml
+- 矿泉水：常见 330/500/600/1000/1500ml`;
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
@@ -19,18 +49,18 @@ const json = (body: unknown, status = 200): Response =>
 type Payload = {
   data?: string;
   mimeType?: string;
-  containerName?: string;
-  capacityMl?: number;
+  // hint：可选。用户已经选了某个容器就传过来给模型当上下文
+  hintContainerName?: string;
+  hintCapacityMl?: number;
 };
 
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  const apiKey = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GEMINI_API_KEY;
+  const apiKey = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.GEMINI_API_KEY;
   if (!apiKey) {
-    return json({ error: '服务端未配置 GEMINI_API_KEY（请在 Vercel Project Settings → Environment Variables 添加）' }, 500);
+    return json({ error: '服务端未配置 GEMINI_API_KEY' }, 500);
   }
 
   let payload: Payload;
@@ -40,12 +70,14 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: 'JSON 无效' }, 400);
   }
 
-  const { data, mimeType, containerName, capacityMl } = payload;
-  if (!data || !mimeType || !containerName || typeof capacityMl !== 'number') {
-    return json({ error: '参数缺失' }, 400);
-  }
+  const { data, mimeType, hintContainerName, hintCapacityMl } = payload;
+  if (!data || !mimeType) return json({ error: '参数缺失（缺图片）' }, 400);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const userText = hintContainerName && hintCapacityMl
+    ? `用户提示：他们当前选的容器是「${hintContainerName}」≈${hintCapacityMl}ml。但请你独立判断品牌/尺寸，不要被这个 hint 限制；若你识别出的品牌信息不一样，按你看到的来。`
+    : `请独立识别图中容器并给出尺寸选项。`;
 
   const reqBody = {
     systemInstruction: { parts: [{ text: SYSTEM }] },
@@ -53,14 +85,14 @@ export default async function handler(req: Request): Promise<Response> {
       {
         parts: [
           { inline_data: { mime_type: mimeType, data } },
-          { text: `容器是「${containerName}」，总容量约 ${capacityMl} ml。请估水位百分比。` },
+          { text: userText },
         ],
       },
     ],
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.2,
-      maxOutputTokens: 400,
+      maxOutputTokens: 600,
       thinkingConfig: { thinkingBudget: 0 },
     },
   };
@@ -86,9 +118,7 @@ export default async function handler(req: Request): Promise<Response> {
   };
   const text = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    return json({ error: `Gemini 未返回 JSON：${text.slice(0, 100)}` }, 502);
-  }
+  if (!match) return json({ error: `Gemini 未返回 JSON：${text.slice(0, 100)}` }, 502);
 
   return new Response(match[0], {
     status: 200,
