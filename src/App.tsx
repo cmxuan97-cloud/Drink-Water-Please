@@ -5,6 +5,7 @@ import Containers from './pages/Containers';
 import Settings from './pages/Settings';
 import Collection from './pages/Collection';
 import Stats from './pages/Stats';
+import Admin from './pages/Admin';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/collection" element={<Collection />} />
       <Route path="/stats" element={<Stats />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );
