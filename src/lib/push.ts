@@ -1,5 +1,5 @@
 import { NotifyMode } from '../types';
-import { getOrCreateClientId, getSettings, saveSettings } from './storage';
+import { getCompanionId, getOrCreateClientId, getSettings, saveSettings } from './storage';
 
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
@@ -30,6 +30,7 @@ const buildSubscribePayload = (sub: PushSubscription, mode?: NotifyMode) => {
     sleepHour: settings.sleepHour,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
     mode: mode ?? settings.notifyMode ?? 'standard',
+    companionId: getCompanionId() ?? undefined,  // 让推送以当前主页伙伴的口吻说话
   };
 };
 
@@ -121,6 +122,22 @@ export const syncSettingsToServer = async (): Promise<void> => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(buildSubscribePayload(sub)),
+  }).catch(() => {});
+};
+
+/** 用户在 Collection 选了新的主页伙伴 → 立刻推到服务端，让下一条 push 用新伙伴口吻。
+ *  传 explicit ID 时强制用它（适合 Home 用「实际显示的 companion」做 backfill —
+ *  显示逻辑会按 unlocked 限制做 fallback，可能跟 localStorage 的 companionId 不一样）。 */
+export const syncCompanionToServer = async (overrideId?: string): Promise<void> => {
+  const sub = await getCurrentSubscription();
+  if (!sub) return;  // 没订阅推送就不用 sync
+  const payload = buildSubscribePayload(sub);
+  if (overrideId && overrideId.length > 0) payload.companionId = overrideId;
+  if (!payload.companionId) return;  // 完全没 companion，让服务端保持原状
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   }).catch(() => {});
 };
 

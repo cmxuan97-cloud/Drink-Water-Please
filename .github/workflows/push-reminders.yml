@@ -2,12 +2,10 @@ name: Push Reminders
 
 on:
   schedule:
-    # 每 10 分钟触发。GitHub Actions 免费版有严重 throttle —
-    # 实际可能 1-3 小时才跑一次。把 cron 调密一点，多点机会命中。
-    # 服务端按每个用户的 mode (easy 90 / standard 60 / frequent 30 / smart 动态)
-    # 检查 lastSentAt，只在到点才真正推送，多 cron 不会重复发。
-    # 永久解决方案：在 cron-job.org 或 Upstash QStash 加一个一样的 schedule
-    - cron: '*/10 * * * *'
+    # 主 cron 已经搬到 cron-job.org（更稳定）。
+    # 这里只作为 backup —— 万一 cron-job.org 出问题，每 4 小时兜底一次。
+    # 服务端 lastSentAt dedup，所以两个 cron 同时跑也不会重复发。
+    - cron: '0 */4 * * *'
   workflow_dispatch: {}    # 也允许手动触发
 
 jobs:

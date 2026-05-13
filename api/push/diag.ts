@@ -136,6 +136,7 @@ export default async function handler(req: Request): Promise<Response> {
                     sleep: obj.sleep,
                     tz: obj.tz,
                     mode: obj.mode || 'standard',
+                    companion: obj.companion || '(none → fallback a-kiwi)',
                     hasLastSentAt: !!obj.lastSentAt,
                     lastSentMinAgo: obj.lastSentAt
                       ? Math.round((Date.now() - Number(obj.lastSentAt)) / 60000)

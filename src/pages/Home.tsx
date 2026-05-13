@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Companion from '../components/Companion';
 import EntryList from '../components/EntryList';
@@ -18,7 +18,7 @@ import {
   setUserName,
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
-import { syncProgress } from '../lib/push';
+import { syncCompanionToServer, syncProgress } from '../lib/push';
 import { syncUserNameToServer } from '../lib/user';
 import { ANIMALS, earnedTokens } from '../data/animals';
 
@@ -100,6 +100,16 @@ export default function Home() {
     const fromSetting = companionId ? unlocked.find((a) => a.id === companionId) : undefined;
     return fromSetting ?? unlocked[unlocked.length - 1] ?? ANIMALS[0];
   }, [companionId]);
+
+  // 一次性 backfill：把「实际显示的 companion」同步到服务端，让老用户/没有手动选过的用户
+  // 也能立刻收到对的口吻 push。每次 mount 同步一次，幂等。
+  const didSyncCompanionRef = useRef(false);
+  useEffect(() => {
+    if (!didSyncCompanionRef.current && companion) {
+      didSyncCompanionRef.current = true;
+      void syncCompanionToServer(companion.id);
+    }
+  }, [companion]);
 
   const lastEntryTs = entries[0]?.ts ?? null;
   const minutesSinceLastDrink = lastEntryTs

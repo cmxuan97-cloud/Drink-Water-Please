@@ -2,9 +2,11 @@
 // Edge runtime + 手写 Web Push（绕过 web-push CJS 包，避免 Node 冷启动超时）
 export const config = { runtime: 'edge' };
 
-// 推送文案池：动物小伙伴说渴了 + 鼓励语录 + 可爱小观察
-// 每次随机抽一条，避免重复感
-const MESSAGES: Array<{ title: string; body: string }> = [
+import { buildMessageFor } from './_messages';
+
+// （Legacy 文案池 — 已不用，buildMessageFor 用每个用户的 companion 生成）
+// 留着是因为测试推送（test=1）和兜底分支偶尔还要用。
+const _LEGACY_MESSAGES: Array<{ title: string; body: string }> = [
   // —— 动物小伙伴们渴了 ——
   { title: '🐦 奇异鸟咕咕', body: '嘴巴干干的，可以陪我喝一口吗～' },
   { title: '🐟 太阳鱼曼波', body: '我泡在水里都觉得渴，你也来一口' },
@@ -441,9 +443,11 @@ export default async function handler(req: Request): Promise<Response> {
 
       if (dry) { sent++; continue; }
 
+      // 用这个用户当前主页伙伴说话 — companion 没存就回退到 a-kiwi（每个用户的起始角色）
+      const companionId = typeof obj.companion === 'string' ? obj.companion : undefined;
       const msg = isTest
         ? { title: '🧪 测试推送', body: '看到这条说明 push 通了！' }
-        : MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        : buildMessageFor(companionId);
       const payload = JSON.stringify({ ...msg, url: '/' });
 
       try {

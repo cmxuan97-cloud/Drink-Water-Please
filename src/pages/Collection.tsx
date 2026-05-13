@@ -9,6 +9,7 @@ import {
   setCompanionId,
 } from '../lib/storage';
 import AnimalIcon from '../components/AnimalIcon';
+import { syncCompanionToServer } from '../lib/push';
 
 const CELEBRATE_EMOJIS = ['🎉', '🎊', '✨', '🌟', '💖', '🎈', '⭐', '💫', '🌈', '🎁', '💕', '🥳'];
 
@@ -53,6 +54,8 @@ export default function Collection() {
     setCompanionId(id);
     setCompanionIdState(id);
     closePopup();
+    // 让推送通知立刻用新伙伴的口吻说话
+    void syncCompanionToServer(id);
   };
 
   const onCellClick = (animal: Animal) => {

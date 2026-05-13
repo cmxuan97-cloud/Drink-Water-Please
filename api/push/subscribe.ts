@@ -9,6 +9,7 @@ type Body = {
   sleepHour?: number;
   tz?: string;
   mode?: 'easy' | 'standard' | 'frequent' | 'smart';
+  companionId?: string;  // 用户主页当前的小伙伴 — push 文案会以它的口吻说话
 };
 
 const VALID_MODES = ['easy', 'standard', 'frequent', 'smart'] as const;
@@ -47,16 +48,21 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const mode = (body.mode && VALID_MODES.includes(body.mode)) ? body.mode : 'standard';
-    await redis.hset(`sub:${clientId}`, {
+    const fields: Record<string, string | number> = {
       sub: JSON.stringify(subscription),
       wake: wakeHour,
       sleep: sleepHour,
       tz,
       mode,
       updatedAt: Date.now(),
-    });
+    };
+    // 只在客户端真的传了 companionId 才覆盖（不然每次 progress sync 会清掉之前的设置）
+    if (typeof body.companionId === 'string' && body.companionId.length > 0) {
+      fields.companion = body.companionId;
+    }
+    await redis.hset(`sub:${clientId}`, fields);
     await redis.sadd('subs:all', clientId);
-    return Response.json({ ok: true, mode });
+    return Response.json({ ok: true, mode, companion: fields.companion ?? null });
   } catch (e) {
     return Response.json(
       {
