@@ -12,15 +12,7 @@ export type { Mood };
 // 一条台词：纯文本（继续用 emoji 也行）或带 icon 前缀的对象
 type Line = string | { icon: ComponentType<LucideProps>; text: string; color?: string };
 
-// 复活爆发：4 emoji + 4 lucide icon 混排
 type BurstItem = string | { Icon: ComponentType<LucideProps>; color: string };
-const REVIVE_BURST: BurstItem[] = [
-  '💧', '🎉', '🌈', '💖',
-  { Icon: Sparkles, color: '#3b82f6' },
-  { Icon: Star, color: '#facc15' },
-  { Icon: Heart, color: '#ec4899' },
-  { Icon: Trophy, color: '#f59e0b' },
-];
 
 // 进入动画：开心（<30min）和濒死（>=30min）两套
 const HAPPY_ENTRANCE_BURST: BurstItem[] = [
@@ -76,16 +68,22 @@ const MESSAGES: Record<Mood, Line[]> = {
     { icon: Coffee, text: '嗯，比咖啡更让我精神', color: '#92400e' },
   ],
   celebrating: [
-    '🎉 我们做到了！', '今天目标完成，棒棒！', '喝够啦，开心~', '你真厉害！',
-    '我就说你行的吧！', '收工！今天完美！', '我要帮你颁奖！虽然我没有奖',
-    '完成！可以骄傲一下了', '你今天的表现让我热泪盈眶（眼泪是水）',
-    '目标达成，今晚可以睡个好觉了', '我们是最棒的搭档！',
-    '哼，早知道你能喝完，我就不担心了（才没有）',
-    '你看，听我的没错吧', '感动，终于不让我操心了',
-    { icon: Trophy, text: '今天达标，我给你颁奖', color: '#f59e0b' },
-    { icon: PartyPopper, text: '完美收工！', color: '#ec4899' },
-    { icon: Sparkles, text: '完成！闪闪发光的你', color: '#a855f7' },
-    { icon: Star, text: '满分日，记下这一天', color: '#facc15' },
+    '目标达成！不过身体还是需要继续补水的哦',
+    '完成啦～但别忘了，喝水不只是为了完成任务',
+    '今天达标了！身体随时都需要水，继续喝吧',
+    '棒！不过目标只是最低线，多喝一杯更好',
+    '完美！不过我还是建议你再喝一杯',
+    '你做到了！身体比数字更需要水，别停哦',
+    '目标只是起点，保持下去才是真厉害',
+    '达标了！我为你骄傲，但我更希望你再喝一口',
+    '哼，完成了就觉得可以不喝了？不行的',
+    '嗯……完成了。不过现在几点了，还可以继续喝',
+    '完成！但你的细胞还在喊渴，听到了吗',
+    '很好。目标完成了，但别让我等太久',
+    { icon: Trophy, text: '达标了！继续喝不吃亏', color: '#f59e0b' },
+    { icon: PartyPopper, text: '完成！顺手再来一杯？', color: '#ec4899' },
+    { icon: Droplet, text: '目标达成，但水不嫌多', color: '#3aa6dd' },
+    { icon: Sparkles, text: '棒！身体还想要更多水', color: '#a855f7' },
   ],
   thirsty: [
     '我口渴了…', '好久没喝水了，要不要来一杯？', '嘴巴干干的，咕嘟咕嘟…', '我们一起喝一杯吧？',
@@ -205,7 +203,6 @@ export default function Companion({
   pace,
 }: Props) {
   const [drinkingPulse, setDrinkingPulse] = useState(false);
-  const [revivalBurst, setRevivalBurst] = useState(false);
   const [entranceBurst, setEntranceBurst] = useState<'happy' | 'dying' | null>(null);
   const [entranceMsg, setEntranceMsg] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -291,12 +288,13 @@ export default function Companion({
     [pct, drunkMl, pace, liveMinutesSinceLastDrink, drinkingPulse],
   );
 
-  // 复活：mood 从 dying 转到任何其它状态 → 触发狂喜 emoji 爆发
+  // 复活：mood 从 dying 转到任何其它状态 → 触发 happy 入场动画（彩纸扇形）
+  // 用同一个 entranceBurst 状态，确保「加水后」和「从别页回来」都看到新动画，不是旧版
   useEffect(() => {
     const wasDying = wasDyingRef.current;
     if (wasDying && mood !== 'dying') {
-      setRevivalBurst(true);
-      const t = setTimeout(() => setRevivalBurst(false), 3000);
+      setEntranceBurst('happy');
+      const t = setTimeout(() => setEntranceBurst(null), 2200);
       wasDyingRef.current = false;
       return () => clearTimeout(t);
     }
@@ -326,26 +324,6 @@ export default function Companion({
           <span className="fx-drop fx-drop-3">💧</span>
         </div>
       )}
-      {revivalBurst && (
-        <div className="revive-fx" aria-hidden>
-          {REVIVE_BURST.map((item, i) => (
-            <span
-              key={i}
-              className="fx-revive"
-              style={{
-                left: '50%',
-                top: '40%',
-                animationDelay: `${i * 0.08}s`,
-                ['--ang' as any]: `${(i * 45)}deg`,
-              }}
-            >
-              {typeof item === 'string'
-                ? item
-                : <item.Icon size={26} color={item.color} fill={item.color} fillOpacity={0.25} strokeWidth={2.2} />}
-            </span>
-          ))}
-        </div>
-      )}
       {entranceBurst && (
         <div className="revive-fx" aria-hidden>
           {(() => {
@@ -372,14 +350,20 @@ export default function Companion({
                   ['--final-y' as any]: `${finalY}px`,
                 };
               } else {
-                // 濒死：从角色周围一圈底部均匀生成，**直接向上飘**（不从身上发出）
-                // 用 left 把生成位置摊开到角色两侧，每个粒子自己只走 Y 轴
-                const center = (count - 1) / 2;
-                const spreadPx = (i - center) * 30; // -105 ~ +105px 摊开在身体两侧
+                // 濒死：从角色周围底部一圈往上飘，但 X / Y / 延迟 / 升起距离都不规则
+                // 用预定的非均匀偏移让排列看着有机，不像直尺打出来的
+                const X     = [-98, -58, -118, -22, 32, 78, 105, 60];
+                const TOP   = [86, 80, 92, 84, 88, 82, 90, 78];
+                const DELAY = [0, 0.22, 0.48, 0.10, 0.32, 0.58, 0.16, 0.40];
+                const RISE  = [205, 245, 185, 265, 215, 250, 200, 230];
+                const DUR   = [2.2, 2.6, 2.0, 2.8, 2.4, 2.5, 2.3, 2.7];
+                const k = i % X.length;
                 inlineStyle = {
-                  left: `calc(50% + ${spreadPx}px)`,
-                  top: '85%', // 角色脚下
-                  animationDelay: `${i * 0.16}s`, // 错峰一个一个升起
+                  left: `calc(50% + ${X[k]}px)`,
+                  top: `${TOP[k]}%`,
+                  animationDelay: `${DELAY[k]}s`,
+                  animationDuration: `${DUR[k]}s`,
+                  ['--rise' as any]: `${RISE[k]}px`,
                 };
               }
               return (
@@ -467,7 +451,7 @@ export default function Companion({
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        /* 复活爆发：emoji 从中心向 8 个方向飞散 */
+        /* 入场动画爆发容器（dying & happy 共用） */
         .revive-fx {
           position: absolute;
           inset: 0;
@@ -478,13 +462,7 @@ export default function Companion({
           position: absolute;
           font-size: 26px;
           transform: translate(-50%, -50%);
-          animation: fx-burst 1.6s cubic-bezier(.2,.8,.2,1) forwards;
           opacity: 0;
-        }
-        @keyframes fx-burst {
-          0%   { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(0) rotate(calc(-1 * var(--ang))) scale(0.4); }
-          20%  { opacity: 1; }
-          100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--ang)) translateY(-120px) rotate(calc(-1 * var(--ang))) scale(1.2); }
         }
 
         /* 开心进入：上半圆扇形喷出 → 重力下坠 — 干净不乱 */
@@ -517,7 +495,8 @@ export default function Companion({
           }
         }
 
-        /* 濒死进入：从角色周围底部一圈生成 → 直接向上飘 + 渐隐 */
+        /* 濒死进入：从角色周围底部一圈生成 → 不规则向上飘 + 渐隐
+           动画时长 + 升起距离每片不同（inline style 覆盖）*/
         .fx-entrance-dying {
           font-size: 22px;
           animation: fx-float-up 2.4s ease-out forwards !important;
@@ -530,16 +509,16 @@ export default function Companion({
           }
           18% {
             opacity: 0.8;
-            transform: translate(-50%, -16px) scale(1);
+            transform: translate(-50%, calc(var(--rise, 220px) * -0.08)) scale(1);
             filter: blur(0);
           }
           70% {
             opacity: 0.5;
-            transform: translate(-50%, -140px) scale(0.95);
+            transform: translate(-50%, calc(var(--rise, 220px) * -0.62)) scale(0.95);
           }
           100% {
             opacity: 0;
-            transform: translate(-50%, -220px) scale(0.7);
+            transform: translate(-50%, calc(-1 * var(--rise, 220px))) scale(0.7);
             filter: blur(2px);
           }
         }
