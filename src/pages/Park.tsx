@@ -28,7 +28,9 @@ const SCENE_H = 1080;
 
 const TICK_MS = 650;
 const ANIMAL_SIZE = 58;
-const ANIMAL_HIT_R = 38;     // tap-radius for animals
+// 命中半径放大一些 — 动物有 CSS transition 在动，sprite.x 是目标位置而非视觉位置；
+// 给一点 slack 让用户点一次就能点中（之前 38 太严，常常要点两次）
+const ANIMAL_HIT_R = 56;
 const INTERACT_DIST = 64;
 const MAX_ANIMALS = 6;
 const MIN_ZOOM = 0.5;
@@ -1113,6 +1115,71 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       <Bush x={440} y={1150} r={13} />
       <Mushroom x={500} y={1145} color="#a878ff" />
       <Bush x={570} y={1140} r={14} />
+
+      {/* ══════════════════════════════════════════
+          FAR BLEED — for wider screens (iPhone 14 Pro Max 等)
+          覆盖到 x=-200 和 x=760，避免大屏看到空地
+      ══════════════════════════════════════════ */}
+
+      {/* Far left bleed */}
+      <Pine x={-150} y={310} h={42} />
+      <Mushroom x={-130} y={355} />
+      <Pine x={-180} y={395} h={46} />
+      <Wildflowers x={-120} y={430} />
+      <Stump x={-150} y={475} />
+      <Pine x={-185} y={510} h={40} />
+      <Mushroom x={-130} y={555} color="#a878ff" />
+      <Wildflowers x={-165} y={595} />
+      <Pine x={-145} y={640} h={48} />
+      <Mushroom x={-180} y={680} />
+      <Rock x={-130} y={715} w={24} />
+      <Pine x={-170} y={760} h={44} />
+      <Wildflowers x={-130} y={800} />
+      <Stump x={-160} y={840} />
+      <Pine x={-130} y={885} h={46} />
+      <Mushroom x={-180} y={920} color="#f0a020" />
+
+      {/* Far right bleed */}
+      <Pine x={680} y={300} h={42} />
+      <Mushroom x={650} y={345} />
+      <Pine x={715} y={390} h={46} />
+      <Wildflowers x={665} y={425} />
+      <Stump x={695} y={470} />
+      <Pine x={720} y={510} h={42} />
+      <Mushroom x={655} y={555} color="#a878ff" />
+      <Wildflowers x={700} y={595} />
+      <Pine x={680} y={640} h={48} />
+      <Mushroom x={720} y={680} />
+      <Rock x={690} y={715} w={24} />
+      <Pine x={715} y={760} h={44} />
+      <Wildflowers x={665} y={800} />
+      <Stump x={705} y={840} />
+      <Pine x={680} y={885} h={46} />
+      <Mushroom x={720} y={920} color="#f0a020" />
+
+      {/* Extended bottom bleed — fill below the bottom edge for tall screens */}
+      <Pine x={-100} y={1210} h={42} />
+      <Bush x={-40} y={1200} r={13} />
+      <Wildflowers x={50} y={1215} />
+      <Mushroom x={120} y={1205} />
+      <Pine x={195} y={1230} h={40} />
+      <Bush x={260} y={1210} r={14} />
+      <Wildflowers x={335} y={1218} />
+      <Pine x={400} y={1235} h={44} />
+      <Mushroom x={465} y={1208} color="#a878ff" />
+      <Bush x={530} y={1215} r={12} />
+      <Wildflowers x={600} y={1220} />
+      <Pine x={665} y={1230} h={42} />
+      <Bush x={730} y={1212} r={14} />
+
+      {/* Top bleed — for very tall scenes where top mountains might shift down */}
+      <g opacity="0.6">
+        <Pine x={-160} y={210} h={42} />
+        <Pine x={-90} y={200} h={48} />
+        <Pine x={620} y={205} h={46} />
+        <Pine x={700} y={210} h={42} />
+        <Pine x={760} y={200} h={48} />
+      </g>
 
       {/* Fireflies (night) */}
       {isNight && (
