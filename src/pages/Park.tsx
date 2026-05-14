@@ -745,15 +745,19 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
           ].map(([sx, sy], i) => (
             <circle key={`st-${i}`} cx={sx} cy={sy} r={i % 3 === 0 ? 1.6 : 1} fill="white" className="pk-twinkle" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          {/* Moon — above mountains */}
-          <g>
-            <circle cx={420} cy={40} r={42} fill="#fff0d0" opacity="0.18" />
-            <circle cx={420} cy={40} r={32} fill="#fff0d0" opacity="0.3" />
-            <circle cx={420} cy={40} r={26} fill="#f8f0d0" />
-            <circle cx={414} cy={34} r={21} fill="#fffcec" />
-            <circle cx={409} cy={32} r={3.8} fill="#e8dcb8" opacity="0.7" />
-            <circle cx={423} cy={44} r={3} fill="#e8dcb8" opacity="0.6" />
-            <circle cx={417} cy={48} r={2} fill="#e8dcb8" opacity="0.55" />
+          {/* Moon — 黄色 + 多层动光晕 */}
+          <g style={{ transformOrigin: '420px 40px', transformBox: 'fill-box' }}>
+            {/* 外层柔光（缓慢呼吸）*/}
+            <circle cx={420} cy={40} r={70} fill="#fff080" opacity="0.10" className="pk-moon-glow-1" />
+            <circle cx={420} cy={40} r={54} fill="#ffe040" opacity="0.18" className="pk-moon-glow-2" />
+            <circle cx={420} cy={40} r={40} fill="#ffd040" opacity="0.30" className="pk-moon-glow-3" />
+            {/* 月亮本体（暖黄）*/}
+            <circle cx={420} cy={40} r={26} fill="#ffc830" />
+            <circle cx={414} cy={34} r={21} fill="#fff080" />
+            {/* 月面陨石坑（深一点的黄）*/}
+            <circle cx={409} cy={32} r={3.8} fill="#d8a020" opacity="0.65" />
+            <circle cx={423} cy={44} r={3} fill="#d8a020" opacity="0.55" />
+            <circle cx={417} cy={48} r={2} fill="#d8a020" opacity="0.50" />
           </g>
         </g>
       )}
@@ -1233,6 +1237,12 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
         @keyframes pk-glow-1 { 0%,100%{opacity:0.08;transform:scale(1)} 50%{opacity:0.16;transform:scale(1.12)} }
         @keyframes pk-glow-2 { 0%,100%{opacity:0.16;transform:scale(1)} 50%{opacity:0.26;transform:scale(1.10)} }
         @keyframes pk-glow-3 { 0%,100%{opacity:0.24;transform:scale(1)} 50%{opacity:0.38;transform:scale(1.08)} }
+        .pk-moon-glow-1 { transform-origin: center; transform-box: fill-box; animation: pk-moon-1 4.0s ease-in-out infinite; }
+        .pk-moon-glow-2 { transform-origin: center; transform-box: fill-box; animation: pk-moon-2 3.2s ease-in-out infinite; }
+        .pk-moon-glow-3 { transform-origin: center; transform-box: fill-box; animation: pk-moon-3 2.4s ease-in-out infinite; }
+        @keyframes pk-moon-1 { 0%,100%{opacity:0.08;transform:scale(1)} 50%{opacity:0.18;transform:scale(1.18)} }
+        @keyframes pk-moon-2 { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.26;transform:scale(1.12)} }
+        @keyframes pk-moon-3 { 0%,100%{opacity:0.24;transform:scale(1)} 50%{opacity:0.38;transform:scale(1.06)} }
         .pk-ember { transform-origin: center; transform-box: fill-box; opacity: 0; }
         .pk-ember-1 { animation: pk-ember-rise 3.6s linear infinite; }
         .pk-ember-2 { animation: pk-ember-rise 4.2s linear 0.9s infinite; }
