@@ -325,8 +325,20 @@ export default function Friends() {
                 ? ANIMALS.find(a => a.id === ev.fromCompanionId)
                 : ev.fromCharId ? ANIMALS.find(a => a.customArt === ev.fromCharId) : undefined;
               const isWater = ev.type === 'water';
+              const isNote = ev.type === 'note';
               const mins = Math.max(1, Math.round((Date.now() - ev.createdAt) / 60000));
               const ago = mins < 60 ? `${mins}分钟前` : mins < 1440 ? `${Math.round(mins / 60)}小时前` : `${Math.round(mins / 1440)}天前`;
+              const bg = isWater
+                ? 'rgba(58,166,221,0.18)'
+                : isNote
+                  ? 'rgba(16,185,129,0.18)'
+                  : 'rgba(245,158,11,0.18)';
+              const badge = isWater ? '💧' : isNote ? '✉️' : (ev.emoji ?? '🎉');
+              const verb = isWater
+                ? '叫你去喝水 💧'
+                : isNote
+                  ? '在你主页留言 ✉️'
+                  : `送了 ${ev.emoji ?? '🎉'} 给你`;
               return (
                 <div key={ev.uid} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -335,7 +347,7 @@ export default function Friends() {
                 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 999,
-                    background: isWater ? 'rgba(58,166,221,0.18)' : 'rgba(245,158,11,0.18)',
+                    background: bg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     position: 'relative',
                   }}>
@@ -347,17 +359,15 @@ export default function Friends() {
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
                     }}>
-                      {isWater ? '💧' : ev.emoji ?? '🎉'}
+                      {badge}
                     </span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14 }}>
                       <span style={{ fontWeight: 700 }}>{ev.fromDisplayName}</span>{' '}
-                      <span style={{ color: 'var(--text-soft)' }}>
-                        {isWater ? '叫你去喝水 💧' : `送了 ${ev.emoji} 给你`}
-                      </span>
+                      <span style={{ color: 'var(--text-soft)' }}>{verb}</span>
                     </div>
-                    {ev.text && (
+                    {ev.text && (isNote || isWater) && (
                       <div style={{ fontSize: 13, marginTop: 3, color: 'var(--text)', fontStyle: 'italic' }}>
                         "{ev.text}"
                       </div>

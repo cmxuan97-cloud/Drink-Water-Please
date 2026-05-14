@@ -60,11 +60,11 @@ export default function FriendPark() {
       <div className="page">
         <header className="page-header">
           <button className="back-btn" onClick={() => navigate(-1)}>← 返回</button>
-          <h1 className="page-title">好友公园</h1>
+          <h1 className="page-title">好友主页</h1>
           <span style={{ width: 48 }} />
         </header>
         <div className="card-tinted card-sky" style={{ marginTop: 16, textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>登录后才能逛公园</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>登录后才能看好友主页</div>
           <button
             className="btn btn-full"
             style={{ marginTop: 16 }}
@@ -81,7 +81,7 @@ export default function FriendPark() {
     <div className="page">
       <header className="page-header">
         <button className="back-btn" onClick={() => navigate(-1)}>← 返回</button>
-        <h1 className="page-title">{isSelf ? '我的公园' : `${profile?.displayName ?? '...'}的公园`}</h1>
+        <h1 className="page-title">{isSelf ? '我的主页' : (profile?.displayName ?? '...')}</h1>
         <span style={{ width: 48 }} />
       </header>
 
@@ -207,7 +207,7 @@ export default function FriendPark() {
           {/* === 留言板 === */}
           <div style={{ marginTop: 18 }}>
             <h2 style={{ fontSize: 16, margin: 0, marginBottom: 8, fontWeight: 700 }}>
-              {isSelf ? '收到的留言' : '在公园里留个言'}
+              {isSelf ? '收到的留言' : '留个言'}
             </h2>
 
             {!isSelf && (

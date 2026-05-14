@@ -4,7 +4,7 @@ import { ANIMALS } from '../data/animals';
 import { sendCheer, sendWater, type Friend } from '../lib/social';
 import AnimalIcon from './AnimalIcon';
 import ProgressRing from './ProgressRing';
-import { Award, Flame, Trees } from 'lucide-react';
+import { Award, Flame, User } from 'lucide-react';
 
 const CHEER_OPTIONS = ['🎉', '❤️', '👏', '💪', '🌟', '🔥'];
 
@@ -93,7 +93,7 @@ export default function FriendCard({ friend, onAction }: Props) {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}
         >
-          <Trees size={13} /> 去公园
+          <User size={13} /> 看他主页
         </Link>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
