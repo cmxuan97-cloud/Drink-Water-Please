@@ -307,22 +307,10 @@ export default function SettingsPage() {
 
       {/* 展开面板：跟着菜单组下面，不打断 group 的视觉统一 */}
       {expandedKey === 'weight' && (
-        <div className="card">
-          <label className="label">体重 (kg)</label>
-          <input
-            className="input"
-            type="number"
-            inputMode="decimal"
-            step={0.5}
-            value={s.weightKg}
-            onChange={(e) => update({ weightKg: Math.max(0, parseFloat(e.target.value) || 0), mlPerKg: 35 })}
-            autoFocus
-          />
-          <div className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
-            每日饮水目标 = 体重 × 35 ml/kg<br/>
-            例：65 kg → 2275 ml · 70 kg → 2450 ml
-          </div>
-        </div>
+        <WeightEditor
+          current={s.weightKg}
+          onCommit={(w) => update({ weightKg: w, mlPerKg: 35 })}
+        />
       )}
       {expandedKey === 'sleep' && (
         <div className="card">
@@ -867,6 +855,54 @@ export default function SettingsPage() {
       </div>
       )}
 
+    </div>
+  );
+}
+
+// 体重输入：允许用户清空再重填；只在合法数字时提交
+function WeightEditor({
+  current, onCommit,
+}: {
+  current: number;
+  onCommit: (kg: number) => void;
+}) {
+  const [text, setText] = useState<string>(current > 0 ? String(current) : '');
+
+  const handleChange = (raw: string) => {
+    // 允许空、数字、一个小数点
+    if (raw === '' || /^\d{1,3}(\.\d{0,2})?$/.test(raw)) {
+      setText(raw);
+      const n = parseFloat(raw);
+      if (Number.isFinite(n) && n > 0) {
+        onCommit(n);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    // 失焦时如果是空或 0，回滚到当前已保存值
+    if (text === '' || parseFloat(text) <= 0) {
+      setText(current > 0 ? String(current) : '');
+    }
+  };
+
+  return (
+    <div className="card">
+      <label className="label">体重 (kg)</label>
+      <input
+        className="input"
+        type="text"
+        inputMode="decimal"
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        placeholder="例：65"
+        autoFocus
+      />
+      <div className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
+        每日饮水目标 = 体重 × 35 ml/kg<br/>
+        例：65 kg → 2275 ml · 70 kg → 2450 ml
+      </div>
     </div>
   );
 }

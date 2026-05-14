@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Companion from '../components/Companion';
 import EntryList from '../components/EntryList';
 import TimeBackground from '../components/TimeBackground';
-import { Container, Entry, Settings } from '../types';
+import { Container, DEFAULT_SETTINGS, Entry, Settings } from '../types';
 import {
   deleteEntry,
   ensureUnlockedMigration,
@@ -17,6 +17,7 @@ import {
   getUserName,
   markDayCompleted,
   pruneOldPhotos,
+  saveSettings,
   setSeenEarnedTokens,
   setUserName,
 } from '../lib/storage';
@@ -48,6 +49,8 @@ export default function Home() {
   const [incomingCount, setIncomingCount] = useState(0);
   const [nameInput, setNameInput] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [showWeightPrompt, setShowWeightPrompt] = useState(false);
+  const [weightInput, setWeightInput] = useState('');
   const [showAllEntries, setShowAllEntries] = useState(false);
 
   // === 首次开屏的认证流 ===
@@ -80,6 +83,22 @@ export default function Home() {
     setUserNameLocal(trimmed);
     setShowNamePrompt(false);
     void syncUserNameToServer(trimmed);
+    // 新用户填完名字后顺手收集体重 — 避免他们之后还得跑去设置页
+    setShowWeightPrompt(true);
+  };
+
+  const onSaveWeight = () => {
+    const w = parseFloat(weightInput);
+    if (!Number.isFinite(w) || w <= 0) return;
+    const next = { ...(settings ?? DEFAULT_SETTINGS), weightKg: w, mlPerKg: 35 };
+    saveSettings(next);
+    setSettings(next);
+    setShowWeightPrompt(false);
+  };
+
+  const onSkipWeight = () => {
+    // 跳过就用默认值（DEFAULT_SETTINGS 已经有 65kg），不强迫
+    setShowWeightPrompt(false);
   };
 
   const onRegister = async () => {
@@ -611,6 +630,77 @@ export default function Home() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showWeightPrompt && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(20, 40, 60, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 60,
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 28,
+              padding: 28,
+              maxWidth: 340,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 6 }}>⚖️</div>
+            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 6 }}>
+              你的体重？
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
+              用来算每天该喝多少水<br/>
+              （体重 × 35 ml/kg）
+            </div>
+            <input
+              className="input"
+              type="text"
+              inputMode="decimal"
+              placeholder="例：65"
+              value={weightInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '' || /^\d{1,3}(\.\d{0,2})?$/.test(v)) setWeightInput(v);
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSaveWeight(); }}
+              autoFocus
+              style={{ textAlign: 'center', fontSize: 22, fontWeight: 600 }}
+            />
+            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>kg</div>
+            {weightInput && parseFloat(weightInput) > 0 && (
+              <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                每日目标：{Math.round(parseFloat(weightInput) * 35)} ml
+              </div>
+            )}
+            <button
+              className="btn btn-full"
+              style={{ marginTop: 14 }}
+              onClick={onSaveWeight}
+              disabled={!weightInput || parseFloat(weightInput) <= 0}
+            >
+              确定
+            </button>
+            <button
+              className="btn-pill"
+              style={{ marginTop: 8, background: 'transparent', boxShadow: 'none', fontSize: 13 }}
+              onClick={onSkipWeight}
+            >
+              用默认 65 kg
+            </button>
           </div>
         </div>
       )}
