@@ -910,32 +910,105 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
         <line x1="7" y1="-7" x2="-7" y2="7" stroke="#d83828" strokeWidth="3.5" strokeLinecap="round" />
       </g>
 
-      {/* Big lake */}
+      {/* Big lake (now extends past the scene edges) */}
       <path
-        d="M50 920 Q70 895 150 905 Q280 895 380 915 Q470 925 490 960 Q500 1000 470 1030 Q390 1050 280 1045 Q150 1050 80 1035 Q40 1015 35 980 Q30 945 50 920 Z"
+        d="M-60 930 Q-10 905 100 910 Q220 895 360 915 Q480 920 560 935 Q625 955 620 1005 Q610 1070 520 1095 Q380 1115 240 1110 Q100 1115 0 1095 Q-55 1065 -65 1010 Q-70 970 -60 930 Z"
         fill="url(#pk-lake)"
       />
-      <path d="M90 935 Q200 925 350 940" stroke="white" strokeWidth="2" fill="none" opacity="0.5" />
-      <ellipse cx="180" cy="990" rx="50" ry="8" fill="white" opacity="0.32" />
-      <ellipse cx="350" cy="1010" rx="38" ry="6" fill="white" opacity="0.28" />
-      <ellipse cx="120" cy="970" rx="15" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
-      <ellipse cx="400" cy="980" rx="20" ry="4" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
-      <ellipse cx="260" cy="1020" rx="18" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
+      <path d="M50 935 Q200 925 480 945" stroke="white" strokeWidth="2" fill="none" opacity="0.5" />
+      <ellipse cx="180" cy="1000" rx="60" ry="10" fill="white" opacity="0.3" />
+      <ellipse cx="370" cy="1020" rx="44" ry="8" fill="white" opacity="0.26" />
+      <ellipse cx="60" cy="1050" rx="32" ry="6" fill="white" opacity="0.24" />
+      <ellipse cx="120" cy="975" rx="16" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
+      <ellipse cx="400" cy="985" rx="22" ry="4" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
+      <ellipse cx="270" cy="1035" rx="20" ry="3.5" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
+      <ellipse cx="500" cy="1010" rx="18" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
 
       <Boat x={boatX} y={970} />
 
+      {/* Dock */}
       <rect x="65" y="908" width="40" height="14" fill="#a06834" />
       <rect x="65" y="906" width="40" height="3" fill="#c08858" />
       <rect x="68" y="918" width="4" height="10" fill="#7a4824" />
       <rect x="100" y="918" width="4" height="10" fill="#7a4824" />
 
+      {/* Lily pads (multiple clusters) */}
       <ellipse cx="410" cy="945" rx="9" ry="6" fill="#5a9a30" />
       <ellipse cx="425" cy="950" rx="6" ry="4" fill="#6ab040" />
       <ellipse cx="430" cy="940" rx="3" ry="2" fill="#f078a8" />
+      <ellipse cx="180" cy="1075" rx="10" ry="6" fill="#5a9a30" />
+      <ellipse cx="195" cy="1080" rx="7" ry="4" fill="#6ab040" />
+      <ellipse cx="500" cy="1070" rx="9" ry="6" fill="#5a9a30" />
+      <ellipse cx="515" cy="1075" rx="7" ry="4" fill="#6ab040" />
+      <ellipse cx="520" cy="1066" rx="3" ry="2" fill="#fff0c0" />
 
+      {/* Lake-edge trees + reeds */}
       <Pine x={30} y={905} h={42} />
       <Pine x={490} y={1010} h={36} />
       <Pine x={510} y={935} h={40} />
+      {/* Reeds in shallow water */}
+      {[450, 460, 470, 30, 40].map((rx, i) => (
+        <g key={`lake-rd-${i}`}>
+          <line x1={rx} y1={i < 3 ? 935 : 945} x2={rx} y2={i < 3 ? 922 : 932} stroke="#5a8828" strokeWidth="1.4" />
+          <ellipse cx={rx} cy={i < 3 ? 921 : 931} rx="2" ry="4" fill="#4a7820" />
+        </g>
+      ))}
+
+      {/* ══════════════════════════════════════════
+          BLEED DECORATIONS  (outside viewBox 0..540 — visible when zoomed out)
+      ══════════════════════════════════════════ */}
+
+      {/* Left bleed — upper to lower */}
+      <Pine x={-60} y={295} h={44} />
+      <Pine x={-30} y={335} h={40} />
+      <Mushroom x={-50} y={380} />
+      <Wildflowers x={-20} y={420} />
+      <Stump x={-40} y={465} />
+      <Mushroom x={-65} y={500} color="#a878ff" />
+      <Pine x={-50} y={545} h={42} />
+      <Wildflowers x={-25} y={580} />
+      <Pine x={-70} y={620} h={38} />
+      <Mushroom x={-30} y={655} />
+      <Stump x={-55} y={695} />
+      <Wildflowers x={-20} y={730} />
+      <Rock x={-40} y={760} w={22} />
+      <Mushroom x={-65} y={795} color="#f0a020" />
+      <Pine x={-50} y={835} h={46} />
+      <Wildflowers x={-25} y={875} />
+      <Mushroom x={-55} y={905} />
+
+      {/* Right bleed — upper to lower */}
+      <Pine x={595} y={285} h={44} />
+      <Pine x={560} y={320} h={40} />
+      <Mushroom x={575} y={365} />
+      <Pine x={605} y={385} h={42} />
+      <Wildflowers x={585} y={420} />
+      <Stump x={570} y={460} />
+      <Pine x={605} y={490} h={40} />
+      <Mushroom x={580} y={520} color="#a878ff" />
+      <Wildflowers x={610} y={555} />
+      <Pine x={580} y={590} h={42} />
+      <Stump x={605} y={625} />
+      <Mushroom x={580} y={660} color="#f0a020" />
+      <Wildflowers x={600} y={695} />
+      <Pine x={580} y={735} h={44} />
+      <Rock x={605} y={770} w={22} />
+      <Wildflowers x={580} y={800} />
+      <Mushroom x={605} y={830} />
+      <Pine x={585} y={870} h={42} />
+      <Stump x={605} y={905} />
+
+      {/* Bottom bleed — beyond the lake (small grass strip with bushes) */}
+      <Bush x={-30} y={1135} r={14} />
+      <Wildflowers x={20} y={1145} />
+      <Mushroom x={80} y={1140} />
+      <Bush x={150} y={1145} r={12} />
+      <Wildflowers x={220} y={1150} />
+      <Pine x={310} y={1170} h={44} />
+      <Wildflowers x={380} y={1145} />
+      <Bush x={440} y={1150} r={13} />
+      <Mushroom x={500} y={1145} color="#a878ff" />
+      <Bush x={570} y={1140} r={14} />
 
       {/* Fireflies (night) */}
       {isNight && (
