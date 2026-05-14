@@ -16,6 +16,7 @@ const K_COMPANION = 'dw:companionId';
 const K_CLIENT_ID = 'dw:clientId';
 const K_USER_NAME = 'dw:userName';
 const K_UNLOCKED_IDS = 'dw:unlockedIds';
+const K_SEEN_TOKENS = 'dw:seenEarnedTokens';
 
 const todayKey = (d = new Date()): string => {
   const y = d.getFullYear();
@@ -200,6 +201,18 @@ export const markDayCompleted = (date = new Date()): { added: boolean; days: str
     return { added, days: arr };
   }
   return { added, days: Array.from(days).sort() };
+};
+
+// 用户最后一次「看过」的累计钥匙数 — 当 earnedTokens > 这个值时，进入主页弹通知
+export const getSeenEarnedTokens = (): number => {
+  const raw = localStorage.getItem(K_SEEN_TOKENS);
+  if (!raw) return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+};
+
+export const setSeenEarnedTokens = (n: number): void => {
+  localStorage.setItem(K_SEEN_TOKENS, String(Math.max(0, Math.floor(n))));
 };
 
 export const pruneOldPhotos = (keepDays = 30): void => {

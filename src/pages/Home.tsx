@@ -11,10 +11,13 @@ import {
   getCompletedDays,
   getContainers,
   getEntries,
+  getSeenEarnedTokens,
   getSettings,
+  getUnlockedIds,
   getUserName,
   markDayCompleted,
   pruneOldPhotos,
+  setSeenEarnedTokens,
   setUserName,
 } from '../lib/storage';
 import { calcProgress, dailyGoalMl, pace } from '../lib/goal';
@@ -26,7 +29,7 @@ import {
   BarChart3, Cloud, Hand, Key, LogIn, PartyPopper, PawPrint,
   Settings as SettingsIcon, Sparkles, Trophy, UserPlus,
 } from 'lucide-react';
-import { ANIMALS, earnedTokens } from '../data/animals';
+import { ANIMALS, availableTokens, earnedTokens } from '../data/animals';
 
 const greetingFor = (h: number): string => {
   if (h < 5) return '夜深啦';
@@ -150,6 +153,28 @@ export default function Home() {
       }
     }
   }, [progress.pct, settings, goalMl]);
+
+  // 进入页面时检查：累计赚到的钥匙数 > 上次看过的，且还有没用的 → 弹提示
+  const checkedTokensRef = useRef(false);
+  useEffect(() => {
+    if (checkedTokensRef.current) return;
+    if (!settings) return;
+    checkedTokensRef.current = true;
+    const completedDays = getCompletedDays().length;
+    const unlockedCount = getUnlockedIds(ANIMALS[0].id).length;
+    const earned = earnedTokens(completedDays);
+    const available = availableTokens(completedDays, unlockedCount);
+    if (earned > getSeenEarnedTokens() && available > 0) {
+      setTokenEarned(true);
+    }
+  }, [settings]);
+
+  // 关闭弹窗时，记下当前累计赚到的钥匙数（之后只有新钥匙才会再弹）
+  const closeTokenPopup = (): void => {
+    const completedDays = getCompletedDays().length;
+    setSeenEarnedTokens(earnedTokens(completedDays));
+    setTokenEarned(false);
+  };
 
   // 选 companion：当前的 companionId（限于已解锁），否则最后一个解锁的
   const companion = useMemo(() => {
@@ -298,7 +323,7 @@ export default function Home() {
 
       {tokenEarned && (
         <div
-          onClick={() => setTokenEarned(false)}
+          onClick={closeTokenPopup}
           style={{
             position: 'fixed',
             inset: 0,
@@ -336,14 +361,14 @@ export default function Home() {
               to="/collection"
               className="btn btn-full"
               style={{ marginTop: 18 }}
-              onClick={() => setTokenEarned(false)}
+              onClick={closeTokenPopup}
             >
               去挑选 →
             </Link>
             <button
               className="btn-pill"
               style={{ marginTop: 10, background: 'transparent', boxShadow: 'none' }}
-              onClick={() => setTokenEarned(false)}
+              onClick={closeTokenPopup}
             >
               稍后再说
             </button>
