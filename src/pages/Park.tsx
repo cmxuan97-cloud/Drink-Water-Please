@@ -904,24 +904,18 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
 
       <Cabin x={400} y={530} w={66} lit={cabinLit.mid || isNight} />
 
-      <Pine x={210} y={555} h={48} />
-      <Pine x={185} y={595} h={42} />
-      <Pine x={195} y={655} h={50} />
-      <Pine x={355} y={555} h={36} />
-      <Pine x={470} y={560} h={42} />
-      <Pine x={490} y={610} h={38} />
-      <Pine x={235} y={690} h={44} />
-      <Pine x={460} y={680} h={42} />
+      {/* Just a few pines framing the clearing, not crowding it */}
+      <Pine x={205} y={560} h={48} />
+      <Pine x={485} y={565} h={44} />
+      <Pine x={235} y={695} h={44} />
 
-      <Bush x={310} y={560} r={11} />
-      <Bush x={420} y={690} r={13} />
-      <Bush x={170} y={520} r={12} />
+      <Bush x={170} y={530} r={12} />
+      <Bush x={425} y={695} r={13} />
 
-      <rect x="220" y="650" width="30" height="6" rx="3" fill="#7a4a28" />
-      <rect x="300" y="655" width="28" height="6" rx="3" fill="#7a4a28" transform="rotate(8 314 658)" />
+      {/* Logs near campfire (single, neater) */}
+      <rect x="225" y="650" width="30" height="6" rx="3" fill="#7a4a28" />
 
-      <Rock x={150} y={730} w={24} />
-      <Rock x={395} y={720} w={20} />
+      <Rock x={155} y={730} w={22} />
 
       {/* Lower forest */}
       <Pine x={50} y={870} h={56} />
@@ -1098,8 +1092,7 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       )}
 
       <style>{`
-        .pk-flame { transform-origin: center bottom; animation: pk-flicker 0.9s ease-in-out infinite alternate; }
-        @keyframes pk-flicker { 0%{transform:scale(1) translateY(0)} 100%{transform:scale(1.08,1.12) translateY(-1px)} }
+        .pk-flame { transform-origin: center bottom; }
         .pk-twinkle { animation: pk-twinkle 2.2s ease-in-out infinite; }
         @keyframes pk-twinkle { 0%,100%{opacity:0.6} 50%{opacity:1} }
         .pk-firefly { animation: pk-firefly 2.2s ease-in-out infinite; }
