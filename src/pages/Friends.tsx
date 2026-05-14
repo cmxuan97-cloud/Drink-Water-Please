@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Search, Tent, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
@@ -171,6 +171,17 @@ export default function Friends() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: -10, marginBottom: 14 }}>
         <div className="muted" style={{ fontSize: 13 }}>@{username}</div>
         <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => navigate('/community')}
+            style={{
+              padding: '6px 12px', borderRadius: 999,
+              background: 'rgba(34,197,94,0.14)', color: '#15803d',
+              fontSize: 12, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <Trees size={13} /> 公共公园
+          </button>
           <button
             onClick={() => navigate('/leaderboard')}
             style={{
