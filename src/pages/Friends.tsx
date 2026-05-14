@@ -103,7 +103,7 @@ export default function Friends() {
   };
 
   if (!username) {
-    // 未注册账号 → 引导
+    // 未注册账号 → 引导到 settings 的注册面板
     return (
       <div className="page">
         <header className="page-header">
@@ -111,19 +111,35 @@ export default function Friends() {
           <h1 className="page-title">好友</h1>
           <span style={{ width: 48 }} />
         </header>
-        <div className="card-tinted card-sky" style={{ marginTop: 16, textAlign: 'center' }}>
-          <Users size={48} strokeWidth={1.6} color="var(--accent-deep)" style={{ marginTop: 8 }} />
-          <div style={{ fontWeight: 700, fontSize: 18, marginTop: 12 }}>先注册账号</div>
-          <div className="muted" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.6 }}>
-            好友功能需要注册账号<br />
-            回主页用「注册账号」就行
+        <div
+          className="card-tinted"
+          style={{
+            marginTop: 16,
+            textAlign: 'center',
+            background: 'linear-gradient(135deg, #fef3c7, #fcd34d)',
+            paddingBottom: 24,
+          }}
+        >
+          <div style={{ fontSize: 48, marginTop: 4 }}>👋💧</div>
+          <div style={{ fontWeight: 800, fontSize: 19, marginTop: 8, color: '#78350f' }}>
+            跟朋友一起喝水吧！
+          </div>
+          <div style={{ fontSize: 14, marginTop: 10, lineHeight: 1.7, color: '#92400e' }}>
+            注册个账号就能加好友<br />
+            互相看见今天有没有喝水、互递杯水
           </div>
           <button
             className="btn btn-full"
-            style={{ marginTop: 20 }}
-            onClick={() => navigate('/')}
+            style={{
+              marginTop: 22,
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(217,119,6,0.32)',
+            }}
+            onClick={() => navigate('/settings?register=1&from=friends')}
           >
-            回主页注册
+            <Users size={15} style={{ marginRight: 6, verticalAlign: -2 }} /> 去注册
           </button>
         </div>
       </div>

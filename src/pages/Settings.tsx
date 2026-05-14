@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Bell, Cloud, Copy, Droplet, LogIn, Moon, RotateCcw,
   Scale, Smartphone, Sparkles, User, UserPlus,
@@ -43,6 +43,10 @@ const timeToHour = (t: string): number => {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const fromFriends = search.get('from') === 'friends';
+  const wantRegister = search.get('register') === '1';
+  const accountCardRef = useRef<HTMLDivElement | null>(null);
   const [s, setS] = useState<TSettings>(DEFAULT_SETTINGS);
   const [perm, setPerm] = useState<NotificationPermission>('default');
   const [isStandalone, setIsStandalone] = useState(false);
@@ -82,6 +86,18 @@ export default function SettingsPage() {
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // 深链：?register=1 → 自动展开账号卡 + 打开注册面板 + 滚到那里
+  useEffect(() => {
+    if (!wantRegister) return;
+    if (getCurrentUsername()) return; // 已登录就跳过
+    setAccountExpanded(true);
+    setShowAuthPanel('register');
+    // 等下一个 frame 让 DOM 渲染完再滚
+    requestAnimationFrame(() => {
+      accountCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [wantRegister]);
 
   useEffect(() => {
     setS(getSettings());
@@ -447,8 +463,38 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* === 来自好友页的引导横幅 === */}
+      {fromFriends && !authUsername && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
+            color: '#3a2410',
+            borderRadius: 16,
+            padding: '14px 16px',
+            fontSize: 14,
+            fontWeight: 600,
+            boxShadow: '0 4px 14px rgba(245,158,11,0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 22 }}>👋</span>
+          <div style={{ flex: 1, lineHeight: 1.4 }}>
+            <div style={{ fontWeight: 800 }}>跟朋友一起喝水吧！</div>
+            <div style={{ fontSize: 12, opacity: 0.85, fontWeight: 500, marginTop: 2 }}>
+              注册个账号 → 加好友 → 互相递水监督
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* === 账号 === 默认收起，点 header 展开 */}
-      <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%)' }}>
+      <div
+        ref={accountCardRef}
+        className="card-tinted"
+        style={{ background: 'linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%)' }}
+      >
         <button
           onClick={() => setAccountExpanded((v) => !v)}
           style={{
