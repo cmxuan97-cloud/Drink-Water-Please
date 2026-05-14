@@ -424,13 +424,28 @@ function Campfire({ x, y, burst = false }: { x: number; y: number; burst?: boole
   const scale = burst ? 1.7 : 1;
   return (
     <g transform={`translate(${x}, ${y})`}>
+      {/* Warm glow rings — pulse but don't move the flame */}
+      <circle cx={0} cy={-12} r={42} fill="#ff9040" opacity="0.10" className="pk-fire-glow-1" />
+      <circle cx={0} cy={-12} r={28} fill="#ffb050" opacity="0.18" className="pk-fire-glow-2" />
+      <circle cx={0} cy={-14} r={18} fill="#ffd060" opacity="0.28" className="pk-fire-glow-3" />
+
+      {/* Ground shadow + logs */}
       <ellipse cx={0} cy={4} rx={22} ry={5} fill="#1a3008" opacity="0.3" />
-      <rect x={-20} y={-2} width="40" height="7" rx="2.5" fill="#5a3818" transform={`rotate(-12)`} />
-      <rect x={-18} y={-2} width="36" height="6" rx="2.5" fill="#7a4828" transform={`rotate(14)`} />
+      <rect x={-20} y={-2} width="40" height="7" rx="2.5" fill="#5a3818" transform="rotate(-12)" />
+      <rect x={-18} y={-2} width="36" height="6" rx="2.5" fill="#7a4828" transform="rotate(14)" />
+
+      {/* Static flame */}
       <g style={{ transform: `scale(${scale})`, transformOrigin: 'center bottom', transition: 'transform 0.25s' }}>
-        <path d="M-9 -4 Q-14 -22 -5 -26 Q-2 -16 0 -30 Q4 -18 8 -24 Q13 -14 9 -4 Z" fill="#f47020" className="pk-flame" />
-        <path d="M-5 -4 Q-7 -17 -2 -20 Q0 -12 2 -22 Q5 -16 7 -18 Q7 -9 5 -4 Z" fill="#f8d040" className="pk-flame" />
+        <path d="M-9 -4 Q-14 -22 -5 -26 Q-2 -16 0 -30 Q4 -18 8 -24 Q13 -14 9 -4 Z" fill="#f47020" />
+        <path d="M-5 -4 Q-7 -17 -2 -20 Q0 -12 2 -22 Q5 -16 7 -18 Q7 -9 5 -4 Z" fill="#f8d040" />
       </g>
+
+      {/* Slow rising embers — tiny glowing dots */}
+      <circle cx={-3} cy={-18} r={0.9} fill="#ffd060" className="pk-ember pk-ember-1" />
+      <circle cx={2}  cy={-22} r={0.7} fill="#ff9040" className="pk-ember pk-ember-2" />
+      <circle cx={5}  cy={-15} r={0.8} fill="#ffe080" className="pk-ember pk-ember-3" />
+      <circle cx={-4} cy={-12} r={0.6} fill="#ffa050" className="pk-ember pk-ember-4" />
+
       {burst && (
         <g>
           {[-18, -8, 8, 18].map((dx, i) => (
@@ -1122,12 +1137,22 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       )}
 
       <style>{`
-        .pk-flame { transform-origin: center bottom; animation: pk-flicker 1.4s ease-in-out infinite; }
-        @keyframes pk-flicker {
-          0%,100% { transform: scale(1, 1); }
-          25%     { transform: scale(1.07, 0.94); }
-          50%     { transform: scale(0.94, 1.05); }
-          75%     { transform: scale(1.05, 0.97); }
+        .pk-fire-glow-1 { transform-origin: center; transform-box: fill-box; animation: pk-glow-1 2.6s ease-in-out infinite; }
+        .pk-fire-glow-2 { transform-origin: center; transform-box: fill-box; animation: pk-glow-2 1.9s ease-in-out infinite; }
+        .pk-fire-glow-3 { transform-origin: center; transform-box: fill-box; animation: pk-glow-3 1.5s ease-in-out infinite; }
+        @keyframes pk-glow-1 { 0%,100%{opacity:0.08;transform:scale(1)} 50%{opacity:0.16;transform:scale(1.12)} }
+        @keyframes pk-glow-2 { 0%,100%{opacity:0.16;transform:scale(1)} 50%{opacity:0.26;transform:scale(1.10)} }
+        @keyframes pk-glow-3 { 0%,100%{opacity:0.24;transform:scale(1)} 50%{opacity:0.38;transform:scale(1.08)} }
+        .pk-ember { transform-origin: center; transform-box: fill-box; opacity: 0; }
+        .pk-ember-1 { animation: pk-ember-rise 3.6s linear infinite; }
+        .pk-ember-2 { animation: pk-ember-rise 4.2s linear 0.9s infinite; }
+        .pk-ember-3 { animation: pk-ember-rise 3.2s linear 1.8s infinite; }
+        .pk-ember-4 { animation: pk-ember-rise 4.6s linear 2.6s infinite; }
+        @keyframes pk-ember-rise {
+          0%   { opacity: 0; transform: translate(0, 0) scale(0.6); }
+          15%  { opacity: 1; }
+          70%  { opacity: 0.7; }
+          100% { opacity: 0; transform: translate(var(--ex, 4px), -22px) scale(0.4); }
         }
         .pk-bfly-flap { transform-origin: center; transform-box: fill-box; animation: pk-bfly-flap 0.16s linear infinite alternate; }
         @keyframes pk-bfly-flap { from { transform: scaleX(1); } to { transform: scaleX(0.35); } }
