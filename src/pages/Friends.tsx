@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Search, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Search, Tent, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
@@ -168,8 +168,32 @@ export default function Friends() {
         <span style={{ width: 48 }} />
       </header>
 
-      <div className="muted" style={{ fontSize: 13, marginTop: -10, marginBottom: 14 }}>
-        @{username}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: -10, marginBottom: 14 }}>
+        <div className="muted" style={{ fontSize: 13 }}>@{username}</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => navigate('/leaderboard')}
+            style={{
+              padding: '6px 12px', borderRadius: 999,
+              background: 'rgba(245,158,11,0.12)', color: '#b45309',
+              fontSize: 12, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <Trophy size={13} /> 排行榜
+          </button>
+          <button
+            onClick={() => navigate('/teams')}
+            style={{
+              padding: '6px 12px', borderRadius: 999,
+              background: 'rgba(16,185,129,0.12)', color: '#047857',
+              fontSize: 12, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <Tent size={13} /> 小队
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -281,7 +305,9 @@ export default function Friends() {
             </div>
           ) : (
             inbox.map((ev) => {
-              const animal = ev.fromCharId ? ANIMALS.find(a => a.customArt === ev.fromCharId) : undefined;
+              const animal = ev.fromCompanionId
+                ? ANIMALS.find(a => a.id === ev.fromCompanionId)
+                : ev.fromCharId ? ANIMALS.find(a => a.customArt === ev.fromCharId) : undefined;
               const isWater = ev.type === 'water';
               const mins = Math.max(1, Math.round((Date.now() - ev.createdAt) / 60000));
               const ago = mins < 60 ? `${mins}分钟前` : mins < 1440 ? `${Math.round(mins / 60)}小时前` : `${Math.round(mins / 1440)}天前`;
@@ -340,7 +366,9 @@ export default function Friends() {
               <div className="muted" style={{ fontSize: 13, padding: 10 }}>暂时没有新请求</div>
             ) : (
               incoming.map(req => {
-                const animal = req.charId ? ANIMALS.find(a => a.customArt === req.charId) : undefined;
+                const animal = req.companionId
+                  ? ANIMALS.find(a => a.id === req.companionId)
+                  : req.charId ? ANIMALS.find(a => a.customArt === req.charId) : undefined;
                 return (
                   <div key={req.clientId} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
@@ -433,7 +461,9 @@ export default function Friends() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {searchResults.map(u => {
-              const animal = u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
+              const animal = u.companionId
+                ? ANIMALS.find(a => a.id === u.companionId)
+                : u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
               const sent = sentTo.has(u.username);
               return (
                 <div key={u.username} style={{

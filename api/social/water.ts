@@ -34,6 +34,7 @@ export default async function handler(req: Request): Promise<Response> {
     fromClientId: myClientId,
     fromUsername: auth.username,
     fromDisplayName: me?.displayName ?? auth.username,
+    fromCompanionId: me?.companionId,
     fromCharId: me?.charId,
     text: typeof body.text === 'string' ? body.text.slice(0, 80) : undefined,
     createdAt: Date.now(),

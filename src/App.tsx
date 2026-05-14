@@ -8,6 +8,8 @@ import Stats from './pages/Stats';
 import Admin from './pages/Admin';
 import Park from './pages/Park';
 import Friends from './pages/Friends';
+import Leaderboard from './pages/Leaderboard';
+import Teams from './pages/Teams';
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/park" element={<Park />} />
       <Route path="/friends" element={<Friends />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/teams" element={<Teams />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

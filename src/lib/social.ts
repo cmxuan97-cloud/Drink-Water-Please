@@ -19,6 +19,7 @@ export type FriendRequest = {
   clientId: string;
   username: string;
   displayName: string;
+  companionId?: string;
   charId?: string;
   sentAt: number;
 };
@@ -114,6 +115,7 @@ export type InboxEvent = {
   fromClientId: string;
   fromUsername: string;
   fromDisplayName: string;
+  fromCompanionId?: string;
   fromCharId?: string;
   text?: string;
   emoji?: string;
@@ -193,6 +195,102 @@ export const ackInbox = async (): Promise<{ ok: boolean }> => {
     return { ok: true };
   } catch {
     return { ok: false };
+  }
+};
+
+// ── Leaderboard ─────────────────────────────────────────────────────────────
+export type LeaderboardRow = PublicProfile & { clientId: string; isMe: boolean };
+
+export const fetchLeaderboard = async (): Promise<{ rows: LeaderboardRow[]; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch(`/api/social/leaderboard?clientId=${encodeURIComponent(clientId)}`);
+    if (!r.ok) {
+      const j = await safeJson(r);
+      return { rows: [], error: (j.error as string) ?? '获取失败' };
+    }
+    const j = (await safeJson(r)) as { rows?: LeaderboardRow[] };
+    return { rows: j.rows ?? [] };
+  } catch (e) {
+    return { rows: [], error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+// ── Teams ──────────────────────────────────────────────────────────────────
+export type Team = {
+  id: string;
+  name: string;
+  createdBy: string;
+  members: string[];
+  joinCode: string;
+  createdAt: number;
+  memberProfiles: Array<PublicProfile & { clientId: string }>;
+};
+
+export const createTeam = async (name: string): Promise<{
+  ok: boolean; teamId?: string; joinCode?: string; error?: string;
+}> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/teams/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, name }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '创建失败' };
+    return { ok: true, teamId: j.teamId as string, joinCode: j.joinCode as string };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const joinTeam = async (joinCode: string): Promise<{
+  ok: boolean; teamId?: string; name?: string; error?: string;
+}> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/teams/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, joinCode }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '加入失败' };
+    return { ok: true, teamId: j.teamId as string, name: j.name as string };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const leaveTeam = async (teamId: string): Promise<{ ok: boolean; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/teams/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, teamId }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '离开失败' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const fetchMyTeams = async (): Promise<{ teams: Team[]; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch(`/api/teams/my?clientId=${encodeURIComponent(clientId)}`);
+    if (!r.ok) {
+      const j = await safeJson(r);
+      return { teams: [], error: (j.error as string) ?? '获取失败' };
+    }
+    const j = (await safeJson(r)) as { teams?: Team[] };
+    return { teams: j.teams ?? [] };
+  } catch (e) {
+    return { teams: [], error: e instanceof Error ? e.message : '网络错误' };
   }
 };
 

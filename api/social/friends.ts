@@ -5,7 +5,7 @@ import type { PublicProfile } from './_shared';
 export const config = { runtime: 'edge' };
 
 type Friend = PublicProfile & { clientId: string };
-type FriendReq = { clientId: string; username: string; displayName: string; charId?: string; sentAt: number };
+type FriendReq = { clientId: string; username: string; displayName: string; companionId?: string; charId?: string; sentAt: number };
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'GET') return errResp('Method not allowed', 405);
@@ -50,6 +50,7 @@ export default async function handler(req: Request): Promise<Response> {
       clientId: id,
       username: p.username,
       displayName: p.displayName,
+      companionId: p.companionId,
       charId: p.charId,
       sentAt: score,
     };

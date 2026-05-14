@@ -37,6 +37,7 @@ export default async function handler(req: Request): Promise<Response> {
     fromClientId: myClientId,
     fromUsername: auth.username,
     fromDisplayName: me?.displayName ?? auth.username,
+    fromCompanionId: me?.companionId,
     fromCharId: me?.charId,
     emoji,
     createdAt: Date.now(),
