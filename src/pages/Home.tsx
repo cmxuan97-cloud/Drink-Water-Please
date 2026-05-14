@@ -155,15 +155,15 @@ export default function Home() {
     }
   }, [progress.pct, settings, goalMl]);
 
-  // 拉一下未处理好友请求数量（红点用）
+  // 拉未处理好友请求 + 未读 inbox 数量
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const { getCurrentUsername } = await import('../lib/auth');
       if (!getCurrentUsername()) return;
-      const { fetchFriends } = await import('../lib/social');
-      const r = await fetchFriends();
-      if (!cancelled) setIncomingCount(r.incoming.length);
+      const { fetchFriends, fetchInbox } = await import('../lib/social');
+      const [fr, ib] = await Promise.all([fetchFriends(), fetchInbox()]);
+      if (!cancelled) setIncomingCount(fr.incoming.length + ib.unread);
     })();
     return () => { cancelled = true; };
   }, []);

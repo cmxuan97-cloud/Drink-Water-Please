@@ -108,6 +108,94 @@ export const removeFriend = async (
   }
 };
 
+export type InboxEvent = {
+  uid: string;
+  type: 'water' | 'cheer' | 'note';
+  fromClientId: string;
+  fromUsername: string;
+  fromDisplayName: string;
+  fromCharId?: string;
+  text?: string;
+  emoji?: string;
+  createdAt: number;
+};
+
+export const sendWater = async (
+  targetClientId: string,
+  text?: string,
+): Promise<{ ok: boolean; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/water', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, targetClientId, text }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '递水失败' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const sendCheer = async (
+  targetClientId: string,
+  emoji: string,
+): Promise<{ ok: boolean; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/cheer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, targetClientId, emoji }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '失败' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const fetchInbox = async (): Promise<{
+  events: InboxEvent[];
+  unread: number;
+  lastReadAt: number;
+  error?: string;
+}> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch(`/api/social/inbox?clientId=${encodeURIComponent(clientId)}`);
+    if (!r.ok) {
+      const j = await safeJson(r);
+      return { events: [], unread: 0, lastReadAt: 0, error: (j.error as string) ?? '获取失败' };
+    }
+    const j = (await safeJson(r)) as { events?: InboxEvent[]; unread?: number; lastReadAt?: number };
+    return {
+      events: j.events ?? [],
+      unread: j.unread ?? 0,
+      lastReadAt: j.lastReadAt ?? 0,
+    };
+  } catch (e) {
+    return { events: [], unread: 0, lastReadAt: 0, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const ackInbox = async (): Promise<{ ok: boolean }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    await fetch('/api/social/inbox/ack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    });
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+};
+
 export const fetchFriends = async (): Promise<{
   friends: Friend[];
   incoming: FriendRequest[];

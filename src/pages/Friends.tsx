@@ -5,13 +5,14 @@ import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
 import {
-  fetchFriends, removeFriend, respondToRequest, searchUsers, sendFriendRequest,
-  type Friend, type FriendRequest, type SearchResult,
+  ackInbox, fetchFriends, fetchInbox, removeFriend, respondToRequest,
+  searchUsers, sendFriendRequest,
+  type Friend, type FriendRequest, type InboxEvent, type SearchResult,
 } from '../lib/social';
 import { getCurrentUsername } from '../lib/auth';
 import { syncProfile } from '../lib/profile';
 
-type Tab = 'friends' | 'requests' | 'search';
+type Tab = 'friends' | 'inbox' | 'requests' | 'search';
 
 export default function Friends() {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ export default function Friends() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
+  const [inbox, setInbox] = useState<InboxEvent[]>([]);
+  const [unread, setUnread] = useState(0);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -35,13 +38,22 @@ export default function Friends() {
     if (!username) return;
     setBusy(true);
     setErr(null);
-    const r = await fetchFriends();
-    if (r.error) setErr(r.error);
-    setFriends(r.friends);
-    setIncoming(r.incoming);
-    setOutgoing(r.outgoing);
+    const [fr, ib] = await Promise.all([fetchFriends(), fetchInbox()]);
+    if (fr.error) setErr(fr.error);
+    setFriends(fr.friends);
+    setIncoming(fr.incoming);
+    setOutgoing(fr.outgoing);
+    setInbox(ib.events);
+    setUnread(ib.unread);
     setBusy(false);
   }, [username]);
+
+  // 进入 inbox tab 时自动标记已读
+  useEffect(() => {
+    if (tab !== 'inbox' || !username || inbox.length === 0) return;
+    void ackInbox();
+    setUnread(0);
+  }, [tab, username, inbox.length]);
 
   useEffect(() => {
     if (!username) return;
@@ -171,7 +183,8 @@ export default function Friends() {
         marginBottom: 16,
       }}>
         {([
-          { id: 'friends', label: `好友 ${friends.length || ''}` },
+          { id: 'friends', label: `好友 ${friends.length || ''}`.trim() },
+          { id: 'inbox', label: '收件', badge: unread > 0 ? unread : null },
           { id: 'requests', label: '请求', badge: reqBadge },
           { id: 'search', label: '搜索' },
         ] as Array<{ id: Tab; label: string; badge?: number | null }>).map(t => {
@@ -236,7 +249,7 @@ export default function Friends() {
           ) : (
             friends.map(f => (
               <div key={f.clientId} style={{ position: 'relative' }}>
-                <FriendCard friend={f} />
+                <FriendCard friend={f} onAction={showToast} />
                 <button
                   onClick={() => onRemove(f)}
                   aria-label="移除好友"
@@ -251,6 +264,67 @@ export default function Friends() {
                 </button>
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {/* === INBOX TAB === */}
+      {tab === 'inbox' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {inbox.length === 0 ? (
+            <div className="card-tinted card-sky" style={{ textAlign: 'center', padding: 24 }}>
+              <div style={{ fontSize: 36 }}>📭</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>暂时没有消息</div>
+              <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                好友送来的水和加油会出现在这里
+              </div>
+            </div>
+          ) : (
+            inbox.map((ev) => {
+              const animal = ev.fromCharId ? ANIMALS.find(a => a.customArt === ev.fromCharId) : undefined;
+              const isWater = ev.type === 'water';
+              const mins = Math.max(1, Math.round((Date.now() - ev.createdAt) / 60000));
+              const ago = mins < 60 ? `${mins}分钟前` : mins < 1440 ? `${Math.round(mins / 60)}小时前` : `${Math.round(mins / 1440)}天前`;
+              return (
+                <div key={ev.uid} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: 12, background: 'var(--bg-card)', borderRadius: 14,
+                  boxShadow: 'var(--shadow-card)',
+                }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 999,
+                    background: isWater ? 'rgba(58,166,221,0.18)' : 'rgba(245,158,11,0.18)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    position: 'relative',
+                  }}>
+                    {animal ? <AnimalIcon animal={animal} size={42} /> : '?'}
+                    <span style={{
+                      position: 'absolute', bottom: -2, right: -2,
+                      fontSize: 16, background: 'white',
+                      width: 22, height: 22, borderRadius: 999,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    }}>
+                      {isWater ? '💧' : ev.emoji ?? '🎉'}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14 }}>
+                      <span style={{ fontWeight: 700 }}>{ev.fromDisplayName}</span>{' '}
+                      <span style={{ color: 'var(--text-soft)' }}>
+                        {isWater ? '给你递了一杯水' : `送了 ${ev.emoji} 给你`}
+                      </span>
+                    </div>
+                    {ev.text && (
+                      <div style={{ fontSize: 13, marginTop: 3, color: 'var(--text)', fontStyle: 'italic' }}>
+                        "{ev.text}"
+                      </div>
+                    )}
+                    <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{ago}</div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}
