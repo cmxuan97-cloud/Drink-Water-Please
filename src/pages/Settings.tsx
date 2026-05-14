@@ -87,6 +87,9 @@ export default function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // 注册引导模式：从好友页跳来 + 还没注册账号 → 把其他卡片收起来，让用户专心填表
+  const focusRegister = wantRegister && !authUsername;
+
   // 深链：?register=1 → 自动展开账号卡 + 打开注册面板 + 滚到那里
   useEffect(() => {
     if (!wantRegister) return;
@@ -244,11 +247,12 @@ export default function SettingsPage() {
     <div className="page">
       <header className="page-header">
         <button className="back-btn" onClick={() => navigate(-1)}>← 返回</button>
-        <h1 className="page-title">设置</h1>
+        <h1 className="page-title">{focusRegister ? '注册账号' : '设置'}</h1>
         <span style={{ width: 48 }} />
       </header>
 
-      {/* hero goal card */}
+      {/* hero goal card + menu group + reminder — hidden in register-focus mode */}
+      {!focusRegister && (<>
       <div className="card-tinted card-sky" style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.85 }}>每日饮水目标</div>
         <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 4 }}>
@@ -462,6 +466,7 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+      </>)}
 
       {/* === 来自好友页的引导横幅 === */}
       {fromFriends && !authUsername && (
@@ -663,7 +668,8 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* === 云备份 === 默认收起 */}
+      {/* === 云备份 === 默认收起 — 注册引导模式下隐藏 */}
+      {!focusRegister && (
       <div className="card-tinted" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
         <button
           onClick={() => setBackupExpanded((v) => !v)}
@@ -859,6 +865,7 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+      )}
 
     </div>
   );

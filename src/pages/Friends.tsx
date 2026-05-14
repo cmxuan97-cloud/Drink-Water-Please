@@ -22,7 +22,8 @@ export default function Friends() {
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
   const [inbox, setInbox] = useState<InboxEvent[]>([]);
   const [unread, setUnread] = useState(0);
-  const [busy, setBusy] = useState(false);
+  // 初始 loaded=false → 显示 skeleton，避免进页面瞬间闪一下"没有好友"
+  const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -36,7 +37,6 @@ export default function Friends() {
 
   const loadFriends = useCallback(async () => {
     if (!username) return;
-    setBusy(true);
     setErr(null);
     const [fr, ib] = await Promise.all([fetchFriends(), fetchInbox()]);
     if (fr.error) setErr(fr.error);
@@ -45,7 +45,7 @@ export default function Friends() {
     setOutgoing(fr.outgoing);
     setInbox(ib.events);
     setUnread(ib.unread);
-    setBusy(false);
+    setLoaded(true);
   }, [username]);
 
   // 进入 inbox tab 时自动标记已读
@@ -253,8 +253,24 @@ export default function Friends() {
       {/* === FRIENDS TAB === */}
       {tab === 'friends' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {busy && friends.length === 0 ? (
-            <div className="muted" style={{ textAlign: 'center', padding: 20, fontSize: 14 }}>加载中…</div>
+          {!loaded ? (
+            // 加载中 — 显示 skeleton 卡片占位，不要闪 "没有好友"
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: 12, background: 'var(--bg-card)', borderRadius: 16,
+                  boxShadow: 'var(--shadow-card)', opacity: 0.5,
+                }}>
+                  <div style={{ width: 72, height: 72, borderRadius: 999, background: 'rgba(0,0,0,0.06)' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ height: 14, width: '60%', background: 'rgba(0,0,0,0.06)', borderRadius: 6 }} />
+                    <div style={{ height: 11, width: '40%', background: 'rgba(0,0,0,0.05)', borderRadius: 6 }} />
+                    <div style={{ height: 11, width: '70%', background: 'rgba(0,0,0,0.04)', borderRadius: 6, marginTop: 4 }} />
+                  </div>
+                </div>
+              ))}
+            </>
           ) : friends.length === 0 ? (
             <div className="card-tinted card-sky" style={{ textAlign: 'center', padding: 20 }}>
               <Users size={36} strokeWidth={1.5} color="var(--accent-deep)" style={{ marginBottom: 8 }} />
