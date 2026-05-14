@@ -142,19 +142,6 @@ export default function Collection() {
                   <div style={{ fontSize: 12, opacity: 0.75, marginTop: 1 }}>@{username}</div>
                 )}
               </div>
-              <button
-                onClick={() => navigate('/park')}
-                style={{
-                  padding: '6px 11px', borderRadius: 999,
-                  background: 'rgba(34,136,64,0.18)', color: '#15803d',
-                  fontSize: 12, fontWeight: 700,
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  flexShrink: 0,
-                }}
-                aria-label="去公园"
-              >
-                <Trees size={13} /> 公园
-              </button>
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12.5, color: 'rgba(0,0,0,0.7)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -213,6 +200,41 @@ export default function Collection() {
           </div>
         )}
       </div>
+
+      {/* 公园入口 — 显眼大按钮 */}
+      <button
+        onClick={() => navigate('/park')}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '16px 18px',
+          borderRadius: 18,
+          background: 'linear-gradient(135deg, #a8d850, #6cab30)',
+          color: 'white',
+          border: 'none',
+          boxShadow: '0 6px 18px rgba(60, 130, 40, 0.28)',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, borderRadius: 14,
+          background: 'rgba(255,255,255,0.22)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Trees size={26} strokeWidth={2} color="white" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>去我的公园</div>
+          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 3 }}>
+            看你的小伙伴在公园里玩耍
+          </div>
+        </div>
+        <span style={{ fontSize: 22, opacity: 0.9, fontWeight: 600 }}>›</span>
+      </button>
 
       {/* Tabs（仅注册用户显示「留言」） */}
       {username ? (

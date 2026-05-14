@@ -172,18 +172,6 @@ export default function Friends() {
         <div className="muted" style={{ fontSize: 13 }}>@{username}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
-            onClick={() => navigate('/community')}
-            style={{
-              padding: '6px 11px', borderRadius: 999,
-              background: 'rgba(34,136,64,0.18)', color: '#15803d',
-              fontSize: 12, fontWeight: 700,
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              flexShrink: 0,
-            }}
-          >
-            <Trees size={13} /> 公共公园
-          </button>
-          <button
             onClick={() => navigate('/leaderboard')}
             style={{
               padding: '6px 12px', borderRadius: 999,
@@ -261,6 +249,42 @@ export default function Friends() {
           {err}
         </div>
       )}
+
+      {/* 公共公园入口 — 显眼大按钮 */}
+      <button
+        onClick={() => navigate('/community')}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '16px 18px',
+          borderRadius: 18,
+          background: 'linear-gradient(135deg, #a8d850, #6cab30)',
+          color: 'white',
+          border: 'none',
+          boxShadow: '0 6px 18px rgba(60, 130, 40, 0.28)',
+          cursor: 'pointer',
+          textAlign: 'left',
+          marginBottom: 14,
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, borderRadius: 14,
+          background: 'rgba(255,255,255,0.22)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Trees size={26} strokeWidth={2} color="white" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>去公共公园</div>
+          <div style={{ fontSize: 12, opacity: 0.92, marginTop: 3 }}>
+            看朋友的小伙伴 · 一起互动
+          </div>
+        </div>
+        <span style={{ fontSize: 22, opacity: 0.9, fontWeight: 600 }}>›</span>
+      </button>
 
       {/* === FRIENDS TAB === */}
       {tab === 'friends' && (
