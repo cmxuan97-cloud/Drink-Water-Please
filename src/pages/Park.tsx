@@ -24,9 +24,10 @@ type Zone = 'upper' | 'middle' | 'lower';
 type Action = 'walking' | 'idle' | 'friendly' | 'fight' | 'dragged';
 
 const ZONE_CONFIG: Record<Zone, { minX: number; maxX: number; minY: number; maxY: number }> = {
-  upper:  { minX: 110, maxX: 430, minY: 215, maxY: 320 },
-  middle: { minX: 80,  maxX: 460, minY: 500, maxY: 680 },
-  lower:  { minX: 100, maxX: 440, minY: 760, maxY: 870 },
+  // Widened zones so animals can roam the side meadows too
+  upper:  { minX: 55,  maxX: 490, minY: 235, maxY: 350 },
+  middle: { minX: 200, maxX: 510, minY: 460, maxY: 700 },
+  lower:  { minX: 55,  maxX: 500, minY: 725, maxY: 895 },
 };
 
 // ── Speech pools ───────────────────────────────────────────────────────────
@@ -476,6 +477,53 @@ function Rock({ x, y, w = 30 }: { x: number; y: number; w?: number }) {
   );
 }
 
+function Mushroom({ x, y, color = '#d83828' }: { x: number; y: number; color?: string }) {
+  return (
+    <g>
+      <ellipse cx={x} cy={y + 2} rx={6} ry={1.5} fill="#1a3008" opacity="0.3" />
+      <rect x={x - 2} y={y - 5} width="4" height="7" rx="1.5" fill="#f8e8c0" />
+      <path d={`M ${x - 7} ${y - 5} Q ${x - 7} ${y - 11} ${x} ${y - 11} Q ${x + 7} ${y - 11} ${x + 7} ${y - 5} Z`} fill={color} />
+      <circle cx={x - 2.5} cy={y - 8} r="1.1" fill="white" opacity="0.75" />
+      <circle cx={x + 2} cy={y - 6.5} r="0.9" fill="white" opacity="0.65" />
+    </g>
+  );
+}
+
+function Stump({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <ellipse cx={x} cy={y + 2} rx={11} ry={3} fill="#1a3008" opacity="0.3" />
+      <ellipse cx={x} cy={y - 4} rx={10} ry={6} fill="#7a4828" />
+      <ellipse cx={x} cy={y - 6} rx={10} ry={6} fill="#9a6838" />
+      <ellipse cx={x} cy={y - 6} rx={5.5} ry={3.2} fill="#5a3818" />
+      <path d={`M ${x - 3} ${y - 7} Q ${x} ${y - 5.5} ${x + 3} ${y - 7}`} stroke="#3a2410" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+
+function Wildflowers({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x}, ${y}) scale(${scale})`}>
+      <circle cx={0} cy={0} r="2.6" fill="#ff80a8" />
+      <circle cx={6} cy={-2} r="2.2" fill="#ffe048" />
+      <circle cx={-5} cy={-1} r="2.2" fill="#fff0c0" />
+      <circle cx={3} cy={5} r="2.4" fill="#a878ff" />
+      <circle cx={-4} cy={4} r="2" fill="#ff9040" />
+    </g>
+  );
+}
+
+function Sign({ x, y, text = '宝藏 →' }: { x: number; y: number; text?: string }) {
+  return (
+    <g>
+      <ellipse cx={x} cy={y + 2} rx={14} ry={2.5} fill="#1a3008" opacity="0.3" />
+      <rect x={x - 1.5} y={y - 16} width="3" height="18" rx="0.5" fill="#7a4828" />
+      <rect x={x - 18} y={y - 22} width="36" height="11" rx="1.5" fill="#e8c880" stroke="#a07840" strokeWidth="1.2" />
+      <text x={x} y={y - 14} textAnchor="middle" fill="#5a3810" fontSize="7" fontWeight="700" fontFamily="sans-serif">{text}</text>
+    </g>
+  );
+}
+
 // ── Scene FX SVG (rendered inside SceneFxLayer) ────────────────────────────
 
 function Bird({ x, y }: { x: number; y: number }) {
@@ -730,6 +778,65 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       <Rock x={80} y={415} w={28} />
       <Rock x={220} y={355} w={22} />
       <Rock x={490} y={395} w={26} />
+
+      {/* ── SIDE DECORATIONS — fill the empty grass ── */}
+      {/* Right side (between mountain forest and middle) */}
+      <Pine x={515} y={295} h={42} />
+      <Pine x={490} y={335} h={36} />
+      <Mushroom x={500} y={365} />
+      <Wildflowers x={518} y={385} />
+      <Stump x={510} y={425} />
+      <Mushroom x={528} y={445} color="#f0a020" />
+      <Rock x={520} y={490} w={20} />
+      <Wildflowers x={500} y={478} />
+
+      {/* Right side (middle area outskirts) */}
+      <Pine x={520} y={540} h={42} />
+      <Wildflowers x={490} y={510} />
+      <Mushroom x={510} y={585} />
+      <Stump x={520} y={630} />
+      <Wildflowers x={500} y={665} />
+      <Pine x={520} y={700} h={38} />
+
+      {/* Right side (lower) */}
+      <Mushroom x={515} y={735} color="#f0a020" />
+      <Wildflowers x={505} y={760} />
+      <Pine x={520} y={790} h={40} />
+      <Stump x={510} y={830} />
+      <Wildflowers x={520} y={865} />
+      <Rock x={500} y={875} w={18} />
+
+      {/* Left side — left of the river (animals reach this via lower zone) */}
+      <Pine x={28} y={500} h={38} />
+      <Mushroom x={45} y={530} />
+      <Wildflowers x={32} y={560} />
+      <Stump x={40} y={595} />
+      <Mushroom x={20} y={630} color="#a878ff" />
+      <Pine x={32} y={665} h={44} />
+      <Wildflowers x={48} y={695} />
+      <Rock x={30} y={720} w={20} />
+      <Wildflowers x={50} y={755} />
+      <Mushroom x={28} y={790} />
+      <Stump x={42} y={830} />
+      <Wildflowers x={28} y={862} />
+
+      {/* Sparse fill — between upper meadow and middle (transition) */}
+      <Wildflowers x={140} y={430} />
+      <Mushroom x={240} y={445} />
+      <Wildflowers x={310} y={460} />
+      <Stump x={205} y={460} />
+      <Wildflowers x={400} y={445} />
+      <Mushroom x={310} y={420} color="#a878ff" />
+      <Rock x={285} y={478} w={16} />
+
+      {/* Between middle and lower (transition) */}
+      <Wildflowers x={210} y={715} />
+      <Mushroom x={290} y={710} />
+      <Stump x={365} y={720} />
+      <Wildflowers x={425} y={715} />
+
+      {/* Signpost near treasure */}
+      <Sign x={360} y={745} text="宝藏 →" />
 
       {/* River */}
       <path
