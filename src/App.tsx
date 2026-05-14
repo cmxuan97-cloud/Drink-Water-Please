@@ -6,6 +6,7 @@ import Settings from './pages/Settings';
 import Collection from './pages/Collection';
 import Stats from './pages/Stats';
 import Admin from './pages/Admin';
+import Park from './pages/Park';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/collection" element={<Collection />} />
       <Route path="/stats" element={<Stats />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/park" element={<Park />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

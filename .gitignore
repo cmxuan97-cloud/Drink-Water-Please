@@ -13,3 +13,5 @@ dist-ssr
 .cache
 *.tsbuildinfo
 .claude/worktrees/
+.vercel
+.env*.local

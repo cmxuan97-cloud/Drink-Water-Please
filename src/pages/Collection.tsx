@@ -121,6 +121,32 @@ export default function Collection() {
         </div>
       </div>
 
+      {/* 公园入口 */}
+      {unlockedCount >= 1 && (
+        <button
+          onClick={() => navigate('/park')}
+          style={{
+            width: '100%',
+            padding: '14px 20px',
+            borderRadius: 18,
+            background: 'linear-gradient(135deg, #3aaa5a, #228840)',
+            color: 'white',
+            fontWeight: 700,
+            fontSize: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            boxShadow: '0 4px 16px rgba(34,136,64,0.28)',
+          }}
+        >
+          🌳 去动物公园逛逛
+          <span style={{ fontSize: 12, opacity: 0.85, fontWeight: 500 }}>
+            {unlockedCount} 只小伙伴在等你
+          </span>
+        </button>
+      )}
+
       {/* Token 状态卡 */}
       <div className={tokens > 0 ? 'card-tinted card-mint' : 'card'}>
         <div className="row-between">
