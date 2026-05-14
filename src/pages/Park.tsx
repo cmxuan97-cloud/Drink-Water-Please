@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ANIMALS } from '../data/animals';
 import { getCompanionId, getUnlockedIds } from '../lib/storage';
 import Character from '../components/Character';
+import { leaveParkNote, sendCheer, sendWater } from '../lib/social';
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
 //   Constants
@@ -105,6 +106,9 @@ const SCENE_TARGETS: TapTarget[] = [
 type Sprite = {
   id: string;
   charId: string;
+  label?: string;          // 朋友的 displayName 或 '我' (community 模式)
+  friendClientId?: string; // 朋友的 clientId (community 模式)
+  friendUsername?: string; // 朋友的 username (community 模式，用于跳到主页)
   x: number;
   y: number;
   zone: Zone;
@@ -117,6 +121,13 @@ type Sprite = {
   timer: number;
   speech?: { text: string; expiresAt: number };
   isDragging?: boolean;
+};
+
+type SpriteSeed = {
+  charId: string;
+  label?: string;
+  friendClientId?: string;
+  friendUsername?: string;
 };
 
 type Fx = {
@@ -237,22 +248,20 @@ function pickDragLine(
 //   Init & tick
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
-function initSprites(unlockedIds: string[], companionId: string | null): Sprite[] {
-  const ordered = [
-    ...unlockedIds.filter(id => id === companionId),
-    ...unlockedIds.filter(id => id !== companionId),
-  ].slice(0, MAX_ANIMALS);
-
+function initSpritesFromSeeds(seeds: SpriteSeed[]): Sprite[] {
   const initZones: Zone[] = ['middle', 'upper', 'lower', 'middle', 'upper', 'lower'];
-  return ordered.map((id, i) => {
-    const animal = ANIMALS.find(a => a.id === id)!;
+  return seeds.slice(0, MAX_ANIMALS).map((seed, i) => {
     const zone = initZones[i % initZones.length];
     const { minX, maxX, minY, maxY } = ZONE_CONFIG[zone];
     const x = rand(minX, maxX);
     const y = rand(minY, maxY);
     const { tx, ty } = pickTarget(zone, x, y);
     return {
-      id, charId: animal.customArt,
+      id: seed.friendClientId ? `f-${seed.friendClientId}` : `sp-${i}-${seed.charId}`,
+      charId: seed.charId,
+      label: seed.label,
+      friendClientId: seed.friendClientId,
+      friendUsername: seed.friendUsername,
       x, y, zone,
       facing: tx > x ? 'right' : 'left',
       action: 'walking', targetX: tx, targetY: ty,
@@ -1244,6 +1253,27 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
           <Character id={sprite.charId as any} mood={sprite.action === 'friendly' ? 'happy' : 'idle'} size={size} static />
         </div>
       </div>
+      {sprite.label && (
+        <div style={{
+          position: 'absolute',
+          top: size + 2,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15,40,20,0.78)',
+          color: 'white',
+          padding: '2px 8px',
+          borderRadius: 999,
+          fontSize: 10.5,
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          maxWidth: 90,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {sprite.label}
+        </div>
+      )}
     </div>
   );
 }
@@ -1349,7 +1379,17 @@ function computeFit(cw: number, ch: number): Transform {
 //   Main page
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
-export default function Park() {
+type ParkProps = {
+  mode?: 'private' | 'community';
+  friends?: Array<{
+    clientId: string;
+    username: string;
+    displayName: string;
+    companionId?: string;
+  }>;
+};
+
+export default function Park({ mode = 'private', friends = [] }: ParkProps) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -1376,14 +1416,54 @@ export default function Park() {
   }, [updateTransform]);
 
   // ── Animal state ──────────────────────────────────────────────────────────
-  const { unlockedIds, companionId } = useMemo(() => ({
-    unlockedIds: getUnlockedIds('a-kiwi'),
-    companionId: getCompanionId(),
-  }), []);
+  const spriteSeeds: SpriteSeed[] = useMemo(() => {
+    if (mode === 'community') {
+      // 自己 + 朋友们的 companion 都进场
+      const selfCompanionId = getCompanionId();
+      const seeds: SpriteSeed[] = [];
+      const selfAnimal = ANIMALS.find(a => a.id === selfCompanionId);
+      if (selfAnimal) seeds.push({ charId: selfAnimal.customArt, label: '我' });
+      for (const f of friends) {
+        const a = f.companionId ? ANIMALS.find(x => x.id === f.companionId) : undefined;
+        if (a) seeds.push({
+          charId: a.customArt,
+          label: f.displayName,
+          friendClientId: f.clientId,
+          friendUsername: f.username,
+        });
+      }
+      return seeds;
+    }
+    // 私人模式：自己解锁的所有动物
+    const unlocked = getUnlockedIds('a-kiwi');
+    const companion = getCompanionId();
+    const ordered = [
+      ...unlocked.filter(id => id === companion),
+      ...unlocked.filter(id => id !== companion),
+    ];
+    return ordered
+      .map((id) => {
+        const a = ANIMALS.find(x => x.id === id);
+        return a ? { charId: a.customArt } : null;
+      })
+      .filter((s): s is SpriteSeed => s !== null);
+  }, [mode, friends]);
 
-  const [sprites, setSprites] = useState<Sprite[]>(() => initSprites(unlockedIds, companionId));
+  const [sprites, setSprites] = useState<Sprite[]>(() => initSpritesFromSeeds(spriteSeeds));
   const spritesRef = useRef(sprites);
   useEffect(() => { spritesRef.current = sprites; }, [sprites]);
+
+  // community 模式下朋友列表是异步加载的，seeds 变化时重新生成 sprites
+  const seedSig = useMemo(
+    () => spriteSeeds.map(s => `${s.charId}:${s.friendClientId ?? 'self'}`).join('|'),
+    [spriteSeeds],
+  );
+  useEffect(() => {
+    if (mode === 'community') {
+      setSprites(initSpritesFromSeeds(spriteSeeds));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedSig, mode]);
 
   const [fxList, setFxList] = useState<Fx[]>([]);
   const [sceneFxList, setSceneFxList] = useState<SceneFx[]>([]);
@@ -1398,6 +1478,14 @@ export default function Park() {
   const [cabinLit, setCabinLit] = useState<{ top: boolean; mid: boolean }>({ top: false, mid: false });
   const [boatX, setBoatX] = useState(290);
   const [fireBurstAt, setFireBurstAt] = useState<number | null>(null);
+
+  // 公共公园：朋友互动抽屉
+  const [activeFriend, setActiveFriend] = useState<{ clientId: string; username: string; displayName: string; charId: string } | null>(null);
+  const [parkToast, setParkToast] = useState<string | null>(null);
+  const showParkToast = useCallback((msg: string) => {
+    setParkToast(msg);
+    setTimeout(() => setParkToast(null), 2200);
+  }, []);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const addFx = useCallback((kind: Fx['kind'], x: number, y: number) => {
@@ -1422,9 +1510,23 @@ export default function Park() {
 
   // ── Tap on animal ─────────────────────────────────────────────────────────
   const handleAnimalTap = useCallback((sprite: Sprite) => {
+    if (sprite.friendClientId && sprite.friendUsername) {
+      // 朋友的动物 → 打开互动抽屉
+      setActiveFriend({
+        clientId: sprite.friendClientId,
+        username: sprite.friendUsername,
+        displayName: sprite.label ?? sprite.friendUsername,
+        charId: sprite.charId,
+      });
+      // 也短暂停一下表示注意到了
+      setSprites(prev => prev.map(sp =>
+        sp.id === sprite.id ? { ...sp, action: 'idle', timer: 2 } : sp,
+      ));
+      return;
+    }
+    // 自己的动物 → 原本的逻辑（爱心 + 说话泡）
     setSpeech(sprite.id, pickRandom(TAP_LINES));
     addFx('tap-heart', sprite.x, sprite.y - ANIMAL_SIZE);
-    // briefly pause
     setSprites(prev => prev.map(sp =>
       sp.id === sprite.id ? { ...sp, action: 'idle', timer: 3 } : sp,
     ));
@@ -1537,8 +1639,10 @@ export default function Park() {
       const t = e.touches[0];
       const dx = t.clientX - p1.x;
       const dy = t.clientY - p1.y;
-      // Upgrade to drag once finger moves enough
-      if (tr.type === 'animal-tap' && Math.hypot(dx, dy) > 8) {
+      // Upgrade to drag once finger moves enough — 但朋友的动物不能拖
+      const draggedSprite = spritesRef.current.find(sp => sp.id === tr.dragAnimalId);
+      const isFriendSprite = !!draggedSprite?.friendClientId;
+      if (tr.type === 'animal-tap' && !isFriendSprite && Math.hypot(dx, dy) > 8) {
         tr.type = 'animal-drag';
         // Mark sprite as dragging
         setSprites(prev => prev.map(sp =>
@@ -1758,7 +1862,7 @@ export default function Park() {
           display: 'flex', alignItems: 'center', gap: 8,
         }}
       >
-        <span>🏕️ 探险公园</span>
+        <span>{mode === 'community' ? '🌳 公共公园' : '🏕️ 探险公园'}</span>
         <span style={{ opacity: 0.5, fontSize: 11 }}>·</span>
         <span style={{ fontSize: 14 }}>
           {timeOfDay === 'dawn' ? '🌄' : timeOfDay === 'day' ? '☀️' : timeOfDay === 'dusk' ? '🌇' : '🌙'}
@@ -1805,6 +1909,29 @@ export default function Park() {
         {sprites.length} 只小伙伴 · 还原
       </button>
 
+      {activeFriend && (
+        <FriendActionSheet
+          friend={activeFriend}
+          onClose={() => setActiveFriend(null)}
+          onToast={showParkToast}
+          onNavigate={(path) => { setActiveFriend(null); navigate(path); }}
+        />
+      )}
+
+      {parkToast && (
+        <div style={{
+          position: 'fixed', bottom: 'max(96px, env(safe-area-inset-bottom, 16px))', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(31,42,68,0.94)', color: 'white',
+          padding: '10px 18px', borderRadius: 999,
+          fontSize: 13, fontWeight: 500,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.25)', zIndex: 100,
+          maxWidth: 'calc(100% - 40px)', textAlign: 'center',
+        }}>
+          {parkToast}
+        </div>
+      )}
+
       <style>{`
         @keyframes pk-walk  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         @keyframes pk-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px) rotate(-4deg)} 75%{transform:translateX(5px) rotate(4deg)} }
@@ -1823,3 +1950,154 @@ export default function Park() {
     </div>
   );
 }
+
+// === 朋友互动抽屉（仅在公共公园里点朋友的动物时弹出）=========================
+function FriendActionSheet({
+  friend, onClose, onToast, onNavigate,
+}: {
+  friend: { clientId: string; username: string; displayName: string; charId: string };
+  onClose: () => void;
+  onToast: (msg: string) => void;
+  onNavigate: (path: string) => void;
+}) {
+  const [action, setAction] = useState<null | 'note'>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [posting, setPosting] = useState(false);
+
+  const close = () => { setAction(null); setNoteDraft(''); onClose(); };
+
+  const onCallWater = async () => {
+    setPosting(true);
+    const r = await sendWater(friend.clientId, '记得喝水哦！');
+    setPosting(false);
+    if (!r.ok) { onToast(r.error ?? '失败'); return; }
+    onToast(`💧 已叫 ${friend.displayName} 喝水`);
+    close();
+  };
+
+  const onScold = async () => {
+    setPosting(true);
+    const r = await sendCheer(friend.clientId, '😤');
+    setPosting(false);
+    if (!r.ok) { onToast(r.error ?? '失败'); return; }
+    onToast(`😤 已送达 ${friend.displayName}`);
+    close();
+  };
+
+  const onSendNote = async () => {
+    if (!noteDraft.trim()) return;
+    setPosting(true);
+    const r = await leaveParkNote(friend.username, noteDraft.trim());
+    setPosting(false);
+    if (!r.ok) { onToast(r.error ?? '失败'); return; }
+    onToast(`✉️ 留言已送达`);
+    close();
+  };
+
+  return (
+    <div
+      onClick={close}
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(20,40,60,0.5)', zIndex: 200,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'white',
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          padding: 20,
+          width: '100%', maxWidth: 480,
+          boxShadow: '0 -8px 30px rgba(0,0,0,0.25)',
+        }}
+      >
+        {/* friend preview */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(58,166,221,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Character id={friend.charId as any} mood="idle" size={44} static />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: '#1a2638' }}>{friend.displayName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>@{friend.username}</div>
+          </div>
+        </div>
+
+        {action === null && (
+          <>
+            <button style={fasPillStyle} onClick={onCallWater} disabled={posting}>
+              💧 叫他喝水
+            </button>
+            <button style={fasPillStyle} onClick={onScold} disabled={posting}>
+              😤 骂他没喝水
+            </button>
+            <button style={fasPillStyle} onClick={() => setAction('note')} disabled={posting}>
+              ✉️ 留言
+            </button>
+            <button style={fasPillStyle} onClick={() => onNavigate(`/u/${friend.username}/park`)}>
+              🏡 去他主页
+            </button>
+            <button style={{ ...fasPillStyle, color: 'var(--text-mute)', marginTop: 8, background: 'transparent' }} onClick={close}>
+              关闭
+            </button>
+          </>
+        )}
+
+        {action === 'note' && (
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              ✉️ 给 {friend.displayName} 留言
+            </div>
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              maxLength={120}
+              rows={3}
+              placeholder="说点什么（120 字以内）"
+              autoFocus
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 14,
+                border: '1px solid var(--line)', background: 'var(--bg-card)',
+                fontSize: 14, outline: 'none', resize: 'vertical', minHeight: 70,
+                fontFamily: 'inherit', color: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={onSendNote}
+              disabled={posting || !noteDraft.trim()}
+              style={{
+                width: '100%', marginTop: 10, padding: '14px 16px', borderRadius: 999,
+                background: noteDraft.trim() ? 'var(--primary)' : 'rgba(0,0,0,0.08)',
+                color: 'white', fontWeight: 600, fontSize: 14, border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {posting ? '送出中…' : '送出留言'}
+            </button>
+            <button style={{ ...fasPillStyle, marginTop: 8, color: 'var(--text-soft)', background: 'transparent' }} onClick={() => setAction(null)}>
+              ← 返回
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const fasPillStyle: React.CSSProperties = {
+  width: '100%',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  padding: '14px 16px',
+  fontSize: 14,
+  fontWeight: 600,
+  background: 'rgba(0,0,0,0.04)',
+  marginBottom: 6,
+  borderRadius: 14,
+  border: 'none',
+  cursor: 'pointer',
+  color: '#1a2638',
+};

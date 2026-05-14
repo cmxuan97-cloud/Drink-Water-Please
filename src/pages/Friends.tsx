@@ -174,10 +174,11 @@ export default function Friends() {
           <button
             onClick={() => navigate('/community')}
             style={{
-              padding: '6px 12px', borderRadius: 999,
-              background: 'rgba(34,197,94,0.14)', color: '#15803d',
+              padding: '6px 11px', borderRadius: 999,
+              background: 'rgba(34,136,64,0.18)', color: '#15803d',
               fontSize: 12, fontWeight: 700,
               display: 'inline-flex', alignItems: 'center', gap: 4,
+              flexShrink: 0,
             }}
           >
             <Trees size={13} /> 公共公园
