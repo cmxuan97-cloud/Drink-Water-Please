@@ -318,6 +318,15 @@ export default function Home() {
             pace={paceInfo?.pace ?? null}
           />
         </div>
+
+        {/* + 加一杯水 — 直接在 hero 卡里 */}
+        <Link
+          to="/add"
+          className="btn btn-full"
+          style={{ marginTop: 18, fontSize: 17 }}
+        >
+          + 加一杯水
+        </Link>
       </div>
 
       <div>
@@ -341,11 +350,6 @@ export default function Home() {
         )}
       </div>
 
-      <div className="fab">
-        <Link to="/add" className="btn btn-full" style={{ fontSize: 17 }}>
-          + 加一杯水
-        </Link>
-      </div>
 
       {tokenEarned && (
         <div
