@@ -745,19 +745,21 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
           ].map(([sx, sy], i) => (
             <circle key={`st-${i}`} cx={sx} cy={sy} r={i % 3 === 0 ? 1.6 : 1} fill="white" className="pk-twinkle" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          {/* Moon — 黄色 + 多层动光晕 */}
+          {/* Moon — 鲜亮黄色 + 多层强光晕 */}
           <g style={{ transformOrigin: '420px 40px', transformBox: 'fill-box' }}>
-            {/* 外层柔光（缓慢呼吸）*/}
-            <circle cx={420} cy={40} r={70} fill="#fff080" opacity="0.10" className="pk-moon-glow-1" />
-            <circle cx={420} cy={40} r={54} fill="#ffe040" opacity="0.18" className="pk-moon-glow-2" />
-            <circle cx={420} cy={40} r={40} fill="#ffd040" opacity="0.30" className="pk-moon-glow-3" />
-            {/* 月亮本体（暖黄）*/}
-            <circle cx={420} cy={40} r={26} fill="#ffc830" />
-            <circle cx={414} cy={34} r={21} fill="#fff080" />
-            {/* 月面陨石坑（深一点的黄）*/}
-            <circle cx={409} cy={32} r={3.8} fill="#d8a020" opacity="0.65" />
-            <circle cx={423} cy={44} r={3} fill="#d8a020" opacity="0.55" />
-            <circle cx={417} cy={48} r={2} fill="#d8a020" opacity="0.50" />
+            {/* 最外层泛光 */}
+            <circle cx={420} cy={40} r={90} fill="#fff5b0" opacity="0.18" className="pk-moon-glow-1" />
+            <circle cx={420} cy={40} r={68} fill="#ffe860" opacity="0.32" className="pk-moon-glow-2" />
+            <circle cx={420} cy={40} r={48} fill="#ffd640" opacity="0.55" className="pk-moon-glow-3" />
+            {/* 月亮本体 — 鲜亮黄 */}
+            <circle cx={420} cy={40} r={28} fill="#ffd840" />
+            <circle cx={418} cy={37} r={24} fill="#fff080" />
+            {/* 中心高亮点（最亮的一小撮）*/}
+            <circle cx={415} cy={34} r={14} fill="#fffce0" opacity="0.85" />
+            {/* 月面陨石坑（暖橙黄，比之前淡）*/}
+            <circle cx={409} cy={31} r={3.6} fill="#e0a830" opacity="0.55" />
+            <circle cx={425} cy={45} r={2.8} fill="#e0a830" opacity="0.50" />
+            <circle cx={419} cy={49} r={2} fill="#e0a830" opacity="0.45" />
           </g>
         </g>
       )}
@@ -1240,9 +1242,9 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
         .pk-moon-glow-1 { transform-origin: center; transform-box: fill-box; animation: pk-moon-1 4.0s ease-in-out infinite; }
         .pk-moon-glow-2 { transform-origin: center; transform-box: fill-box; animation: pk-moon-2 3.2s ease-in-out infinite; }
         .pk-moon-glow-3 { transform-origin: center; transform-box: fill-box; animation: pk-moon-3 2.4s ease-in-out infinite; }
-        @keyframes pk-moon-1 { 0%,100%{opacity:0.08;transform:scale(1)} 50%{opacity:0.18;transform:scale(1.18)} }
-        @keyframes pk-moon-2 { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.26;transform:scale(1.12)} }
-        @keyframes pk-moon-3 { 0%,100%{opacity:0.24;transform:scale(1)} 50%{opacity:0.38;transform:scale(1.06)} }
+        @keyframes pk-moon-1 { 0%,100%{opacity:0.14;transform:scale(1)} 50%{opacity:0.28;transform:scale(1.16)} }
+        @keyframes pk-moon-2 { 0%,100%{opacity:0.28;transform:scale(1)} 50%{opacity:0.45;transform:scale(1.12)} }
+        @keyframes pk-moon-3 { 0%,100%{opacity:0.48;transform:scale(1)} 50%{opacity:0.68;transform:scale(1.06)} }
         .pk-ember { transform-origin: center; transform-box: fill-box; opacity: 0; }
         .pk-ember-1 { animation: pk-ember-rise 3.6s linear infinite; }
         .pk-ember-2 { animation: pk-ember-rise 4.2s linear 0.9s infinite; }
