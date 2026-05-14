@@ -676,27 +676,69 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       {isNight && (
         <g>
           {[
-            [60, 60], [120, 90], [200, 50], [280, 80], [340, 50],
-            [400, 75], [460, 55], [510, 95], [40, 110], [180, 130],
-            [330, 130], [490, 130],
+            [60, 50], [120, 80], [200, 40], [280, 70], [340, 40],
+            [340, 90], [460, 50], [510, 85], [40, 100], [180, 120],
+            [330, 120], [490, 120], [80, 40], [240, 95], [380, 30],
+            [80, 130], [220, 60], [500, 30],
           ].map(([sx, sy], i) => (
             <circle key={`st-${i}`} cx={sx} cy={sy} r={i % 3 === 0 ? 1.6 : 1} fill="white" className="pk-twinkle" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          {/* Moon */}
+          {/* Moon — above mountains */}
           <g>
-            <circle cx={420} cy={100} r={28} fill="#f8f0d0" />
-            <circle cx={414} cy={94} r={22} fill="#fffcec" />
-            <circle cx={410} cy={92} r={4} fill="#e8dcb8" opacity="0.7" />
-            <circle cx={422} cy={104} r={3} fill="#e8dcb8" opacity="0.6" />
+            <circle cx={420} cy={40} r={42} fill="#fff0d0" opacity="0.18" />
+            <circle cx={420} cy={40} r={32} fill="#fff0d0" opacity="0.3" />
+            <circle cx={420} cy={40} r={26} fill="#f8f0d0" />
+            <circle cx={414} cy={34} r={21} fill="#fffcec" />
+            <circle cx={409} cy={32} r={3.8} fill="#e8dcb8" opacity="0.7" />
+            <circle cx={423} cy={44} r={3} fill="#e8dcb8" opacity="0.6" />
+            <circle cx={417} cy={48} r={2} fill="#e8dcb8" opacity="0.55" />
           </g>
         </g>
       )}
 
-      {/* Sun (dawn/dusk) */}
-      {(isDawn || isDusk) && (
+      {/* Day sun — above mountains, with pulsing rays */}
+      {timeOfDay === 'day' && (
         <g>
-          <circle cx={isDawn ? 130 : 430} cy={isDawn ? 130 : 110} r={isDusk ? 36 : 30} fill={isDusk ? '#ff9050' : '#ffd060'} opacity="0.85" />
-          <circle cx={isDawn ? 130 : 430} cy={isDawn ? 130 : 110} r={isDusk ? 28 : 24} fill={isDusk ? '#ffb070' : '#fff4a0'} />
+          {/* Outer glow */}
+          <circle cx={120} cy={60} r={52} fill="#ffe080" opacity="0.18" />
+          {/* Rays */}
+          <g className="pk-sun-rays" style={{ transformOrigin: '120px 60px' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <rect
+                key={i}
+                x={118.5} y={20}
+                width={3} height={14}
+                rx={1.5}
+                fill="#ffc830"
+                transform={`rotate(${i * 30} 120 60)`}
+                opacity="0.85"
+              />
+            ))}
+          </g>
+          {/* Sun body */}
+          <circle cx={120} cy={60} r={30} fill="#ffc830" />
+          <circle cx={120} cy={60} r={24} fill="#ffe060" />
+          <circle cx={114} cy={54} r={8} fill="#fff8c8" opacity="0.85" />
+        </g>
+      )}
+
+      {/* Dawn sun — low, rising */}
+      {isDawn && (
+        <g>
+          <circle cx={110} cy={95} r={40} fill="#ffa478" opacity="0.45" />
+          <circle cx={110} cy={95} r={30} fill="#ffc890" opacity="0.85" />
+          <circle cx={110} cy={95} r={22} fill="#ffe4b0" />
+          <circle cx={106} cy={91} r={6} fill="#fff4d0" opacity="0.8" />
+        </g>
+      )}
+
+      {/* Dusk sun — large, setting */}
+      {isDusk && (
+        <g>
+          <circle cx={430} cy={85} r={50} fill="#ff5028" opacity="0.32" />
+          <circle cx={430} cy={85} r={38} fill="#ff7040" opacity="0.75" />
+          <circle cx={430} cy={85} r={28} fill="#ff9858" />
+          <circle cx={426} cy={81} r={8} fill="#ffc080" opacity="0.7" />
         </g>
       )}
 
@@ -1066,6 +1108,8 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
         @keyframes pk-rain-drop { 0%{transform:translate(0,0);opacity:0.6} 100%{transform:translate(60px,1100px);opacity:0} }
         .pk-spark { animation: pk-spark-rise 0.7s ease-out forwards; }
         @keyframes pk-spark-rise { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-24px) scale(0.3)} }
+        .pk-sun-rays { animation: pk-sun-spin 36s linear infinite; }
+        @keyframes pk-sun-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
     </svg>
   );
