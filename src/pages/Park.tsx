@@ -38,7 +38,31 @@ type Sprite = {
   speed: number;
   peer?: string;
   timer: number;
+  speech?: { text: string; expiresAt: number };
 };
+
+const SPEECH_LINES = [
+  '好渴啊…想喝水',
+  '今天天气真好',
+  '宝藏到底在哪里？',
+  '蝴蝶蝴蝶~',
+  '走累了，歇会儿',
+  '我闻到饼干味了',
+  '你看到我的尾巴了吗？',
+  '嗨~',
+  '好困哦 zzz',
+  '刚才那只好凶！',
+  '山好高啊',
+  '我今天好开心',
+  '肚子咕咕叫',
+  '想去看湖',
+  '咦，是月亮？',
+  '鱼鱼鱼！',
+  '想吃西瓜',
+  '主人在干嘛',
+  '公园真大',
+  '想跟你聊天',
+];
 
 type Fx = {
   uid: string;
@@ -113,19 +137,20 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
     const dy = sp.targetY - sp.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 3) {
+      // Pick new target. Sometimes switch zones — but DON'T teleport.
+      // Just pick a target in the new zone and walk there naturally.
       let newZone = sp.zone;
       const rz = Math.random();
-      if (sp.zone === 'upper' && rz < 0.1) newZone = 'middle';
-      else if (sp.zone === 'lower' && rz < 0.1) newZone = 'middle';
-      else if (sp.zone === 'middle' && rz < 0.12) newZone = Math.random() < 0.5 ? 'upper' : 'lower';
-      const { minX, maxX, minY, maxY } = ZONE_CONFIG[newZone];
-      const nx = newZone !== sp.zone ? rand(minX, maxX) : sp.x;
-      const ny = newZone !== sp.zone ? rand(minY, maxY) : sp.y;
-      const { tx, ty } = pickTarget(newZone, nx, ny);
+      if (sp.zone === 'upper' && rz < 0.18) newZone = 'middle';
+      else if (sp.zone === 'lower' && rz < 0.18) newZone = 'middle';
+      else if (sp.zone === 'middle' && rz < 0.18) newZone = Math.random() < 0.5 ? 'upper' : 'lower';
+      const { tx, ty } = pickTarget(newZone, sp.x, sp.y);
       return {
-        ...sp, x: nx, y: ny, zone: newZone,
+        ...sp,
+        zone: newZone,
         action: 'idle' as Action, timer: randInt(1, 2),
-        targetX: tx, targetY: ty, facing: tx > nx ? 'right' : 'left',
+        targetX: tx, targetY: ty,
+        facing: tx > sp.x ? 'right' : 'left',
       };
     }
     const step = Math.min(dist, sp.speed);
@@ -282,7 +307,7 @@ function ParkSceneSVG() {
       viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
       width={SCENE_W}
       height={SCENE_H}
-      style={{ display: 'block', position: 'absolute', inset: 0 }}
+      style={{ display: 'block', position: 'absolute', inset: 0, overflow: 'visible' }}
       aria-hidden
     >
       <defs>
@@ -306,23 +331,26 @@ function ParkSceneSVG() {
         </linearGradient>
       </defs>
 
-      {/* Grass base */}
-      <rect width={SCENE_W} height={SCENE_H} fill="url(#pk-grass)" />
+      {/* Extended grass (bleeds beyond scene edges so screen never shows frame) */}
+      <rect x={-400} y={-400} width={SCENE_W + 800} height={SCENE_H + 800} fill="url(#pk-grass)" />
 
-      {/* Sky gradient at top */}
-      <rect width={SCENE_W} height={170} fill="url(#pk-sky)" />
-
-      {/* Distant pines silhouette (across top) */}
-      {[20, 70, 120, 170, 220, 270, 320, 370, 420, 470, 510].map((x, i) => (
-        <Pine key={`tp-${i}`} x={x} y={195} h={40 + (i % 3) * 8} />
-      ))}
+      {/* Extended sky at top */}
+      <rect x={-400} y={-400} width={SCENE_W + 800} height={570} fill="url(#pk-sky)" />
 
       {/* ══════════════════════════════════════════
-          TOP — MOUNTAINS
+          TOP — MOUNTAINS (drawn BEFORE pines so trees overlap them)
       ══════════════════════════════════════════ */}
-      <Mountain x={120} y={170} w={140} h={130} />
-      <Mountain x={280} y={170} w={180} h={170} />
-      <Mountain x={430} y={170} w={150} h={140} />
+      <Mountain x={120} y={175} w={140} h={130} />
+      <Mountain x={280} y={175} w={180} h={170} />
+      <Mountain x={430} y={175} w={150} h={140} />
+      {/* Extra side mountains so edges look natural */}
+      <Mountain x={-20} y={175} w={120} h={110} />
+      <Mountain x={560} y={175} w={130} h={120} />
+
+      {/* Pine forest line — in front of mountains, extends past the edges */}
+      {[-30, 20, 70, 120, 170, 220, 270, 320, 370, 420, 470, 510, 560, 600].map((x, i) => (
+        <Pine key={`tp-${i}`} x={x} y={208} h={44 + (i % 3) * 10} />
+      ))}
 
       {/* Grass tufts/details upper meadow */}
       {[
@@ -513,20 +541,6 @@ function ParkSceneSVG() {
       <Pine x={490} y={1010} h={36} />
       <Pine x={510} y={935} h={40} />
 
-      {/* ══════════════════════════════════════════
-          MAP BORDER (cream/yellow paper edge)
-      ══════════════════════════════════════════ */}
-      <rect
-        x="4" y="4"
-        width={SCENE_W - 8}
-        height={SCENE_H - 8}
-        fill="none"
-        stroke="#f4e8a0"
-        strokeWidth="8"
-        rx="14"
-        opacity="0.75"
-      />
-
       <style>{`
         .pk-flame { transform-origin: center bottom; animation: pk-flicker 0.9s ease-in-out infinite alternate; }
         @keyframes pk-flicker { 0%{transform:scale(1) translateY(0)} 100%{transform:scale(1.08,1.12) translateY(-1px)} }
@@ -557,6 +571,40 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
         filter: 'drop-shadow(0 3px 3px rgba(0,40,0,0.3))',
       }}
     >
+      {sprite.speech && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -8,
+            left: '50%',
+            transform: 'translateX(-50%) translateY(-100%)',
+            background: 'white',
+            padding: '5px 11px',
+            borderRadius: 14,
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#2a3850',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 3px 10px rgba(0,40,20,0.22)',
+            pointerEvents: 'none',
+            animation: 'pk-speech-in 0.35s cubic-bezier(0.2,1.4,0.4,1)',
+          }}
+        >
+          {sprite.speech.text}
+          <span
+            style={{
+              position: 'absolute',
+              bottom: -4,
+              left: '50%',
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: 9,
+              height: 9,
+              background: 'white',
+              boxShadow: '2px 2px 4px rgba(0,40,20,0.12)',
+            }}
+          />
+        </div>
+      )}
       <div style={{ transform: `scaleX(${flipX})`, transformOrigin: 'center' }}>
         <div style={{ animation: isWalking ? 'pk-walk 0.5s ease-in-out infinite' : isFight ? 'pk-shake 0.28s ease-in-out infinite' : 'none' }}>
           <Character id={sprite.charId as any} mood={sprite.action === 'friendly' ? 'happy' : 'idle'} size={size} static />
@@ -762,6 +810,34 @@ export default function Park() {
     return () => clearInterval(interval);
   }, []);
 
+  // Speech bubble tick — periodically gives a random animal something to say
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setSprites(prev => {
+        // Clear expired speeches
+        const cleaned = prev.map(sp =>
+          sp.speech && sp.speech.expiresAt < now ? { ...sp, speech: undefined } : sp,
+        );
+        // 50% chance to assign a new speech to an animal that isn't already speaking
+        if (Math.random() < 0.5) {
+          const eligible = cleaned.filter(sp => !sp.speech);
+          if (eligible.length > 0) {
+            const chosen = eligible[Math.floor(Math.random() * eligible.length)];
+            const line = SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)];
+            return cleaned.map(sp =>
+              sp.id === chosen.id
+                ? { ...sp, speech: { text: line, expiresAt: now + 3400 } }
+                : sp,
+            );
+          }
+        }
+        return cleaned;
+      });
+    }, 2200);
+    return () => clearInterval(interval);
+  }, []);
+
   const sortedSprites = useMemo(
     () => [...sprites].sort((a, b) => a.y - b.y),
     [sprites],
@@ -889,6 +965,11 @@ export default function Park() {
           15% {opacity:1;transform:translate(-50%,-50%) scale(1.1)}
           70% {opacity:1;transform:translate(-50%,-80%) scale(1)}
           100%{opacity:0;transform:translate(-50%,-120%) scale(0.8)}
+        }
+        @keyframes pk-speech-in {
+          0%   {opacity:0;transform:translateX(-50%) translateY(-100%) scale(0.6)}
+          70%  {opacity:1;transform:translateX(-50%) translateY(-104%) scale(1.06)}
+          100% {opacity:1;transform:translateX(-50%) translateY(-100%) scale(1)}
         }
       `}</style>
     </div>
