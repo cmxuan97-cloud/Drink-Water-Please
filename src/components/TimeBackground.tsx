@@ -91,6 +91,18 @@ const float = `
     70%  { transform: translate(14px, -10px); }
     100% { transform: translate(0px, 0px); }
   }
+  @keyframes tbg-moon-pulse {
+    0%,100% { transform: scale(1); opacity: 0.55; }
+    50%     { transform: scale(1.18); opacity: 0.85; }
+  }
+  @keyframes tbg-moon-pulse-slow {
+    0%,100% { transform: scale(1.05); opacity: 0.35; }
+    50%     { transform: scale(1.35); opacity: 0.65; }
+  }
+  @keyframes tbg-moon-shimmer {
+    0%,100% { transform: scale(0.98); opacity: 0.8; }
+    50%     { transform: scale(1.08); opacity: 1; }
+  }
 `;
 
 const Style = () => <style>{float}</style>;
@@ -261,39 +273,79 @@ function NightScene() {
   return (
     <>
       <Style />
-      {/* 弯月 — 暖色渐变 + 月坑 (镜面反转) */}
-      <svg
-        viewBox="0 0 100 100"
-        style={{ position: 'absolute', right: 22, top: 48, width: 110, height: 110, animation: 'tbg-float 5s ease-in-out infinite' }}
-      >
-        <defs>
-          <radialGradient id="moon-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stopColor="#fff5c8" stopOpacity={0.55} />
-            <stop offset="55%" stopColor="#fff0a8" stopOpacity={0.15} />
-            <stop offset="100%" stopColor="#fff0a8" stopOpacity={0} />
-          </radialGradient>
-          <radialGradient id="moon-body" cx="0.38" cy="0.4" r="0.7">
-            <stop offset="0%" stopColor="#fffaf0" />
-            <stop offset="55%" stopColor="#fff0c0" />
-            <stop offset="100%" stopColor="#f0d078" />
-          </radialGradient>
-          <radialGradient id="moon-shade" cx="0.7" cy="0.55" r="0.55">
-            <stop offset="0%" stopColor="#000" stopOpacity={0} />
-            <stop offset="100%" stopColor="#a07028" stopOpacity={0.22} />
-          </radialGradient>
-        </defs>
-        <g transform="translate(100,0) scale(-1,1)">
-          <circle cx={50} cy={50} r={48} fill="url(#moon-glow)" />
-          <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-body)" />
-          <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-shade)" />
-          {/* 月坑 */}
-          <ellipse cx={36} cy={42} rx={3.2} ry={2.6} fill="#e2bd72" opacity={0.5} />
-          <ellipse cx={42} cy={64} rx={2.5} ry={2} fill="#e2bd72" opacity={0.45} />
-          <ellipse cx={30} cy={56} rx={1.8} ry={1.6} fill="#e2bd72" opacity={0.4} />
-          <ellipse cx={40} cy={30} rx={1.6} ry={1.4} fill="#e2bd72" opacity={0.45} />
-          <ellipse cx={34} cy={72} rx={1.5} ry={1.2} fill="#e2bd72" opacity={0.4} />
-        </g>
-      </svg>
+      {/* 弯月 — 黄色 + 多层会动光晕 */}
+      <div style={{ position: 'absolute', right: 22, top: 48, width: 110, height: 110, animation: 'tbg-float 5s ease-in-out infinite' }}>
+        {/* 最外层光晕 — 慢速膨胀 */}
+        <svg
+          viewBox="0 0 100 100"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            transformOrigin: '50% 50%',
+            animation: 'tbg-moon-pulse-slow 4.5s ease-in-out infinite',
+          }}
+        >
+          <defs>
+            <radialGradient id="moon-halo-outer" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0%"  stopColor="#ffe066" stopOpacity={0.55} />
+              <stop offset="55%" stopColor="#fbbf24" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          <circle cx={50} cy={50} r={50} fill="url(#moon-halo-outer)" />
+        </svg>
+
+        {/* 中层光晕 — 标准节奏 */}
+        <svg
+          viewBox="0 0 100 100"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            transformOrigin: '50% 50%',
+            animation: 'tbg-moon-pulse 3s ease-in-out infinite',
+          }}
+        >
+          <defs>
+            <radialGradient id="moon-halo-mid" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0%"  stopColor="#fff2a0" stopOpacity={0.78} />
+              <stop offset="55%" stopColor="#ffd84a" stopOpacity={0.30} />
+              <stop offset="100%" stopColor="#ffc224" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          <circle cx={50} cy={50} r={42} fill="url(#moon-halo-mid)" />
+        </svg>
+
+        {/* 月亮本体 — 黄色弯月（镜面反转） */}
+        <svg
+          viewBox="0 0 100 100"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            transformOrigin: '50% 50%',
+            animation: 'tbg-moon-shimmer 3.4s ease-in-out infinite',
+            filter: 'drop-shadow(0 0 8px rgba(255, 220, 90, 0.65))',
+          }}
+        >
+          <defs>
+            <radialGradient id="moon-body-yellow" cx="0.38" cy="0.4" r="0.7">
+              <stop offset="0%"  stopColor="#fff9d0" />
+              <stop offset="50%" stopColor="#ffe066" />
+              <stop offset="100%" stopColor="#f0a818" />
+            </radialGradient>
+            <radialGradient id="moon-shade-yellow" cx="0.72" cy="0.55" r="0.55">
+              <stop offset="0%"  stopColor="#a06000" stopOpacity={0} />
+              <stop offset="100%" stopColor="#a06000" stopOpacity={0.28} />
+            </radialGradient>
+          </defs>
+          <g transform="translate(100,0) scale(-1,1)">
+            <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-body-yellow)" />
+            <path d="M 50 16 A 34 34 0 1 0 50 84 A 10 34 0 0 1 50 16 Z" fill="url(#moon-shade-yellow)" />
+            {/* 月坑 */}
+            <ellipse cx={36} cy={42} rx={3.2} ry={2.6} fill="#c98a18" opacity={0.45} />
+            <ellipse cx={42} cy={64} rx={2.5} ry={2}   fill="#c98a18" opacity={0.4} />
+            <ellipse cx={30} cy={56} rx={1.8} ry={1.6} fill="#c98a18" opacity={0.35} />
+            <ellipse cx={40} cy={30} rx={1.6} ry={1.4} fill="#c98a18" opacity={0.4} />
+            <ellipse cx={34} cy={72} rx={1.5} ry={1.2} fill="#c98a18" opacity={0.35} />
+          </g>
+        </svg>
+      </div>
       {/* 星星 */}
       {stars.map((s, i) => (
         <div
