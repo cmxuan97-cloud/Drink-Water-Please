@@ -1364,12 +1364,14 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 const FX_ITEMS: Record<string, string[]> = {
-  friendly: ['💛', '💚', '🧡', '💛'],
-  fight:    ['✨', '💥', '⭐', '✨'],
+  friendly: ['💖', '💕', '✨', '💗', '💝'],
+  fight:    ['💢', '😡', '💢', '🤬'],
   'tap-heart': ['❤️', '💕', '❤️'],
 };
 
 function InteractionFx({ fx }: { fx: Fx }) {
+  if (fx.kind === 'fight') return <FightCloudFx x={fx.x} y={fx.y} />;
+  if (fx.kind === 'friendly') return <FriendlyFx x={fx.x} y={fx.y} />;
   return (
     <div style={{ position: 'absolute', left: fx.x, top: fx.y, pointerEvents: 'none', zIndex: 9999 }}>
       {FX_ITEMS[fx.kind].map((item, i) => (
@@ -1388,6 +1390,114 @@ function InteractionFx({ fx }: { fx: Fx }) {
           {item}
         </span>
       ))}
+    </div>
+  );
+}
+
+// 打架 — 卡通烟雾爆炸云 + 浮起的怒火 icons
+function FightCloudFx({ x, y }: { x: number; y: number }) {
+  return (
+    <div style={{ position: 'absolute', left: x, top: y, pointerEvents: 'none', zIndex: 9999, transform: 'translate(-50%, -50%)' }}>
+      {/* 红色尖刺爆炸背景 */}
+      <svg
+        width={130} height={130}
+        viewBox="0 0 130 130"
+        style={{
+          position: 'absolute', inset: 0,
+          transform: 'translate(-50%, -50%)',
+          animation: 'pk-fight-burst 1.4s ease-out forwards',
+        }}
+      >
+        <polygon
+          points="65,5 75,38 110,28 88,58 125,65 88,72 110,102 75,92 65,125 55,92 20,102 42,72 5,65 42,58 20,28 55,38"
+          fill="#ef4444"
+        />
+      </svg>
+      {/* 白色烟雾团 */}
+      <svg
+        width={100} height={80}
+        viewBox="0 0 100 80"
+        style={{
+          position: 'absolute', inset: 0,
+          transform: 'translate(-50%, -50%)',
+          animation: 'pk-fight-cloud 1.4s ease-out forwards',
+        }}
+      >
+        <g stroke="#1a2638" strokeWidth={2} strokeLinejoin="round">
+          <circle cx={28} cy={42} r={20} fill="#f5f5f5" />
+          <circle cx={52} cy={28} r={24} fill="#fafafa" />
+          <circle cx={78} cy={42} r={20} fill="#f0f0f0" />
+          <circle cx={42} cy={56} r={18} fill="#e8e8e8" />
+          <circle cx={66} cy={56} r={18} fill="#e8e8e8" />
+        </g>
+      </svg>
+      {/* 怒火 icon — 浮起来散开 */}
+      {FX_ITEMS.fight.map((item, i) => {
+        const angle = -120 + i * 40; // -120, -80, -40, 0
+        const rad = (angle * Math.PI) / 180;
+        const dx = Math.cos(rad) * 50;
+        const dy = Math.sin(rad) * 38 - 14;
+        return (
+          <span
+            key={i}
+            style={{
+              position: 'absolute',
+              fontSize: 20,
+              left: 0, top: 0,
+              animationDelay: `${i * 0.07}s`,
+              animation: 'pk-fight-icon 1.5s ease-out forwards',
+              ['--dx' as any]: `${dx}px`,
+              ['--dy' as any]: `${dy}px`,
+              opacity: 0,
+            }}
+          >
+            {item}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// 友好 — 多颗爱心 + 聊天泡泡
+function FriendlyFx({ x, y }: { x: number; y: number }) {
+  return (
+    <div style={{ position: 'absolute', left: x, top: y, pointerEvents: 'none', zIndex: 9999 }}>
+      {/* 聊天泡泡 居中 */}
+      <span
+        style={{
+          position: 'absolute',
+          fontSize: 22,
+          left: 0, top: 0,
+          transform: 'translate(-50%, -50%)',
+          animation: 'pk-fx-rise 1.8s ease-out forwards',
+          opacity: 0,
+        }}
+      >
+        💬
+      </span>
+      {/* 爱心 — 多颗散开 */}
+      {FX_ITEMS.friendly.map((item, i) => {
+        const offsetX = (i - (FX_ITEMS.friendly.length - 1) / 2) * 18;
+        const offsetY = -10 + Math.sin(i * 1.3) * 4;
+        return (
+          <span
+            key={i}
+            style={{
+              position: 'absolute',
+              fontSize: 18 + (i % 2) * 4,
+              left: offsetX,
+              top: offsetY,
+              transform: 'translate(-50%, -50%)',
+              animationDelay: `${0.1 + i * 0.08}s`,
+              animation: 'pk-friendly-float 1.8s ease-out forwards',
+              opacity: 0,
+            }}
+          >
+            {item}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -1590,22 +1700,23 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
   }, []);
 
   // ── Tap on animal ─────────────────────────────────────────────────────────
+  // 单击：爱心 + 说话泡（朋友的动物也走这个，让它先打个招呼）
+  // 双击：朋友的动物 → 打开互动抽屉
+  const openFriendSheet = useCallback((sprite: Sprite) => {
+    if (!sprite.friendClientId || !sprite.friendUsername) return;
+    setActiveFriend({
+      clientId: sprite.friendClientId,
+      username: sprite.friendUsername,
+      displayName: sprite.label ?? sprite.friendUsername,
+      charId: sprite.charId,
+    });
+    setSprites(prev => prev.map(sp =>
+      sp.id === sprite.id ? { ...sp, action: 'idle', timer: 2 } : sp,
+    ));
+  }, []);
+
   const handleAnimalTap = useCallback((sprite: Sprite) => {
-    if (sprite.friendClientId && sprite.friendUsername) {
-      // 朋友的动物 → 打开互动抽屉
-      setActiveFriend({
-        clientId: sprite.friendClientId,
-        username: sprite.friendUsername,
-        displayName: sprite.label ?? sprite.friendUsername,
-        charId: sprite.charId,
-      });
-      // 也短暂停一下表示注意到了
-      setSprites(prev => prev.map(sp =>
-        sp.id === sprite.id ? { ...sp, action: 'idle', timer: 2 } : sp,
-      ));
-      return;
-    }
-    // 自己的动物 → 原本的逻辑（爱心 + 说话泡）
+    // 爱心 + 说话泡 — 任何动物都走这套（包括朋友的）
     setSpeech(sprite.id, pickRandom(TAP_LINES));
     addFx('tap-heart', sprite.x, sprite.y - ANIMAL_SIZE);
     setSprites(prev => prev.map(sp =>
@@ -1665,6 +1776,9 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     startMid: { x: 0, y: 0 },
     tapStart: { time: 0, x: 0, y: 0 },
     lastTapTime: 0,
+    // 动物双击检测 — 单击 = 招呼（爱心 + 说话泡）；双击同一只朋友动物 = 开互动抽屉
+    lastAnimalTapId: '',
+    lastAnimalTapTime: 0,
     moved: false,
     dragAnimalId: '',
     dragStartCtx: null as string | null,
@@ -1763,7 +1877,22 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     if (wasType === 'animal-tap' && e.changedTouches.length === 1) {
       // Tap on animal
       const sprite = spritesRef.current.find(sp => sp.id === tr.dragAnimalId);
-      if (sprite) handleAnimalTap(sprite);
+      if (sprite) {
+        const now = Date.now();
+        const isDoubleTap =
+          tr.lastAnimalTapId === sprite.id &&
+          (now - tr.lastAnimalTapTime) < 380;
+        // 双击朋友的动物 → 开互动抽屉（自己的动物双击就还是打个招呼）
+        if (isDoubleTap && sprite.friendClientId && sprite.friendUsername) {
+          openFriendSheet(sprite);
+          tr.lastAnimalTapId = '';
+          tr.lastAnimalTapTime = 0;
+        } else {
+          handleAnimalTap(sprite);
+          tr.lastAnimalTapId = sprite.id;
+          tr.lastAnimalTapTime = now;
+        }
+      }
       return;
     }
     if (wasType === 'animal-drag' && e.changedTouches.length === 1) {
@@ -1806,7 +1935,7 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         if (target) handleSceneTap(target, sceneX, sceneY);
       }
     }
-  }, [doReset, handleAnimalTap, handleSceneTap, setSpeech]);
+  }, [doReset, handleAnimalTap, handleSceneTap, openFriendSheet, setSpeech]);
 
   const handleZoom = useCallback((delta: number) => {
     const cw = window.innerWidth, ch = window.innerHeight;
@@ -2030,6 +2159,30 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         @keyframes pk-fas-success {
           0%   {opacity:0;transform:scale(0.85)}
           100% {opacity:1;transform:scale(1)}
+        }
+        @keyframes pk-fight-burst {
+          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.2) rotate(0deg); }
+          20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15) rotate(8deg); }
+          70%  { opacity: 0.92; transform: translate(-50%,-50%) scale(1.0) rotate(-6deg); }
+          100% { opacity: 0; transform: translate(-50%,-50%) scale(0.85) rotate(0deg); }
+        }
+        @keyframes pk-fight-cloud {
+          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3); }
+          25%  { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+          75%  { opacity: 1; transform: translate(-50%,-50%) scale(1.0); }
+          100% { opacity: 0; transform: translate(-50%,-50%) scale(0.8); }
+        }
+        @keyframes pk-fight-icon {
+          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.4); }
+          25%  { opacity: 1; transform: translate(calc(-50% + var(--dx, 0px) * 0.5), calc(-50% + var(--dy, 0px) * 0.5)) scale(1.2); }
+          75%  { opacity: 1; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(1); }
+          100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px) * 1.15), calc(-50% + var(--dy, 0px) - 18px)) scale(0.8); }
+        }
+        @keyframes pk-friendly-float {
+          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.4); }
+          20%  { opacity: 1; transform: translate(-50%,-60%) scale(1.15) rotate(-6deg); }
+          70%  { opacity: 1; transform: translate(-50%,-110%) scale(1) rotate(4deg); }
+          100% { opacity: 0; transform: translate(-50%,-160%) scale(0.8) rotate(-2deg); }
         }
       `}</style>
     </div>
