@@ -354,7 +354,7 @@ export default function Friends() {
                     <div style={{ fontSize: 14 }}>
                       <span style={{ fontWeight: 700 }}>{ev.fromDisplayName}</span>{' '}
                       <span style={{ color: 'var(--text-soft)' }}>
-                        {isWater ? '给你递了一杯水' : `送了 ${ev.emoji} 给你`}
+                        {isWater ? '叫你去喝水 💧' : `送了 ${ev.emoji} 给你`}
                       </span>
                     </div>
                     {ev.text && (

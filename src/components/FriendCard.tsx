@@ -23,7 +23,7 @@ export default function FriendCard({ friend, onAction }: Props) {
     setBusy(true);
     const r = await sendWater(friend.clientId);
     setBusy(false);
-    onAction?.(r.ok ? `给 ${friend.displayName} 递了杯水 💧` : (r.error ?? '失败'));
+    onAction?.(r.ok ? `已提醒 ${friend.displayName} 喝水 💧` : (r.error ?? '失败'));
   };
 
   const onSendCheer = async (emoji: string) => {
@@ -109,7 +109,7 @@ export default function FriendCard({ friend, onAction }: Props) {
             transition: 'background 0.15s',
           }}
         >
-          💧 递杯水
+          💧 叫他喝水
         </button>
         <div style={{ flex: 1, position: 'relative' }}>
           <button
@@ -129,16 +129,16 @@ export default function FriendCard({ friend, onAction }: Props) {
             <div
               style={{
                 position: 'absolute',
-                bottom: 'calc(100% + 6px)', left: 0, right: 0,
+                bottom: 'calc(100% + 6px)', right: 0,
                 background: 'white',
                 borderRadius: 14,
-                padding: 8,
+                padding: 6,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(6, 1fr)',
-                gap: 4,
+                display: 'flex',
+                gap: 2,
                 zIndex: 10,
                 animation: 'pop-up 0.18s ease-out',
+                whiteSpace: 'nowrap',
               }}
             >
               {CHEER_OPTIONS.map((e) => (
@@ -146,7 +146,13 @@ export default function FriendCard({ friend, onAction }: Props) {
                   key={e}
                   onClick={() => onSendCheer(e)}
                   style={{
-                    padding: 6, borderRadius: 8, fontSize: 20, background: 'transparent',
+                    width: 36, height: 36,
+                    padding: 0,
+                    borderRadius: 10,
+                    fontSize: 20,
+                    background: 'transparent',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
                   {e}
