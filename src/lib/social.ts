@@ -7,10 +7,12 @@ export type PublicProfile = {
   companionId?: string;
   charId?: string;
   todayPctGoal: number;
+  todayDrunkMl?: number;
   unlockedCount: number;
   unlockedIds?: string[];
   totalCompletedDays: number;
   currentStreak: number;
+  peakStreak?: number;
   updatedAt: number;
 };
 

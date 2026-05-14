@@ -32,10 +32,12 @@ export default async function handler(req: Request): Promise<Response> {
     companionId: p.companionId ? String(p.companionId).slice(0, 50) : undefined,
     charId: p.charId ? String(p.charId).slice(0, 50) : undefined,
     todayPctGoal: Math.max(0, Math.min(100, Math.round(Number(p.todayPctGoal) || 0))),
+    todayDrunkMl: Math.max(0, Math.min(999999, Math.round(Number(p.todayDrunkMl) || 0))),
     unlockedCount: Math.max(0, Math.min(999, Math.round(Number(p.unlockedCount) || 0))),
     unlockedIds: ids,
     totalCompletedDays: Math.max(0, Math.min(99999, Math.round(Number(p.totalCompletedDays) || 0))),
     currentStreak: Math.max(0, Math.min(9999, Math.round(Number(p.currentStreak) || 0))),
+    peakStreak: Math.max(0, Math.min(9999, Math.round(Number(p.peakStreak) || 0))),
     updatedAt: Date.now(),
   };
 

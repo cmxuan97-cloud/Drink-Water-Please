@@ -39,16 +39,38 @@ export const currentStreak = (completedDays: string[]): number => {
   return count;
 };
 
+/** 历史最长连续 streak — 排序后扫一遍找最长连续段 */
+export const peakStreak = (completedDays: string[]): number => {
+  if (completedDays.length === 0) return 0;
+  const sorted = [...completedDays].sort();
+  let best = 1;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1]);
+    const curr = new Date(sorted[i]);
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+    if (diffDays === 1) {
+      run += 1;
+      if (run > best) best = run;
+    } else {
+      run = 1;
+    }
+  }
+  return best;
+};
+
 export type PublicProfile = {
   username: string;
   displayName: string;
   companionId?: string;
   charId?: string;
   todayPctGoal: number;       // 0..100 (int)
+  todayDrunkMl: number;       // 今日已喝 ml
   unlockedCount: number;
-  unlockedIds: string[];      // 用于让好友看见你家公园里有谁
+  unlockedIds: string[];      // 用于让好友看见你家公园里有谁（访客端会被 server 抹掉）
   totalCompletedDays: number;
   currentStreak: number;
+  peakStreak: number;         // 历史最长连续 streak
   updatedAt: number;
 };
 
@@ -77,10 +99,12 @@ export const buildPublicProfile = (): PublicProfile | null => {
     companionId,
     charId,
     todayPctGoal: pct,
+    todayDrunkMl: progress.drunkMl,
     unlockedCount: unlocked.length,
     unlockedIds: unlocked,
     totalCompletedDays: completed.length,
     currentStreak: currentStreak(completed),
+    peakStreak: peakStreak(completed),
     updatedAt: Date.now(),
   };
 };

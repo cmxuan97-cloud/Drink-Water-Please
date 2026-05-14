@@ -37,10 +37,12 @@ export type PublicProfile = {
   companionId?: string;
   charId?: string;
   todayPctGoal: number;       // 0..100
+  todayDrunkMl?: number;      // 今日已喝 ml
   unlockedCount: number;
-  unlockedIds: string[];
+  unlockedIds?: string[];     // 访客被 visit endpoint 抹掉，仅 isSelf 可见
   totalCompletedDays: number;
   currentStreak: number;
+  peakStreak?: number;        // 历史最长连续 streak
   updatedAt: number;
 };
 

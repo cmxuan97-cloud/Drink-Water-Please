@@ -48,5 +48,8 @@ export default async function handler(req: Request): Promise<Response> {
     })
     .filter((x): x is Note => x !== null);
 
-  return jsonResp({ profile, notes, isSelf });
+  // 访客看不到具体解锁了哪些动物（避免剧透）— 只保留 count，把 ids 抹掉
+  const profileOut = isSelf ? profile : { ...profile, unlockedIds: undefined };
+
+  return jsonResp({ profile: profileOut, notes, isSelf });
 }

@@ -1,7 +1,7 @@
 // 好友的公园（只读）：动物收集格 + 留言区
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Award, Flame, Send } from 'lucide-react';
+import { Award, Calendar, Droplet, Flame, Gift, Send, Trophy } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import ProgressRing from '../components/ProgressRing';
@@ -142,65 +142,67 @@ export default function FriendPark() {
             </div>
           </div>
 
-          {/* === 动物收集 === */}
-          <div style={{ marginTop: 16 }}>
-            <div className="row-between" style={{ marginBottom: 8 }}>
-              <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700 }}>
-                {isSelf ? '我的小伙伴' : 'Ta 的小伙伴'}
-              </h2>
-              <span className="muted" style={{ fontSize: 12 }}>{profile.unlockedCount} 只</span>
-            </div>
-            <div style={{
-              background: 'linear-gradient(180deg, #c9e9b1, #a5d68f)',
-              borderRadius: 16,
-              padding: 14,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
-              gap: 12,
-              boxShadow: 'var(--shadow-card)',
-            }}>
-              {(profile.unlockedIds ?? []).map((id) => {
-                const animal = ANIMALS.find((a) => a.id === id);
-                if (!animal) return null;
-                const isCompanion = profile.companionId === id;
-                return (
-                  <div key={id} style={{ position: 'relative', textAlign: 'center' }}>
-                    <div style={{
-                      background: 'rgba(255,255,255,0.7)',
-                      borderRadius: 14,
-                      padding: 6,
-                      border: isCompanion ? '2px solid #f59e0b' : 'none',
-                      boxShadow: '0 2px 6px rgba(0,40,0,0.12)',
-                    }}>
-                      <AnimalIcon animal={animal} size={48} />
+          {/* === 动物收集 (仅自己可见) 或 成就板 (好友访客) === */}
+          {isSelf ? (
+            <div style={{ marginTop: 16 }}>
+              <div className="row-between" style={{ marginBottom: 8 }}>
+                <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700 }}>我的小伙伴</h2>
+                <span className="muted" style={{ fontSize: 12 }}>{profile.unlockedCount} 只</span>
+              </div>
+              <div style={{
+                background: 'linear-gradient(180deg, #c9e9b1, #a5d68f)',
+                borderRadius: 16,
+                padding: 14,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
+                gap: 12,
+                boxShadow: 'var(--shadow-card)',
+              }}>
+                {(profile.unlockedIds ?? []).map((id) => {
+                  const animal = ANIMALS.find((a) => a.id === id);
+                  if (!animal) return null;
+                  const isCompanion = profile.companionId === id;
+                  return (
+                    <div key={id} style={{ position: 'relative', textAlign: 'center' }}>
+                      <div style={{
+                        background: 'rgba(255,255,255,0.7)',
+                        borderRadius: 14,
+                        padding: 6,
+                        border: isCompanion ? '2px solid #f59e0b' : 'none',
+                        boxShadow: '0 2px 6px rgba(0,40,0,0.12)',
+                      }}>
+                        <AnimalIcon animal={animal} size={48} />
+                      </div>
+                      {isCompanion && (
+                        <span style={{
+                          position: 'absolute', top: -6, right: -4,
+                          fontSize: 14, background: 'white',
+                          width: 20, height: 20, borderRadius: 999,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.18)',
+                        }}>👑</span>
+                      )}
+                      <div style={{
+                        fontSize: 10, fontWeight: 600,
+                        marginTop: 4,
+                        color: '#1a4010',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {animal.name.slice(0, 4)}
+                      </div>
                     </div>
-                    {isCompanion && (
-                      <span style={{
-                        position: 'absolute', top: -6, right: -4,
-                        fontSize: 14, background: 'white',
-                        width: 20, height: 20, borderRadius: 999,
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.18)',
-                      }}>👑</span>
-                    )}
-                    <div style={{
-                      fontSize: 10, fontWeight: 600,
-                      marginTop: 4,
-                      color: '#1a4010',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {animal.name.slice(0, 4)}
-                    </div>
+                  );
+                })}
+                {(profile.unlockedIds ?? []).length === 0 && (
+                  <div className="muted" style={{ gridColumn: '1 / -1', textAlign: 'center', fontSize: 13, padding: 12 }}>
+                    Ta 还没解锁动物
                   </div>
-                );
-              })}
-              {(profile.unlockedIds ?? []).length === 0 && (
-                <div className="muted" style={{ gridColumn: '1 / -1', textAlign: 'center', fontSize: 13, padding: 12 }}>
-                  Ta 还没解锁动物
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <AchievementBoard profile={profile} totalAnimals={ANIMALS.length} />
+          )}
 
           {/* === 留言板 === */}
           <div style={{ marginTop: 18 }}>
@@ -290,6 +292,119 @@ export default function FriendPark() {
           {toast}
         </div>
       )}
+    </div>
+  );
+}
+
+// === 访客看到的成就板（隐藏具体动物，避免剧透） ===
+function AchievementBoard({
+  profile, totalAnimals,
+}: {
+  profile: PublicProfile & { clientId: string };
+  totalAnimals: number;
+}) {
+  const drunkMl = profile.todayDrunkMl ?? 0;
+  const pct = profile.todayPctGoal ?? 0;
+  const peak = profile.peakStreak ?? Math.max(profile.currentStreak, 0);
+  return (
+    <div style={{ marginTop: 16 }}>
+      <h2 style={{ fontSize: 16, margin: 0, marginBottom: 8, fontWeight: 700 }}>Ta 的成就</h2>
+
+      {/* 今日 — 全宽 + 进度条 */}
+      <div style={{
+        background: 'linear-gradient(135deg, #e7f4ff, #cfe6ff)',
+        borderRadius: 16,
+        padding: 14,
+        boxShadow: 'var(--shadow-card)',
+        marginBottom: 10,
+      }}>
+        <div className="row-between" style={{ marginBottom: 8 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#1d5d8f', fontWeight: 600 }}>
+            <Droplet size={14} /> 今日
+          </span>
+          <span style={{ fontSize: 13, color: '#1d5d8f', fontWeight: 700 }}>{pct}%</span>
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#0c3d66' }}>
+          {drunkMl} <span style={{ fontSize: 13, fontWeight: 500, color: '#3b6f99' }}>ml</span>
+        </div>
+        <div style={{
+          marginTop: 8, height: 8, borderRadius: 999,
+          background: 'rgba(0,0,0,0.06)', overflow: 'hidden',
+        }}>
+          <div style={{
+            width: `${Math.min(100, pct)}%`, height: '100%',
+            background: 'linear-gradient(90deg, #7dd3fc, #3aa6dd)',
+            transition: 'width 0.4s ease',
+          }} />
+        </div>
+      </div>
+
+      {/* 2×2 stat grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 10,
+      }}>
+        <StatCard
+          icon={<Flame size={14} color="#f97316" />}
+          label="当前 streak"
+          value={profile.currentStreak}
+          unit="天连续"
+          tint="rgba(249,115,22,0.10)"
+        />
+        <StatCard
+          icon={<Trophy size={14} color="#f59e0b" />}
+          label="最长 streak"
+          value={peak}
+          unit="天"
+          tint="rgba(245,158,11,0.10)"
+        />
+        <StatCard
+          icon={<Calendar size={14} color="#10b981" />}
+          label="累计达标"
+          value={profile.totalCompletedDays}
+          unit="天"
+          tint="rgba(16,185,129,0.10)"
+        />
+        <StatCard
+          icon={<Gift size={14} color="#a855f7" />}
+          label="解锁进度"
+          value={profile.unlockedCount}
+          unit={`/ ${totalAnimals}`}
+          tint="rgba(168,85,247,0.10)"
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon, label, value, unit, tint,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  unit: string;
+  tint: string;
+}) {
+  return (
+    <div style={{
+      background: tint,
+      border: '1px solid rgba(0,0,0,0.04)',
+      borderRadius: 14,
+      padding: 12,
+      boxShadow: 'var(--shadow-card)',
+    }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>
+        {icon}
+        {label}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>
+        {value}
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-soft)', marginLeft: 4 }}>
+          {unit}
+        </span>
+      </div>
     </div>
   );
 }
