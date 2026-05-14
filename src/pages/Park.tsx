@@ -187,7 +187,7 @@ function getTimeOfDay(): TimeOfDay {
   return 'night';
 }
 
-function pickWeather(prev: Weather): Weather {
+function pickWeather(): Weather {
   const r = Math.random();
   if (r < 0.65) return 'sunny';
   if (r < 0.9)  return 'cloudy';
@@ -509,6 +509,28 @@ function Wildflowers({ x, y, scale = 1 }: { x: number; y: number; scale?: number
       <circle cx={-5} cy={-1} r="2.2" fill="#fff0c0" />
       <circle cx={3} cy={5} r="2.4" fill="#a878ff" />
       <circle cx={-4} cy={4} r="2" fill="#ff9040" />
+    </g>
+  );
+}
+
+function Butterfly({ cx, cy, anim, dur = 14, color1, color2 }: {
+  cx: number; cy: number; anim: string; dur?: number; color1: string; color2: string;
+}) {
+  return (
+    <g style={{ animation: `${anim} ${dur}s ease-in-out infinite` }}>
+      <g transform={`translate(${cx}, ${cy})`}>
+        <g className="pk-bfly-flap">
+          <ellipse cx={-4} cy={-1.8} rx={5} ry={4} fill={color1} />
+          <ellipse cx={-3.2} cy={2.5} rx={3.8} ry={3} fill={color2} />
+          <ellipse cx={4} cy={-1.8} rx={5} ry={4} fill={color1} />
+          <ellipse cx={3.2} cy={2.5} rx={3.8} ry={3} fill={color2} />
+          <circle cx={-5} cy={-2.5} r={1.2} fill="white" opacity="0.6" />
+          <circle cx={5} cy={-2.5} r={1.2} fill="white" opacity="0.6" />
+        </g>
+        <ellipse cx={0} cy={0} rx={0.8} ry={5} fill="#2a1810" />
+        <path d="M-0.8 -4.5 Q-1.6 -7 -2.5 -7.8" stroke="#2a1810" strokeWidth="0.5" fill="none" />
+        <path d="M0.8 -4.5 Q1.6 -7 2.5 -7.8" stroke="#2a1810" strokeWidth="0.5" fill="none" />
+      </g>
     </g>
   );
 }
@@ -880,6 +902,14 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       {/* Signpost near treasure */}
       <Sign x={360} y={745} text="宝藏 →" />
 
+      {/* ── Butterflies — flying around the meadows ── */}
+      <Butterfly cx={280} cy={300} anim="pk-bfly-1" dur={14} color1="#ff80a8" color2="#ffd4e0" />
+      <Butterfly cx={140} cy={470} anim="pk-bfly-2" dur={12} color1="#ffe048" color2="#fff8c8" />
+      <Butterfly cx={400} cy={620} anim="pk-bfly-3" dur={16} color1="#a878ff" color2="#d4c0ff" />
+      <Butterfly cx={300} cy={830} anim="pk-bfly-4" dur={13} color1="#ff9040" color2="#ffe0a0" />
+      <Butterfly cx={210} cy={1020} anim="pk-bfly-5" dur={15} color1="#7adcf0" color2="#cae9f6" />
+      <Butterfly cx={500} cy={400} anim="pk-bfly-6" dur={11} color1="#ff80a8" color2="#fff0c0" />
+
       {/* River */}
       <path
         d="M155 395 Q145 430 130 460 Q115 500 95 545 Q80 600 95 660 Q115 720 100 780 Q85 845 130 905"
@@ -1092,7 +1122,21 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
       )}
 
       <style>{`
-        .pk-flame { transform-origin: center bottom; }
+        .pk-flame { transform-origin: center bottom; animation: pk-flicker 1.4s ease-in-out infinite; }
+        @keyframes pk-flicker {
+          0%,100% { transform: scale(1, 1); }
+          25%     { transform: scale(1.07, 0.94); }
+          50%     { transform: scale(0.94, 1.05); }
+          75%     { transform: scale(1.05, 0.97); }
+        }
+        .pk-bfly-flap { transform-origin: center; transform-box: fill-box; animation: pk-bfly-flap 0.16s linear infinite alternate; }
+        @keyframes pk-bfly-flap { from { transform: scaleX(1); } to { transform: scaleX(0.35); } }
+        @keyframes pk-bfly-1 { 0%,100%{transform:translate(0,0)} 25%{transform:translate(28px,-18px)} 50%{transform:translate(52px,4px)} 75%{transform:translate(22px,22px)} }
+        @keyframes pk-bfly-2 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-26px,-22px)} 66%{transform:translate(-44px,8px)} }
+        @keyframes pk-bfly-3 { 0%,100%{transform:translate(0,0)} 25%{transform:translate(18px,-28px)} 50%{transform:translate(40px,-8px)} 75%{transform:translate(28px,18px)} }
+        @keyframes pk-bfly-4 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-28px,-24px)} }
+        @keyframes pk-bfly-5 { 0%,100%{transform:translate(0,0)} 25%{transform:translate(14px,-14px)} 50%{transform:translate(32px,12px)} 75%{transform:translate(8px,26px)} }
+        @keyframes pk-bfly-6 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(22px,16px)} 66%{transform:translate(-12px,28px)} }
         .pk-twinkle { animation: pk-twinkle 2.2s ease-in-out infinite; }
         @keyframes pk-twinkle { 0%,100%{opacity:0.6} 50%{opacity:1} }
         .pk-firefly { animation: pk-firefly 2.2s ease-in-out infinite; }
@@ -1619,7 +1663,7 @@ export default function Park() {
   // ── Weather tick ──────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
-      setWeather(prev => pickWeather(prev));
+      setWeather(pickWeather());
     }, 90_000);
     return () => clearInterval(interval);
   }, []);
