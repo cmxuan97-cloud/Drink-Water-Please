@@ -11,10 +11,13 @@ import {
 import AnimalIcon from '../components/AnimalIcon';
 import { syncCompanionToServer } from '../lib/push';
 import {
-  Award, Heart, Home, Key, Lock, PartyPopper, Sparkle, Sparkles,
-  Star, Trophy, X, type LucideProps,
+  Award, Flame, Heart, Home, Key, Lock, Mail, PartyPopper, PawPrint,
+  Sparkle, Sparkles, Star, Trees, Trophy, X, type LucideProps,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
+import { getCurrentDisplayName, getCurrentUsername } from '../lib/auth';
+import { currentStreak } from '../lib/profile';
+import { visitFriendPark, type ParkNote } from '../lib/social';
 
 // 解锁爆发：保留一半 emoji（颜色丰富），另一半换成 lucide icon（线条干净）
 type CeItem = string | { Icon: ComponentType<LucideProps>; color: string };
@@ -29,6 +32,8 @@ const CELEBRATE_ITEMS: CeItem[] = [
   { Icon: Sparkle, color: '#06b6d4' },
 ];
 
+type Tab = 'animals' | 'notes';
+
 export default function Collection() {
   const navigate = useNavigate();
   const [completed, setCompleted] = useState<string[]>([]);
@@ -38,6 +43,13 @@ export default function Collection() {
   const [popupStage, setPopupStage] = useState<'view' | 'unlocked'>('view');
   const [celebrate, setCelebrate] = useState(false);
 
+  const [tab, setTab] = useState<Tab>('animals');
+  const [notes, setNotes] = useState<ParkNote[]>([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
+
+  const username = useMemo(() => getCurrentUsername(), []);
+  const displayName = useMemo(() => getCurrentDisplayName() ?? username ?? '我', [username]);
+
   const orderedIds = useMemo(() => ANIMALS.map((a) => a.id), []);
 
   useEffect(() => {
@@ -46,11 +58,22 @@ export default function Collection() {
     setUnlockedIds(ensureUnlockedMigration(getCompletedDays().length, orderedIds));
   }, [orderedIds]);
 
+  // 拉自己主页收到的留言（仅注册用户）
+  useEffect(() => {
+    if (!username) { setNotesLoaded(true); return; }
+    void (async () => {
+      const r = await visitFriendPark(username);
+      setNotes(r.notes);
+      setNotesLoaded(true);
+    })();
+  }, [username]);
+
   const unlockedSet = useMemo(() => new Set(unlockedIds), [unlockedIds]);
   const unlockedCount = unlockedIds.length;
   const tokens = availableTokens(completed.length, unlockedCount);
   const earned = earnedTokens(completed.length);
   const toNext = daysToNextToken(completed.length);
+  const streak = useMemo(() => currentStreak(completed), [completed]);
 
   const onUnlock = (id: string) => {
     if (tokens <= 0) return;
@@ -88,17 +111,17 @@ export default function Collection() {
     <div className="page">
       <header className="page-header">
         <button className="back-btn" onClick={() => navigate(-1)}>← 返回</button>
-        <h1 className="page-title">我的小伙伴</h1>
+        <h1 className="page-title">主页</h1>
         <span style={{ width: 48 }} />
       </header>
 
-      {/* hero card */}
+      {/* hero — 紧凑横排：左 companion + 右 名字/统计 + 右上 公园 pill */}
       <div className="card-tinted card-sky" style={{ position: 'relative', overflow: 'hidden' }}>
-        <div className="row" style={{ gap: 16 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <div
             style={{
-              width: 88,
-              height: 88,
+              width: 80,
+              height: 80,
               borderRadius: 20,
               background: 'rgba(255,255,255,0.55)',
               display: 'flex',
@@ -107,45 +130,46 @@ export default function Collection() {
               flexShrink: 0,
             }}
           >
-            <AnimalIcon animal={featuredAnimal} size={68} />
+            <AnimalIcon animal={featuredAnimal} size={62} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{featuredAnimal.name}</div>
-            <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
-              {featuredAnimal.hint}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {displayName}
+                </div>
+                {username && (
+                  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 1 }}>@{username}</div>
+                )}
+              </div>
+              <button
+                onClick={() => navigate('/park')}
+                style={{
+                  padding: '6px 11px', borderRadius: 999,
+                  background: 'rgba(34,136,64,0.18)', color: '#15803d',
+                  fontSize: 12, fontWeight: 700,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  flexShrink: 0,
+                }}
+                aria-label="去公园"
+              >
+                <Trees size={13} /> 公园
+              </button>
             </div>
-            <div className="tag" style={{ marginTop: 8, background: 'rgba(255,255,255,0.7)' }}>
-              已收集 {unlockedCount} / {ANIMALS.length}
+            <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12.5, color: 'rgba(0,0,0,0.7)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <PawPrint size={12} /> {unlockedCount}/{ANIMALS.length}
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Flame size={12} color="#f59e0b" /> {streak} 天
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Trophy size={11} color="#a855f7" /> 累计 {completed.length}
+              </span>
             </div>
           </div>
         </div>
       </div>
-
-      {/* 公园入口 */}
-      {unlockedCount >= 1 && (
-        <button
-          onClick={() => navigate('/park')}
-          style={{
-            width: '100%',
-            padding: '14px 20px',
-            borderRadius: 18,
-            background: 'linear-gradient(135deg, #3aaa5a, #228840)',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            boxShadow: '0 4px 16px rgba(34,136,64,0.28)',
-          }}
-        >
-          🌳 去动物公园逛逛
-          <span style={{ fontSize: 12, opacity: 0.85, fontWeight: 500 }}>
-            {unlockedCount} 只小伙伴在等你
-          </span>
-        </button>
-      )}
 
       {/* Token 状态卡 */}
       <div className={tokens > 0 ? 'card-tinted card-mint' : 'card'}>
@@ -190,12 +214,91 @@ export default function Collection() {
         )}
       </div>
 
-      {/* grid */}
-      <div className="row-between" style={{ marginTop: 4, paddingLeft: 4 }}>
-        <h2 style={{ fontSize: 17, margin: 0, fontWeight: 700 }}>每只小动物</h2>
-        <span className="muted">{unlockedCount}/{ANIMALS.length}</span>
-      </div>
+      {/* Tabs（仅注册用户显示「留言」） */}
+      {username ? (
+        <div style={{
+          display: 'flex',
+          background: 'var(--bg-card)',
+          borderRadius: 14,
+          padding: 4,
+          gap: 2,
+          boxShadow: 'var(--shadow-card)',
+        }}>
+          {([
+            { id: 'animals' as const, icon: <PawPrint size={14} />, label: '小伙伴', count: unlockedCount },
+            { id: 'notes' as const, icon: <Mail size={14} />, label: '留言', count: notes.length },
+          ]).map(t => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  flex: 1, padding: '10px 8px',
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: active ? 'white' : 'var(--text-soft)',
+                  background: active ? 'var(--accent)' : 'transparent',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  transition: 'background 0.18s, color 0.18s',
+                }}
+              >
+                {t.icon} {t.label} {t.count > 0 && <span style={{ opacity: 0.85 }}>{t.count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
+      {/* === 留言 Tab === */}
+      {username && tab === 'notes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {!notesLoaded ? (
+            <div className="muted" style={{ textAlign: 'center', padding: 20, fontSize: 13 }}>加载中…</div>
+          ) : notes.length === 0 ? (
+            <div className="card-tinted card-sky" style={{ textAlign: 'center', padding: 22 }}>
+              <div style={{ fontSize: 32 }}>✉️</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginTop: 6 }}>还没人来留过言~</div>
+              <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+                好友来你主页留下的话会出现在这里
+              </div>
+            </div>
+          ) : (
+            notes.map((n) => {
+              const animal = n.fromCompanionId
+                ? ANIMALS.find(a => a.id === n.fromCompanionId)
+                : n.fromCharId ? ANIMALS.find(a => a.customArt === n.fromCharId) : undefined;
+              const mins = Math.max(1, Math.round((Date.now() - n.createdAt) / 60000));
+              const ago = mins < 60 ? `${mins}分钟前` : mins < 1440 ? `${Math.round(mins / 60)}小时前` : `${Math.round(mins / 1440)}天前`;
+              return (
+                <div key={n.uid} style={{
+                  display: 'flex', gap: 10,
+                  padding: 12, background: 'var(--bg-card)',
+                  borderRadius: 14, boxShadow: 'var(--shadow-card)',
+                }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 999, background: 'rgba(16,185,129,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {animal ? <AnimalIcon animal={animal} size={36} /> : '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13.5 }}>{n.fromDisplayName}</span>
+                      <span className="muted" style={{ fontSize: 11 }}>{ago}</span>
+                    </div>
+                    <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.45 }}>
+                      {n.message}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* === 小伙伴 Tab（默认；未注册用户也走这里）=== */}
+      {(!username || tab === 'animals') && (
+        <>
       <div className="animal-grid">
         {ANIMALS.map((a) => {
           const locked = !unlockedSet.has(a.id);
@@ -222,6 +325,8 @@ export default function Collection() {
           );
         })}
       </div>
+        </>
+      )}
 
       {/* === 弹窗 === */}
       {popupAnimal && (

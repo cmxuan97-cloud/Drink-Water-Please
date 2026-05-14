@@ -13,6 +13,13 @@ export default function FriendPark() {
   const { username: targetUsername } = useParams<{ username: string }>();
   const myUsername = getCurrentUsername();
 
+  // 访问自己的主页 → 跳到合并后的 /collection
+  useEffect(() => {
+    if (myUsername && targetUsername && targetUsername.toLowerCase() === myUsername.toLowerCase()) {
+      navigate('/collection', { replace: true });
+    }
+  }, [myUsername, targetUsername, navigate]);
+
   const [profile, setProfile] = useState<(PublicProfile & { clientId: string }) | null>(null);
   const [notes, setNotes] = useState<ParkNote[]>([]);
   const [isSelf, setIsSelf] = useState(false);
