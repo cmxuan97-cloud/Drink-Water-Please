@@ -23,6 +23,9 @@ export default async function handler(req: Request): Promise<Response> {
   if (!p || typeof p !== 'object') return errResp('缺 profile', 400);
 
   // 用服务端记的 username 覆盖（防客户端伪造）
+  const ids = Array.isArray(p.unlockedIds)
+    ? p.unlockedIds.filter((x): x is string => typeof x === 'string').slice(0, 100).map((s) => s.slice(0, 30))
+    : [];
   const safe: PublicProfile = {
     username: auth.username,
     displayName: String(p.displayName ?? auth.username).slice(0, 30),
@@ -30,6 +33,7 @@ export default async function handler(req: Request): Promise<Response> {
     charId: p.charId ? String(p.charId).slice(0, 50) : undefined,
     todayPctGoal: Math.max(0, Math.min(100, Math.round(Number(p.todayPctGoal) || 0))),
     unlockedCount: Math.max(0, Math.min(999, Math.round(Number(p.unlockedCount) || 0))),
+    unlockedIds: ids,
     totalCompletedDays: Math.max(0, Math.min(99999, Math.round(Number(p.totalCompletedDays) || 0))),
     currentStreak: Math.max(0, Math.min(9999, Math.round(Number(p.currentStreak) || 0))),
     updatedAt: Date.now(),

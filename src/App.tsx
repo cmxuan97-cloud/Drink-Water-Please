@@ -10,6 +10,7 @@ import Park from './pages/Park';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
 import Teams from './pages/Teams';
+import FriendPark from './pages/FriendPark';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/friends" element={<Friends />} />
       <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/teams" element={<Teams />} />
+      <Route path="/u/:username/park" element={<FriendPark />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

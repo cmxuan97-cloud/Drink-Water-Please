@@ -38,6 +38,7 @@ export type PublicProfile = {
   charId?: string;
   todayPctGoal: number;       // 0..100
   unlockedCount: number;
+  unlockedIds: string[];
   totalCompletedDays: number;
   currentStreak: number;
   updatedAt: number;
@@ -66,6 +67,7 @@ export const profileSummary = async (
       displayName: username,
       todayPctGoal: 0,
       unlockedCount: 1,
+      unlockedIds: ['a-kiwi'],
       totalCompletedDays: 0,
       currentStreak: 0,
       updatedAt: 0,

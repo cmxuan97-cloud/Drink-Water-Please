@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ANIMALS } from '../data/animals';
 import { sendCheer, sendWater, type Friend } from '../lib/social';
 import AnimalIcon from './AnimalIcon';
 import ProgressRing from './ProgressRing';
-import { Award, Flame } from 'lucide-react';
+import { Award, Flame, Trees } from 'lucide-react';
 
 const CHEER_OPTIONS = ['🎉', '❤️', '👏', '💪', '🌟', '🔥'];
 
@@ -82,6 +83,19 @@ export default function FriendCard({ friend, onAction }: Props) {
       </div>
 
       {/* Action row */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Link
+          to={`/u/${encodeURIComponent(friend.username)}/park`}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: 999,
+            background: 'rgba(16,185,129,0.14)', color: '#047857',
+            fontSize: 13, fontWeight: 600, textDecoration: 'none',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}
+        >
+          <Trees size={13} /> 去公园
+        </Link>
+      </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={onSendWater}

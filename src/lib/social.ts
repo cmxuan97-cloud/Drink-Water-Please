@@ -8,6 +8,7 @@ export type PublicProfile = {
   charId?: string;
   todayPctGoal: number;
   unlockedCount: number;
+  unlockedIds?: string[];
   totalCompletedDays: number;
   currentStreak: number;
   updatedAt: number;
@@ -195,6 +196,65 @@ export const ackInbox = async (): Promise<{ ok: boolean }> => {
     return { ok: true };
   } catch {
     return { ok: false };
+  }
+};
+
+// ── Friend Park (visit + notes) ────────────────────────────────────────────
+export type ParkNote = {
+  uid: string;
+  fromClientId: string;
+  fromUsername: string;
+  fromDisplayName: string;
+  fromCompanionId?: string;
+  fromCharId?: string;
+  message: string;
+  createdAt: number;
+};
+
+export const visitFriendPark = async (
+  targetUsername: string,
+): Promise<{
+  profile?: PublicProfile & { clientId: string };
+  notes: ParkNote[];
+  isSelf: boolean;
+  error?: string;
+}> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch(
+      `/api/social/park/visit?clientId=${encodeURIComponent(clientId)}&targetUsername=${encodeURIComponent(targetUsername)}`,
+    );
+    if (!r.ok) {
+      const j = await safeJson(r);
+      return { notes: [], isSelf: false, error: (j.error as string) ?? '加载失败' };
+    }
+    const j = (await safeJson(r)) as {
+      profile?: PublicProfile & { clientId: string };
+      notes?: ParkNote[];
+      isSelf?: boolean;
+    };
+    return { profile: j.profile, notes: j.notes ?? [], isSelf: Boolean(j.isSelf) };
+  } catch (e) {
+    return { notes: [], isSelf: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const leaveParkNote = async (
+  targetUsername: string,
+  message: string,
+): Promise<{ ok: boolean; note?: ParkNote; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/park/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, targetUsername, message }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '留言失败' };
+    return { ok: true, note: j.note as ParkNote };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
   }
 };
 

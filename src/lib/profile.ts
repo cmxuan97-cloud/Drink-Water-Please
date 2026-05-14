@@ -46,6 +46,7 @@ export type PublicProfile = {
   charId?: string;
   todayPctGoal: number;       // 0..100 (int)
   unlockedCount: number;
+  unlockedIds: string[];      // 用于让好友看见你家公园里有谁
   totalCompletedDays: number;
   currentStreak: number;
   updatedAt: number;
@@ -77,6 +78,7 @@ export const buildPublicProfile = (): PublicProfile | null => {
     charId,
     todayPctGoal: pct,
     unlockedCount: unlocked.length,
+    unlockedIds: unlocked,
     totalCompletedDays: completed.length,
     currentStreak: currentStreak(completed),
     updatedAt: Date.now(),
