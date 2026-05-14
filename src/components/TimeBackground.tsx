@@ -350,15 +350,15 @@ function BottomPlants({
       <ellipse cx={106} cy={156} rx={2.5} ry={3} fill={dewColor} opacity={0.7} />
       <ellipse cx={348} cy={149} rx={3.5} ry={4} fill={dewColor} opacity={0.82} />
       <ellipse cx={368} cy={159} rx={3} ry={3.5} fill={dewColor} opacity={0.76} />
-      {/* 鸡蛋花树 1 — 左侧植物中间，位置稍高 */}
-      <FrangipaniTree x={72} y={-20} leafColor={leafColor} />
+      {/* 鸡蛋花树 1 — 左侧植物中间，位置稍低 + 更高大 */}
+      <FrangipaniTree x={72} y={20} scale={1.5} leafColor={leafColor} />
       {/* 鸡蛋花树 2 — 右侧植物中间 */}
       <FrangipaniTree x={348} y={8} leafColor={leafColor} />
     </svg>
   );
 }
 
-function FrangipaniTree({ x, y = 0, leafColor }: { x: number; y?: number; leafColor: string }) {
+function FrangipaniTree({ x, y = 0, scale = 1, leafColor }: { x: number; y?: number; scale?: number; leafColor: string }) {
   const flowers = [
     { dx: -14, dy: 108, r: 6.5 },
     { dx: 14,  dy: 102, r: 6 },
@@ -368,8 +368,9 @@ function FrangipaniTree({ x, y = 0, leafColor }: { x: number; y?: number; leafCo
     { dx: -4,  dy: 92,  r: 4.5 },
     { dx: 8,   dy: 116, r: 4.5 },
   ];
+  // scale 以树根 (y=200) 为基准向上生长，y 是额外的整体偏移
   return (
-    <g transform={`translate(${x}, ${y})`}>
+    <g transform={`translate(${x}, ${200 + y}) scale(${scale}) translate(0, -200)`}>
       {/* 树干 */}
       <path d="M -2 200 Q -4 158 0 118 Q 4 158 2 200 Z" fill="#7a4f2c" opacity={0.92} />
       {/* 树冠 — 多层圆叠出蓬松感 */}
