@@ -3,7 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { ANIMALS } from '../data/animals';
 import { getCompanionId, getUnlockedIds } from '../lib/storage';
 import Character from '../components/Character';
-import { leaveParkNote, sendCheer, sendWater } from '../lib/social';
+import { leaveParkNote, sendScold, sendWater } from '../lib/social';
+
+// 10 句"骂他没喝水"的台词 — 随机挑一句送出去
+const SCOLD_LINES = [
+  '你跟水的关系，像前任一样：能不联系就不联系。',
+  '喝水对你来说是不是犯法？每次叫你喝都像逼你还债。',
+  '你真的很环保，连喝水都省。',
+  '你的水杯是装饰品吗？放那么久积灰都成考古文物了。',
+  '水不喝完会哭的，你听见了没？',
+  '你以为你是仙人掌？连仙人掌都比你勤快。',
+  '别说喝水了，你连看水的眼神都嫌累。',
+  '沙漠看到你都自愧不如。',
+  '你的肾结石都在排队投诉你了。',
+  '你是不是把"喝水"听成"喝醋"了，不然怎么这么抗拒？',
+];
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
 //   Constants
@@ -1946,6 +1960,10 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
           70%  {opacity:1;transform:translateX(-50%) translateY(-104%) scale(1.06)}
           100% {opacity:1;transform:translateX(-50%) translateY(-100%) scale(1)}
         }
+        @keyframes pk-fas-success {
+          0%   {opacity:0;transform:scale(0.85)}
+          100% {opacity:1;transform:scale(1)}
+        }
       `}</style>
     </div>
   );
@@ -1963,8 +1981,15 @@ function FriendActionSheet({
   const [action, setAction] = useState<null | 'note'>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [posting, setPosting] = useState(false);
+  // 成功反馈：在 sheet 里显示一段确认状态再自动关闭，避免用户以为没发出去
+  const [success, setSuccess] = useState<null | { icon: string; title: string; sub?: string }>(null);
 
-  const close = () => { setAction(null); setNoteDraft(''); onClose(); };
+  const close = () => { setAction(null); setNoteDraft(''); setSuccess(null); onClose(); };
+
+  const finishWith = (icon: string, title: string, sub?: string) => {
+    setSuccess({ icon, title, sub });
+    setTimeout(() => close(), 1400);
+  };
 
   const onCallWater = async () => {
     setPosting(true);
@@ -1972,16 +1997,17 @@ function FriendActionSheet({
     setPosting(false);
     if (!r.ok) { onToast(r.error ?? '失败'); return; }
     onToast(`💧 已叫 ${friend.displayName} 喝水`);
-    close();
+    finishWith('💧', `已叫 ${friend.displayName} 喝水`);
   };
 
   const onScold = async () => {
     setPosting(true);
-    const r = await sendCheer(friend.clientId, '😤');
+    const line = SCOLD_LINES[Math.floor(Math.random() * SCOLD_LINES.length)];
+    const r = await sendScold(friend.clientId, line);
     setPosting(false);
     if (!r.ok) { onToast(r.error ?? '失败'); return; }
-    onToast(`😤 已送达 ${friend.displayName}`);
-    close();
+    onToast(`😤 已骂 ${friend.displayName}`);
+    finishWith('😤', '已经骂了 ta', `"${line}"`);
   };
 
   const onSendNote = async () => {
@@ -1991,7 +2017,7 @@ function FriendActionSheet({
     setPosting(false);
     if (!r.ok) { onToast(r.error ?? '失败'); return; }
     onToast(`✉️ 留言已送达`);
-    close();
+    finishWith('✉️', '留言已送达', `"${noteDraft.trim()}"`);
   };
 
   return (
@@ -2024,7 +2050,27 @@ function FriendActionSheet({
           </div>
         </div>
 
-        {action === null && (
+        {success && (
+          <div style={{
+            padding: '22px 16px',
+            textAlign: 'center',
+            background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
+            borderRadius: 16,
+            animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)',
+          }}>
+            <div style={{ fontSize: 40, lineHeight: 1 }}>{success.icon}</div>
+            <div style={{ fontWeight: 800, fontSize: 17, marginTop: 8, color: '#065f46' }}>
+              ✓ {success.title}
+            </div>
+            {success.sub && (
+              <div style={{ fontSize: 13, marginTop: 6, color: '#047857', fontStyle: 'italic', lineHeight: 1.5 }}>
+                {success.sub}
+              </div>
+            )}
+          </div>
+        )}
+
+        {action === null && !success && (
           <>
             <button style={fasPillStyle} onClick={onCallWater} disabled={posting}>
               💧 叫他喝水
@@ -2044,7 +2090,7 @@ function FriendActionSheet({
           </>
         )}
 
-        {action === 'note' && (
+        {action === 'note' && !success && (
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
               ✉️ 给 {friend.displayName} 留言

@@ -362,19 +362,24 @@ export default function Friends() {
                 : ev.fromCharId ? ANIMALS.find(a => a.customArt === ev.fromCharId) : undefined;
               const isWater = ev.type === 'water';
               const isNote = ev.type === 'note';
+              const isScold = ev.type === 'scold';
               const mins = Math.max(1, Math.round((Date.now() - ev.createdAt) / 60000));
               const ago = mins < 60 ? `${mins}分钟前` : mins < 1440 ? `${Math.round(mins / 60)}小时前` : `${Math.round(mins / 1440)}天前`;
               const bg = isWater
                 ? 'rgba(58,166,221,0.18)'
                 : isNote
                   ? 'rgba(16,185,129,0.18)'
-                  : 'rgba(245,158,11,0.18)';
-              const badge = isWater ? '💧' : isNote ? '✉️' : (ev.emoji ?? '🎉');
+                  : isScold
+                    ? 'rgba(239,68,68,0.16)'
+                    : 'rgba(245,158,11,0.18)';
+              const badge = isWater ? '💧' : isNote ? '✉️' : isScold ? '😤' : (ev.emoji ?? '🎉');
               const verb = isWater
                 ? '叫你去喝水 💧'
                 : isNote
                   ? '在你主页留言 ✉️'
-                  : `送了 ${ev.emoji ?? '🎉'} 给你`;
+                  : isScold
+                    ? '骂你没喝水 😤'
+                    : `送了 ${ev.emoji ?? '🎉'} 给你`;
               return (
                 <div key={ev.uid} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -403,7 +408,7 @@ export default function Friends() {
                       <span style={{ fontWeight: 700 }}>{ev.fromDisplayName}</span>{' '}
                       <span style={{ color: 'var(--text-soft)' }}>{verb}</span>
                     </div>
-                    {ev.text && (isNote || isWater) && (
+                    {ev.text && (isNote || isWater || isScold) && (
                       <div style={{ fontSize: 13, marginTop: 3, color: 'var(--text)', fontStyle: 'italic' }}>
                         "{ev.text}"
                       </div>

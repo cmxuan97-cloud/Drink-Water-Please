@@ -114,7 +114,7 @@ export const removeFriend = async (
 
 export type InboxEvent = {
   uid: string;
-  type: 'water' | 'cheer' | 'note';
+  type: 'water' | 'cheer' | 'note' | 'scold';
   fromClientId: string;
   fromUsername: string;
   fromDisplayName: string;
@@ -138,6 +138,25 @@ export const sendWater = async (
     });
     const j = await safeJson(r);
     if (!r.ok) return { ok: false, error: (j.error as string) ?? '递水失败' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const sendScold = async (
+  targetClientId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/scold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, targetClientId, text }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '失败' };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
