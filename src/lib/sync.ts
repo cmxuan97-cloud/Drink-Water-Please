@@ -103,6 +103,13 @@ const doUpload = async (): Promise<void> => {
       triggerSync();
     }
   }
+  // 顺便把社交公开 profile 也推一份（只有已注册账号才会真发，否则 syncProfile 内部 no-op）
+  try {
+    const { syncProfile } = await import('./profile');
+    await syncProfile();
+  } catch {
+    // 忽略
+  }
 };
 
 /** 任何本地状态变化后调一下；多次连续调用会合并成一次上传（5 秒后） */

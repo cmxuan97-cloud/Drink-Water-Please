@@ -27,7 +27,7 @@ import { login as authLogin, register as authRegister } from '../lib/auth';
 import { syncUserNameToServer } from '../lib/user';
 import {
   BarChart3, Cloud, Hand, Key, LogIn, PartyPopper, PawPrint,
-  Settings as SettingsIcon, Sparkles, Trophy, UserPlus,
+  Settings as SettingsIcon, Sparkles, Trophy, UserPlus, Users,
 } from 'lucide-react';
 import { ANIMALS, availableTokens, earnedTokens } from '../data/animals';
 
@@ -45,6 +45,7 @@ export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [companionId, setCompanionIdLocal] = useState<string | null>(null);
   const [userName, setUserNameLocal] = useState<string | null>(null);
+  const [incomingCount, setIncomingCount] = useState(0);
   const [nameInput, setNameInput] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
@@ -154,6 +155,19 @@ export default function Home() {
     }
   }, [progress.pct, settings, goalMl]);
 
+  // 拉一下未处理好友请求数量（红点用）
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { getCurrentUsername } = await import('../lib/auth');
+      if (!getCurrentUsername()) return;
+      const { fetchFriends } = await import('../lib/social');
+      const r = await fetchFriends();
+      if (!cancelled) setIncomingCount(r.incoming.length);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // 进入页面时检查：累计赚到的钥匙数 > 上次看过的，且还有没用的 → 弹提示
   const checkedTokensRef = useRef(false);
   useEffect(() => {
@@ -220,6 +234,18 @@ export default function Home() {
         <div className="row" style={{ gap: 8, marginTop: 14 }}>
           <Link to="/stats" className="icon-btn" aria-label="记录"><BarChart3 size={20} strokeWidth={1.8} /></Link>
           <Link to="/collection" className="icon-btn" aria-label="收藏"><PawPrint size={20} strokeWidth={1.8} /></Link>
+          <Link to="/friends" className="icon-btn" aria-label="好友" style={{ position: 'relative' }}>
+            <Users size={20} strokeWidth={1.8} />
+            {incomingCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -2, right: -2,
+                minWidth: 16, height: 16, padding: '0 4px',
+                borderRadius: 999, fontSize: 10, fontWeight: 700, color: 'white',
+                background: '#ef4444',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>{incomingCount}</span>
+            )}
+          </Link>
           <Link to="/settings" className="icon-btn" aria-label="设置"><SettingsIcon size={20} strokeWidth={1.8} /></Link>
         </div>
       </header>
