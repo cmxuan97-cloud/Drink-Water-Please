@@ -180,8 +180,14 @@ export const getCompletedDays = (): string[] => {
   return safeParse<string[]>(localStorage.getItem(K_COMPLETED), []);
 };
 
-export const getCompanionId = (): string | null => {
-  return localStorage.getItem(K_COMPANION);
+// 新用户首次读取时自动设为 starter (奇异鸟)，保证 profile 有 companionId
+// 这样朋友看到的头像就是奇异鸟而不是 "?"
+const DEFAULT_COMPANION_ID = 'a-kiwi';
+export const getCompanionId = (): string => {
+  const v = localStorage.getItem(K_COMPANION);
+  if (v) return v;
+  localStorage.setItem(K_COMPANION, DEFAULT_COMPANION_ID);
+  return DEFAULT_COMPANION_ID;
 };
 
 export const setCompanionId = (id: string): void => {
