@@ -745,21 +745,28 @@ function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: Scen
           ].map(([sx, sy], i) => (
             <circle key={`st-${i}`} cx={sx} cy={sy} r={i % 3 === 0 ? 1.6 : 1} fill="white" className="pk-twinkle" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          {/* Moon — 鲜亮黄色 + 多层强光晕 */}
+          {/* Moon — 高亮月球 + 多层光晕（用 radial gradient 让月面整体发亮）*/}
+          <defs>
+            <radialGradient id="pk-moon-body" cx="40%" cy="38%" r="65%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="35%" stopColor="#fff5b0" />
+              <stop offset="75%" stopColor="#ffe870" />
+              <stop offset="100%" stopColor="#ffc830" />
+            </radialGradient>
+          </defs>
           <g style={{ transformOrigin: '420px 40px', transformBox: 'fill-box' }}>
             {/* 最外层泛光 */}
             <circle cx={420} cy={40} r={90} fill="#fff5b0" opacity="0.18" className="pk-moon-glow-1" />
             <circle cx={420} cy={40} r={68} fill="#ffe860" opacity="0.32" className="pk-moon-glow-2" />
             <circle cx={420} cy={40} r={48} fill="#ffd640" opacity="0.55" className="pk-moon-glow-3" />
-            {/* 月亮本体 — 鲜亮黄 */}
-            <circle cx={420} cy={40} r={28} fill="#ffd840" />
-            <circle cx={418} cy={37} r={24} fill="#fff080" />
-            {/* 中心高亮点（最亮的一小撮）*/}
-            <circle cx={415} cy={34} r={14} fill="#fffce0" opacity="0.85" />
-            {/* 月面陨石坑（暖橙黄，比之前淡）*/}
-            <circle cx={409} cy={31} r={3.6} fill="#e0a830" opacity="0.55" />
-            <circle cx={425} cy={45} r={2.8} fill="#e0a830" opacity="0.50" />
-            <circle cx={419} cy={49} r={2} fill="#e0a830" opacity="0.45" />
+            {/* 月亮本体 — 径向渐变，从近白到暖黄边缘 */}
+            <circle cx={420} cy={40} r={30} fill="url(#pk-moon-body)" />
+            {/* 高亮区（让左上角更白）*/}
+            <circle cx={414} cy={34} r={16} fill="#ffffff" opacity="0.55" />
+            {/* 月面陨石坑（很淡，不抢戏）*/}
+            <circle cx={408} cy={30} r={3.2} fill="#e6b850" opacity="0.35" />
+            <circle cx={425} cy={46} r={2.4} fill="#e6b850" opacity="0.35" />
+            <circle cx={419} cy={50} r={1.8} fill="#e6b850" opacity="0.30" />
           </g>
         </g>
       )}
