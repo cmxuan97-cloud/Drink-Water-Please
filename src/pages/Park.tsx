@@ -4,12 +4,16 @@ import { ANIMALS } from '../data/animals';
 import { getCompanionId, getUnlockedIds } from '../lib/storage';
 import Character from '../components/Character';
 
-// ── Scene (mobile portrait ratio) ──────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Constants
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 const SCENE_W = 540;
 const SCENE_H = 1080;
 
 const TICK_MS = 650;
 const ANIMAL_SIZE = 58;
+const ANIMAL_HIT_R = 38;     // tap-radius for animals
 const INTERACT_DIST = 64;
 const MAX_ANIMALS = 6;
 const MIN_ZOOM = 0.5;
@@ -17,13 +21,85 @@ const MAX_ZOOM = 3.0;
 
 // ── Zones (top-down regions of grass) ──────────────────────────────────────
 type Zone = 'upper' | 'middle' | 'lower';
-type Action = 'walking' | 'idle' | 'friendly' | 'fight';
+type Action = 'walking' | 'idle' | 'friendly' | 'fight' | 'dragged';
 
 const ZONE_CONFIG: Record<Zone, { minX: number; maxX: number; minY: number; maxY: number }> = {
   upper:  { minX: 110, maxX: 430, minY: 215, maxY: 320 },
   middle: { minX: 80,  maxX: 460, minY: 500, maxY: 680 },
   lower:  { minX: 100, maxX: 440, minY: 760, maxY: 870 },
 };
+
+// ── Speech pools ───────────────────────────────────────────────────────────
+const SPEECH_LINES = [
+  '好渴啊…想喝水', '今天天气真好', '宝藏到底在哪里？', '蝴蝶蝴蝶~',
+  '走累了，歇会儿', '我闻到饼干味了', '你看到我的尾巴了吗？', '嗨~',
+  '好困哦 zzz', '刚才那只好凶！', '山好高啊', '我今天好开心',
+  '肚子咕咕叫', '想去看湖', '咦，是月亮？', '鱼鱼鱼！',
+  '想吃西瓜', '主人在干嘛', '公园真大', '想跟你聊天',
+];
+
+const TAP_LINES = [
+  '干嘛~', '嘿嘿被发现啦', '主人好~', '挠我挠我', '别戳啦~',
+  '今天主人好热情', '抱抱', '咯咯咯', '哈喽~', '心动了 ❤',
+];
+
+const DRAG_LINES = {
+  taken_from_water: ['又要爬过去了 :(', '我都快到湖边了！', '哼，不去湖边了', '气死我了'],
+  taken_from_fire:  ['正在烤暖呢…', '火好暖啊…', '放我回去！'],
+  taken_from_interact: ['正聊着呢…', '别打扰我们！', '哎呀~'],
+  to_water:        ['谢谢主人带我来湖边！', '终于可以喝水了', '哇~湖！'],
+  to_fire:         ['嗯~暖暖的', '烤火去咯', '主人懂我'],
+  to_x_marker:     ['是这里吗？挖宝？', '我闻到金子味了'],
+  random:          ['哇~飞起来了', '诶？好高', '主人在干嘛', '放我下来啦', '咦…搬家了？', '抓住啦~'],
+  rain_extra:      ['雨好凉爽', '别让我淋湿啦', '雨里跳舞~'],
+};
+
+const NIGHT_LINES = ['好困啊…zzz', '星星好多', '月亮好圆', '夜里好安静'];
+const RAIN_LINES = ['又下雨啦~', '想躲雨', '雨好凉', '我会淋湿的！'];
+
+// ── Scene tap targets ──────────────────────────────────────────────────────
+type TapTarget =
+  | { kind: string; type: 'rect'; x: number; y: number; w: number; h: number }
+  | { kind: string; type: 'circle'; x: number; y: number; r: number };
+
+// Tree positions (must roughly match the SVG; used only for tap hit-testing)
+const TREE_POSITIONS: Array<[number, number, number]> = [
+  // top pine line (y=208, height ~50)
+  [20, 208, 50], [70, 208, 60], [120, 208, 55], [170, 208, 50], [220, 208, 60],
+  [270, 208, 55], [320, 208, 50], [370, 208, 60], [420, 208, 55], [470, 208, 50],
+  [510, 208, 60],
+  // cabin trees
+  [340, 395, 45], [465, 395, 42],
+  // upper scattered
+  [50, 410, 48], [250, 345, 36], [310, 345, 32],
+  // middle pines
+  [210, 555, 48], [185, 595, 42], [195, 655, 50], [355, 555, 36],
+  [470, 560, 42], [490, 610, 38], [235, 690, 44], [460, 680, 42],
+  // lower pines
+  [50, 870, 56], [130, 750, 42], [155, 710, 36], [465, 810, 50],
+  [495, 850, 46], [420, 760, 40], [295, 770, 38],
+  // lake-edge pines
+  [30, 905, 42], [490, 1010, 36], [510, 935, 40],
+];
+
+const SCENE_TARGETS: TapTarget[] = [
+  { kind: 'cabin_top', type: 'rect',   x: 360, y: 340, w: 80,  h: 60 },
+  { kind: 'cabin_mid', type: 'rect',   x: 395, y: 470, w: 76,  h: 60 },
+  { kind: 'campfire',  type: 'circle', x: 270, y: 615, r: 28 },
+  { kind: 'boat',      type: 'rect',   x: 285, y: 950, w: 48,  h: 30 },
+  { kind: 'x_marker',  type: 'circle', x: 380, y: 760, r: 18 },
+  { kind: 'small_lake',type: 'rect',   x: 30,  y: 320, w: 190, h: 80 },
+  { kind: 'lake',      type: 'rect',   x: 40,  y: 905, w: 460, h: 145 },
+  { kind: 'river',     type: 'rect',   x: 75,  y: 420, w: 100, h: 480 },
+  // trees auto-added below
+  ...TREE_POSITIONS.map(([x, y]) => ({
+    kind: 'tree', type: 'circle' as const, x, y: y - 25, r: 22,
+  })),
+];
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Types
+// ╚══════════════════════════════════════════════════════════════════════════╝
 
 type Sprite = {
   id: string;
@@ -39,40 +115,36 @@ type Sprite = {
   peer?: string;
   timer: number;
   speech?: { text: string; expiresAt: number };
+  isDragging?: boolean;
 };
-
-const SPEECH_LINES = [
-  '好渴啊…想喝水',
-  '今天天气真好',
-  '宝藏到底在哪里？',
-  '蝴蝶蝴蝶~',
-  '走累了，歇会儿',
-  '我闻到饼干味了',
-  '你看到我的尾巴了吗？',
-  '嗨~',
-  '好困哦 zzz',
-  '刚才那只好凶！',
-  '山好高啊',
-  '我今天好开心',
-  '肚子咕咕叫',
-  '想去看湖',
-  '咦，是月亮？',
-  '鱼鱼鱼！',
-  '想吃西瓜',
-  '主人在干嘛',
-  '公园真大',
-  '想跟你聊天',
-];
 
 type Fx = {
   uid: string;
   x: number;
   y: number;
-  kind: 'friendly' | 'fight';
+  kind: 'friendly' | 'fight' | 'tap-heart';
 };
+
+type SceneFx = {
+  uid: string;
+  kind: 'bird' | 'ripple' | 'fish' | 'fire-burst' | 'dig';
+  x: number;
+  y: number;
+  expiresAt: number;
+};
+
+type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
+type Weather = 'sunny' | 'cloudy' | 'rain';
+
+type Transform = { tx: number; ty: number; zoom: number };
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Pure helpers
+// ╚══════════════════════════════════════════════════════════════════════════╝
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const randInt = (a: number, b: number) => Math.floor(rand(a, b + 1));
+const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 function pickTarget(zone: Zone, cx: number, cy: number): { tx: number; ty: number } {
   const { minX, maxX, minY, maxY } = ZONE_CONFIG[zone];
@@ -83,6 +155,86 @@ function pickTarget(zone: Zone, cx: number, cy: number): { tx: number; ty: numbe
   }
   return { tx: rand(minX, maxX), ty: rand(minY, maxY) };
 }
+
+function hitTargetAt(targets: TapTarget[], x: number, y: number): TapTarget | null {
+  for (const t of targets) {
+    if (t.type === 'circle') {
+      if (Math.hypot(x - t.x, y - t.y) <= t.r) return t;
+    } else {
+      if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return t;
+    }
+  }
+  return null;
+}
+
+function hitTestAnimal(sprites: Sprite[], sceneX: number, sceneY: number): Sprite | null {
+  let closest: Sprite | null = null;
+  let closestD = ANIMAL_HIT_R;
+  for (const sp of sprites) {
+    const cy = sp.y - ANIMAL_SIZE / 2;
+    const d = Math.hypot(sceneX - sp.x, sceneY - cy);
+    if (d <= closestD) { closest = sp; closestD = d; }
+  }
+  return closest;
+}
+
+function getTimeOfDay(): TimeOfDay {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 7) return 'dawn';
+  if (h >= 7 && h < 17) return 'day';
+  if (h >= 17 && h < 19) return 'dusk';
+  return 'night';
+}
+
+function pickWeather(prev: Weather): Weather {
+  const r = Math.random();
+  if (r < 0.65) return 'sunny';
+  if (r < 0.9)  return 'cloudy';
+  return 'rain';
+}
+
+// ── Drag mood routing ──────────────────────────────────────────────────────
+
+function nearbyTarget(x: number, y: number): string | null {
+  // Returns the kind of nearby scene target, or null
+  // Lake (big and small) + fire + X
+  if (y >= 900 && x >= 40 && x <= 500) return 'lake';
+  if (y >= 320 && y <= 400 && x >= 30 && x <= 220) return 'small_lake';
+  if (Math.hypot(x - 270, y - 615) < 70) return 'fire';
+  if (Math.hypot(x - 380, y - 760) < 30) return 'x_marker';
+  if (x >= 75 && x <= 175 && y >= 420 && y <= 900) return 'river';
+  return null;
+}
+
+function pickDragLine(
+  startCtx: string | null,
+  endCtx: string | null,
+  startAction: Action,
+  weather: Weather,
+): string {
+  // 1. Destination matters most
+  if (endCtx === 'lake' || endCtx === 'small_lake' || endCtx === 'river') {
+    return pickRandom(DRAG_LINES.to_water);
+  }
+  if (endCtx === 'fire') return pickRandom(DRAG_LINES.to_fire);
+  if (endCtx === 'x_marker') return pickRandom(DRAG_LINES.to_x_marker);
+  // 2. Otherwise, why are they upset?
+  if (startCtx === 'lake' || startCtx === 'small_lake' || startCtx === 'river') {
+    return pickRandom(DRAG_LINES.taken_from_water);
+  }
+  if (startCtx === 'fire') return pickRandom(DRAG_LINES.taken_from_fire);
+  if (startAction === 'friendly' || startAction === 'fight') {
+    return pickRandom(DRAG_LINES.taken_from_interact);
+  }
+  // 3. Weather flavor
+  if (weather === 'rain' && Math.random() < 0.4) return pickRandom(DRAG_LINES.rain_extra);
+  // 4. Default
+  return pickRandom(DRAG_LINES.random);
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Init & tick
+// ╚══════════════════════════════════════════════════════════════════════════╝
 
 function initSprites(unlockedIds: string[], companionId: string | null): Sprite[] {
   const ordered = [
@@ -114,6 +266,7 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
 
   // 1. Countdown timers
   s = s.map(sp => {
+    if (sp.isDragging || sp.action === 'dragged') return sp;
     if ((sp.action === 'friendly' || sp.action === 'fight') && sp.timer > 0) {
       const t = sp.timer - 1;
       if (t === 0) {
@@ -132,13 +285,11 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
 
   // 2. Move walking animals
   s = s.map(sp => {
-    if (sp.action !== 'walking') return sp;
+    if (sp.action !== 'walking' || sp.isDragging) return sp;
     const dx = sp.targetX - sp.x;
     const dy = sp.targetY - sp.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 3) {
-      // Pick new target. Sometimes switch zones — but DON'T teleport.
-      // Just pick a target in the new zone and walk there naturally.
       let newZone = sp.zone;
       const rz = Math.random();
       if (sp.zone === 'upper' && rz < 0.18) newZone = 'middle';
@@ -162,8 +313,8 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
     };
   });
 
-  // 3. Check new interactions
-  const free = s.filter(sp => sp.action === 'walking' || sp.action === 'idle');
+  // 3. New interactions among walking/idle (skip dragging)
+  const free = s.filter(sp => !sp.isDragging && (sp.action === 'walking' || sp.action === 'idle'));
   outer:
   for (let i = 0; i < free.length; i++) {
     for (let j = i + 1; j < free.length; j++) {
@@ -187,7 +338,10 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
   return { sprites: s, newFx };
 }
 
-// ── Reusable SVG pieces ────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   SVG components
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 function Pine({ x, y, h = 60 }: { x: number; y: number; h?: number }) {
   const w = h * 0.42;
   return (
@@ -220,7 +374,7 @@ function Mountain({ x, y, w = 130, h = 130, snow = true }: { x: number; y: numbe
   );
 }
 
-function Cabin({ x, y, w = 64 }: { x: number; y: number; w?: number }) {
+function Cabin({ x, y, w = 64, lit = false }: { x: number; y: number; w?: number; lit?: boolean }) {
   const h = w * 0.78;
   return (
     <g>
@@ -234,7 +388,17 @@ function Cabin({ x, y, w = 64 }: { x: number; y: number; w?: number }) {
       <ellipse cx={x + w * 0.6 + 3} cy={y - h - h * 0.5} rx="4" ry="3" fill="#888076" opacity="0.7" />
       <rect x={x + w * 0.4} y={y - h * 0.55} width={w * 0.2} height={h * 0.55} fill="#3a2008" rx="1" />
       <rect x={x + w * 0.45} y={y - h * 0.42} width="3" height="3" rx="1" fill="#f8e040" />
-      <rect x={x + w * 0.1} y={y - h * 0.75} width={w * 0.22} height={h * 0.22} fill="#a8d8e0" stroke="#5a3a20" strokeWidth="1.5" rx="1" />
+      {/* Window — gets bright when lit */}
+      <rect
+        x={x + w * 0.1} y={y - h * 0.75}
+        width={w * 0.22} height={h * 0.22}
+        fill={lit ? '#fff0a0' : '#a8d8e0'}
+        stroke="#5a3a20" strokeWidth="1.5" rx="1"
+        style={{ transition: 'fill 0.25s' }}
+      />
+      {lit && (
+        <circle cx={x + w * 0.1 + w * 0.11} cy={y - h * 0.64} r={w * 0.32} fill="#fff0a0" opacity="0.35" />
+      )}
       <line x1={x + w * 0.1 + w * 0.11} y1={y - h * 0.75} x2={x + w * 0.1 + w * 0.11} y2={y - h * 0.53} stroke="#5a3a20" strokeWidth="0.8" />
     </g>
   );
@@ -255,26 +419,38 @@ function Tent({ x, y, h = 50, color = '#f0e4c8' }: { x: number; y: number; h?: n
   );
 }
 
-function Campfire({ x, y }: { x: number; y: number }) {
+function Campfire({ x, y, burst = false }: { x: number; y: number; burst?: boolean }) {
+  const scale = burst ? 1.7 : 1;
   return (
-    <g>
-      <ellipse cx={x} cy={y + 4} rx={22} ry={5} fill="#1a3008" opacity="0.3" />
-      <rect x={x - 20} y={y - 2} width="40" height="7" rx="2.5" fill="#5a3818" transform={`rotate(-12 ${x} ${y})`} />
-      <rect x={x - 18} y={y - 2} width="36" height="6" rx="2.5" fill="#7a4828" transform={`rotate(14 ${x} ${y})`} />
-      <path d={`M${x - 9} ${y - 4} Q${x - 14} ${y - 22} ${x - 5} ${y - 26} Q${x - 2} ${y - 16} ${x} ${y - 30} Q${x + 4} ${y - 18} ${x + 8} ${y - 24} Q${x + 13} ${y - 14} ${x + 9} ${y - 4} Z`} fill="#f47020" className="pk-flame" />
-      <path d={`M${x - 5} ${y - 4} Q${x - 7} ${y - 17} ${x - 2} ${y - 20} Q${x} ${y - 12} ${x + 2} ${y - 22} Q${x + 5} ${y - 16} ${x + 7} ${y - 18} Q${x + 7} ${y - 9} ${x + 5} ${y - 4} Z`} fill="#f8d040" className="pk-flame" />
+    <g transform={`translate(${x}, ${y})`}>
+      <ellipse cx={0} cy={4} rx={22} ry={5} fill="#1a3008" opacity="0.3" />
+      <rect x={-20} y={-2} width="40" height="7" rx="2.5" fill="#5a3818" transform={`rotate(-12)`} />
+      <rect x={-18} y={-2} width="36" height="6" rx="2.5" fill="#7a4828" transform={`rotate(14)`} />
+      <g style={{ transform: `scale(${scale})`, transformOrigin: 'center bottom', transition: 'transform 0.25s' }}>
+        <path d="M-9 -4 Q-14 -22 -5 -26 Q-2 -16 0 -30 Q4 -18 8 -24 Q13 -14 9 -4 Z" fill="#f47020" className="pk-flame" />
+        <path d="M-5 -4 Q-7 -17 -2 -20 Q0 -12 2 -22 Q5 -16 7 -18 Q7 -9 5 -4 Z" fill="#f8d040" className="pk-flame" />
+      </g>
+      {burst && (
+        <g>
+          {[-18, -8, 8, 18].map((dx, i) => (
+            <circle key={i} cx={dx} cy={-30} r="2.5" fill="#ffd040" className="pk-spark" style={{ animationDelay: `${i * 0.06}s` }} />
+          ))}
+        </g>
+      )}
     </g>
   );
 }
 
 function Boat({ x, y }: { x: number; y: number }) {
   return (
-    <g>
-      <ellipse cx={x + 18} cy={y + 14} rx={26} ry={3.5} fill="#1a3030" opacity="0.35" />
-      <path d={`M${x} ${y + 8} L${x + 36} ${y + 8} L${x + 31} ${y + 16} L${x + 5} ${y + 16} Z`} fill="#a06030" />
-      <rect x={x + 5} y={y + 6} width="26" height="3" rx="1" fill="#b87040" />
-      <line x1={x + 18} y1={y + 6} x2={x + 18} y2={y - 14} stroke="#5a3a20" strokeWidth="1.8" />
-      <polygon points={`${x + 18},${y - 14} ${x + 18},${y - 2} ${x + 32},${y - 8}`} fill="#d83828" />
+    <g style={{ transition: 'transform 4s cubic-bezier(0.4, 0, 0.6, 1)', transform: `translate(${x - 290}px, 0)` }}>
+      <g transform="translate(290, 970)">
+        <ellipse cx={18} cy={14 + (y - 970)} rx={26} ry={3.5} fill="#1a3030" opacity="0.35" />
+        <path d={`M0 ${8 + (y - 970)} L36 ${8 + (y - 970)} L31 ${16 + (y - 970)} L5 ${16 + (y - 970)} Z`} fill="#a06030" />
+        <rect x={5} y={6 + (y - 970)} width="26" height="3" rx="1" fill="#b87040" />
+        <line x1={18} y1={6 + (y - 970)} x2={18} y2={-14 + (y - 970)} stroke="#5a3a20" strokeWidth="1.8" />
+        <polygon points={`18,${-14 + (y - 970)} 18,${-2 + (y - 970)} 32,${-8 + (y - 970)}`} fill="#d83828" />
+      </g>
     </g>
   );
 }
@@ -300,8 +476,126 @@ function Rock({ x, y, w = 30 }: { x: number; y: number; w?: number }) {
   );
 }
 
-// ── Park scene (full map) ──────────────────────────────────────────────────
-function ParkSceneSVG() {
+// ── Scene FX SVG (rendered inside SceneFxLayer) ────────────────────────────
+
+function Bird({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="pk-bird" style={{ transform: `translate(${x}px, ${y}px)` }}>
+      <g className="pk-bird-fly">
+        <path d="M-7 0 Q-3 -5 0 0 Q3 -5 7 0" stroke="#2a3850" strokeWidth="2" fill="none" strokeLinecap="round" className="pk-bird-flap" />
+      </g>
+    </g>
+  );
+}
+
+function Ripple({ x, y }: { x: number; y: number }) {
+  return (
+    <g style={{ transform: `translate(${x}px, ${y}px)` }}>
+      {[0, 0.25, 0.5].map((delay, i) => (
+        <circle
+          key={i}
+          cx={0} cy={0}
+          r="6"
+          fill="none"
+          stroke="white"
+          strokeWidth="2"
+          opacity="0"
+          className="pk-ripple"
+          style={{ animationDelay: `${delay}s` }}
+        />
+      ))}
+    </g>
+  );
+}
+
+function FishJump({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="pk-fish" style={{ transform: `translate(${x}px, ${y}px)` }}>
+      <g className="pk-fish-arc">
+        <ellipse cx={0} cy={0} rx="8" ry="4" fill="#5a9ad0" />
+        <polygon points="-8,0 -14,-4 -14,4" fill="#3e7ab0" />
+        <circle cx={4} cy={-1} r="1.2" fill="white" />
+      </g>
+      {/* splash */}
+      <g className="pk-fish-splash">
+        {[0, 1, 2].map(i => (
+          <ellipse key={i} cx={(i - 1) * 6} cy={4} rx={2 - i * 0.4} ry={1.5} fill="white" opacity="0.7" />
+        ))}
+      </g>
+    </g>
+  );
+}
+
+function DigFx({ x, y }: { x: number; y: number }) {
+  const items = ['✨', '💰', '⭐', '✨'];
+  return (
+    <g style={{ transform: `translate(${x}px, ${y}px)` }}>
+      <foreignObject x={-100} y={-50} width="200" height="80" style={{ overflow: 'visible' }}>
+        <div style={{ position: 'relative', width: 200, height: 80 }}>
+          {items.map((it, i) => (
+            <span
+              key={i}
+              style={{
+                position: 'absolute',
+                left: 100 + (i - 1.5) * 26,
+                top: 40,
+                fontSize: 22,
+                transform: 'translate(-50%,-50%)',
+                animationDelay: `${i * 0.09}s`,
+                animation: 'pk-fx-rise 1.9s ease-out forwards',
+                opacity: 0,
+              }}
+            >
+              {it}
+            </span>
+          ))}
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   ParkSceneSVG (background)
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+type SceneProps = {
+  timeOfDay: TimeOfDay;
+  weather: Weather;
+  cabinLit: { top: boolean; mid: boolean };
+  boatX: number;
+  fireBurstAt: number | null;
+};
+
+function ParkSceneSVG({ timeOfDay, weather, cabinLit, boatX, fireBurstAt }: SceneProps) {
+  // sky gradients per time of day
+  const skyStops = {
+    dawn:  ['#ffd6c0', '#fbe8c0'],
+    day:   ['#cae9f6', '#a8d850'],
+    dusk:  ['#ff9a5a', '#e8c46a'],
+    night: ['#0e1a3c', '#1f2c5a'],
+  }[timeOfDay];
+  const grassStops = {
+    dawn:  ['#9ec85a', '#7eb538', '#609d28'],
+    day:   ['#a8d850', '#88c440', '#6cab30'],
+    dusk:  ['#7aa848', '#5a8c30', '#456e22'],
+    night: ['#2a4630', '#1f3625', '#172a1d'],
+  }[timeOfDay];
+
+  const overlayColor = {
+    dawn:  null,
+    day:   null,
+    dusk:  'rgba(255, 130, 80, 0.16)',
+    night: 'rgba(15, 25, 70, 0.42)',
+  }[timeOfDay];
+
+  const isNight = timeOfDay === 'night';
+  const isDawn = timeOfDay === 'dawn';
+  const isDusk = timeOfDay === 'dusk';
+
+  // Fire burst flag — adds a class when set
+  const fireBurst = fireBurstAt !== null && Date.now() < fireBurstAt;
+
   return (
     <svg
       viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
@@ -312,55 +606,95 @@ function ParkSceneSVG() {
     >
       <defs>
         <linearGradient id="pk-grass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a8d850" />
-          <stop offset="40%" stopColor="#88c440" />
-          <stop offset="100%" stopColor="#6cab30" />
+          <stop offset="0%" stopColor={grassStops[0]} />
+          <stop offset="40%" stopColor={grassStops[1]} />
+          <stop offset="100%" stopColor={grassStops[2]} />
         </linearGradient>
         <linearGradient id="pk-lake" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#7adcf0" />
-          <stop offset="100%" stopColor="#3eaad4" />
-        </linearGradient>
-        <linearGradient id="pk-river" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6ad0e8" />
-          <stop offset="50%" stopColor="#8eddf0" />
-          <stop offset="100%" stopColor="#6ad0e8" />
+          <stop offset="0%" stopColor={isNight ? '#3a5a90' : '#7adcf0'} />
+          <stop offset="100%" stopColor={isNight ? '#1a2e58' : '#3eaad4'} />
         </linearGradient>
         <linearGradient id="pk-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#cae9f6" />
-          <stop offset="100%" stopColor="#a8d850" />
+          <stop offset="0%" stopColor={skyStops[0]} />
+          <stop offset="100%" stopColor={skyStops[1]} />
         </linearGradient>
       </defs>
 
-      {/* Extended grass (bleeds beyond scene edges so screen never shows frame) */}
+      {/* Extended grass + sky (bleed past edges) */}
       <rect x={-400} y={-400} width={SCENE_W + 800} height={SCENE_H + 800} fill="url(#pk-grass)" />
-
-      {/* Extended sky at top */}
       <rect x={-400} y={-400} width={SCENE_W + 800} height={570} fill="url(#pk-sky)" />
 
-      {/* ══════════════════════════════════════════
-          TOP — MOUNTAINS (drawn BEFORE pines so trees overlap them)
-      ══════════════════════════════════════════ */}
+      {/* Stars (night) */}
+      {isNight && (
+        <g>
+          {[
+            [60, 60], [120, 90], [200, 50], [280, 80], [340, 50],
+            [400, 75], [460, 55], [510, 95], [40, 110], [180, 130],
+            [330, 130], [490, 130],
+          ].map(([sx, sy], i) => (
+            <circle key={`st-${i}`} cx={sx} cy={sy} r={i % 3 === 0 ? 1.6 : 1} fill="white" className="pk-twinkle" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+          {/* Moon */}
+          <g>
+            <circle cx={420} cy={100} r={28} fill="#f8f0d0" />
+            <circle cx={414} cy={94} r={22} fill="#fffcec" />
+            <circle cx={410} cy={92} r={4} fill="#e8dcb8" opacity="0.7" />
+            <circle cx={422} cy={104} r={3} fill="#e8dcb8" opacity="0.6" />
+          </g>
+        </g>
+      )}
+
+      {/* Sun (dawn/dusk) */}
+      {(isDawn || isDusk) && (
+        <g>
+          <circle cx={isDawn ? 130 : 430} cy={isDawn ? 130 : 110} r={isDusk ? 36 : 30} fill={isDusk ? '#ff9050' : '#ffd060'} opacity="0.85" />
+          <circle cx={isDawn ? 130 : 430} cy={isDawn ? 130 : 110} r={isDusk ? 28 : 24} fill={isDusk ? '#ffb070' : '#fff4a0'} />
+        </g>
+      )}
+
+      {/* Day clouds */}
+      {timeOfDay === 'day' && !isNight && (
+        <g opacity={weather === 'cloudy' || weather === 'rain' ? 0 : 0.85}>
+          <ellipse cx="120" cy="80" rx="40" ry="12" fill="white" />
+          <ellipse cx="150" cy="75" rx="30" ry="10" fill="white" />
+          <ellipse cx="400" cy="110" rx="44" ry="14" fill="white" />
+          <ellipse cx="430" cy="105" rx="34" ry="11" fill="white" />
+        </g>
+      )}
+
+      {/* Extra clouds when cloudy/rain */}
+      {(weather === 'cloudy' || weather === 'rain') && (
+        <g opacity={weather === 'rain' ? 0.85 : 0.78}>
+          <ellipse cx="100" cy="85" rx="56" ry="18" fill={weather === 'rain' ? '#7a8898' : '#dde2e8'} />
+          <ellipse cx="140" cy="78" rx="42" ry="14" fill={weather === 'rain' ? '#7a8898' : '#dde2e8'} />
+          <ellipse cx="290" cy="60" rx="50" ry="16" fill={weather === 'rain' ? '#6e7c8c' : '#cdd5de'} />
+          <ellipse cx="320" cy="55" rx="36" ry="12" fill={weather === 'rain' ? '#6e7c8c' : '#cdd5de'} />
+          <ellipse cx="430" cy="100" rx="50" ry="17" fill={weather === 'rain' ? '#7a8898' : '#dde2e8'} />
+          <ellipse cx="470" cy="92" rx="40" ry="13" fill={weather === 'rain' ? '#7a8898' : '#dde2e8'} />
+        </g>
+      )}
+
+      {/* Mountains */}
       <Mountain x={120} y={175} w={140} h={130} />
       <Mountain x={280} y={175} w={180} h={170} />
       <Mountain x={430} y={175} w={150} h={140} />
-      {/* Extra side mountains so edges look natural */}
       <Mountain x={-20} y={175} w={120} h={110} />
       <Mountain x={560} y={175} w={130} h={120} />
 
-      {/* Pine forest line — in front of mountains, extends past the edges */}
+      {/* Pine forest line */}
       {[-30, 20, 70, 120, 170, 220, 270, 320, 370, 420, 470, 510, 560, 600].map((x, i) => (
         <Pine key={`tp-${i}`} x={x} y={208} h={44 + (i % 3) * 10} />
       ))}
 
-      {/* Grass tufts/details upper meadow */}
+      {/* Grass tufts */}
       {[
         [80, 230], [165, 250], [240, 230], [330, 245], [410, 235], [470, 260],
         [100, 280], [195, 280], [280, 290], [365, 280], [445, 290],
       ].map(([x, y], i) => (
-        <ellipse key={`gt-${i}`} cx={x} cy={y} rx="14" ry="4" fill="#6cab30" opacity="0.55" />
+        <ellipse key={`gt-${i}`} cx={x} cy={y} rx="14" ry="4" fill={isNight ? '#2a3826' : '#6cab30'} opacity="0.55" />
       ))}
 
-      {/* Small flowers in upper meadow */}
+      {/* Upper flowers */}
       {[[140, 245], [350, 260], [220, 305], [400, 300]].map(([x, y], i) => (
         <g key={`fl-${i}`}>
           <circle cx={x} cy={y} r="3" fill="#ff80a8" />
@@ -369,18 +703,14 @@ function ParkSceneSVG() {
         </g>
       ))}
 
-      {/* ══════════════════════════════════════════
-          UPPER — SMALL LAKE + CABIN
-      ══════════════════════════════════════════ */}
-
-      {/* Small lake (top-left) */}
+      {/* Small lake */}
       <g>
         <path d="M40 340 Q60 320 110 325 Q170 320 195 340 Q210 360 195 380 Q170 400 110 395 Q55 395 35 375 Q25 358 40 340 Z" fill="url(#pk-lake)" />
         <path d="M70 345 Q120 340 175 355" stroke="white" strokeWidth="1.5" fill="none" opacity="0.55" />
         <ellipse cx="100" cy="375" rx="22" ry="5" fill="white" opacity="0.3" />
       </g>
 
-      {/* Reeds around small lake */}
+      {/* Reeds */}
       {[180, 190, 200, 210, 35, 45, 55].map((x, i) => (
         <g key={`rd-${i}`}>
           <line x1={x} y1={i < 4 ? 348 : 345} x2={x} y2={i < 4 ? 332 : 328} stroke="#5a8828" strokeWidth="1.5" />
@@ -388,66 +718,43 @@ function ParkSceneSVG() {
         </g>
       ))}
 
-      {/* Cabin upper right */}
-      <Cabin x={365} y={400} w={70} />
+      {/* Upper cabin */}
+      <Cabin x={365} y={400} w={70} lit={cabinLit.top || isNight} />
       <Pine x={340} y={395} h={45} />
       <Pine x={465} y={395} h={42} />
 
-      {/* Pine forest scattered upper */}
+      {/* Upper scattered */}
       <Pine x={50} y={410} h={48} />
       <Pine x={250} y={345} h={36} />
       <Pine x={310} y={345} h={32} />
-
-      {/* Rocks upper */}
       <Rock x={80} y={415} w={28} />
       <Rock x={220} y={355} w={22} />
       <Rock x={490} y={395} w={26} />
 
-      {/* ══════════════════════════════════════════
-          RIVER — winding from upper lake to bottom lake
-      ══════════════════════════════════════════ */}
+      {/* River */}
       <path
         d="M155 395 Q145 430 130 460 Q115 500 95 545 Q80 600 95 660 Q115 720 100 780 Q85 845 130 905"
-        stroke="#5fc8e0"
-        strokeWidth="40"
-        fill="none"
-        strokeLinecap="round"
+        stroke={isNight ? '#3878a8' : '#5fc8e0'} strokeWidth="40" fill="none" strokeLinecap="round"
       />
       <path
         d="M155 395 Q145 430 130 460 Q115 500 95 545 Q80 600 95 660 Q115 720 100 780 Q85 845 130 905"
-        stroke="#a4e2f0"
-        strokeWidth="18"
-        fill="none"
-        strokeLinecap="round"
-        opacity="0.65"
+        stroke={isNight ? '#6098c0' : '#a4e2f0'} strokeWidth="18" fill="none" strokeLinecap="round" opacity="0.65"
       />
-      {/* River sparkles */}
       <ellipse cx="118" cy="490" rx="6" ry="2" fill="white" opacity="0.7" />
-      <ellipse cx="98" cy="600" rx="5" ry="2" fill="white" opacity="0.65" />
+      <ellipse cx="98"  cy="600" rx="5" ry="2" fill="white" opacity="0.65" />
       <ellipse cx="110" cy="740" rx="6" ry="2" fill="white" opacity="0.7" />
-      <ellipse cx="92" cy="820" rx="5" ry="2" fill="white" opacity="0.6" />
+      <ellipse cx="92"  cy="820" rx="5" ry="2" fill="white" opacity="0.6" />
 
-      {/* ══════════════════════════════════════════
-          MIDDLE — CAMPFIRE + TENTS + CABIN
-      ══════════════════════════════════════════ */}
-
-      {/* Open meadow background (slightly lighter) */}
-      <ellipse cx="295" cy="600" rx="220" ry="135" fill="#b0e060" opacity="0.4" />
-
-      {/* Path / dirt circle around campfire */}
+      {/* Middle meadow + campfire area */}
+      <ellipse cx="295" cy="600" rx="220" ry="135" fill={isNight ? '#1e3a26' : '#b0e060'} opacity="0.4" />
       <ellipse cx="270" cy="610" rx="60" ry="40" fill="#d4b070" opacity="0.55" />
+      <Campfire x={270} y={620} burst={fireBurst} />
 
-      {/* Campfire at center of middle area */}
-      <Campfire x={270} y={620} />
-
-      {/* Tents */}
       <Tent x={340} y={605} h={52} />
       <Tent x={385} y={610} h={45} color="#e8d0a4" />
 
-      {/* Big cabin right */}
-      <Cabin x={400} y={530} w={66} />
+      <Cabin x={400} y={530} w={66} lit={cabinLit.mid || isNight} />
 
-      {/* Pine cluster around middle area */}
       <Pine x={210} y={555} h={48} />
       <Pine x={185} y={595} h={42} />
       <Pine x={195} y={655} h={50} />
@@ -457,23 +764,17 @@ function ParkSceneSVG() {
       <Pine x={235} y={690} h={44} />
       <Pine x={460} y={680} h={42} />
 
-      {/* Decorative bushes */}
       <Bush x={310} y={560} r={11} />
       <Bush x={420} y={690} r={13} />
       <Bush x={170} y={520} r={12} />
 
-      {/* Logs near campfire */}
       <rect x="220" y="650" width="30" height="6" rx="3" fill="#7a4a28" />
       <rect x="300" y="655" width="28" height="6" rx="3" fill="#7a4a28" transform="rotate(8 314 658)" />
 
-      {/* Small rocks */}
       <Rock x={150} y={730} w={24} />
       <Rock x={395} y={720} w={20} />
 
-      {/* ══════════════════════════════════════════
-          LOWER — FOREST + MEADOW
-      ══════════════════════════════════════════ */}
-
+      {/* Lower forest */}
       <Pine x={50} y={870} h={56} />
       <Pine x={130} y={750} h={42} />
       <Pine x={155} y={710} h={36} />
@@ -482,13 +783,11 @@ function ParkSceneSVG() {
       <Pine x={420} y={760} h={40} />
       <Pine x={295} y={770} h={38} />
 
-      {/* Bushes */}
       <Bush x={205} y={810} r={11} />
       <Bush x={340} y={830} r={12} />
       <Bush x={395} y={870} r={11} />
       <Bush x={235} y={870} r={10} />
 
-      {/* Flower patches */}
       {[[175, 770], [310, 800], [430, 880]].map(([x, y], i) => (
         <g key={`fl2-${i}`}>
           <circle cx={x} cy={y} r="3.5" fill="#ff80a8" />
@@ -498,63 +797,108 @@ function ParkSceneSVG() {
         </g>
       ))}
 
-      {/* Treasure X marker */}
+      {/* X marker */}
       <g transform="translate(380, 760)">
         <line x1="-7" y1="-7" x2="7" y2="7" stroke="#d83828" strokeWidth="3.5" strokeLinecap="round" />
         <line x1="7" y1="-7" x2="-7" y2="7" stroke="#d83828" strokeWidth="3.5" strokeLinecap="round" />
       </g>
-
-      {/* ══════════════════════════════════════════
-          BOTTOM — BIG LAKE
-      ══════════════════════════════════════════ */}
 
       {/* Big lake */}
       <path
         d="M50 920 Q70 895 150 905 Q280 895 380 915 Q470 925 490 960 Q500 1000 470 1030 Q390 1050 280 1045 Q150 1050 80 1035 Q40 1015 35 980 Q30 945 50 920 Z"
         fill="url(#pk-lake)"
       />
-      {/* Lake highlights */}
       <path d="M90 935 Q200 925 350 940" stroke="white" strokeWidth="2" fill="none" opacity="0.5" />
       <ellipse cx="180" cy="990" rx="50" ry="8" fill="white" opacity="0.32" />
       <ellipse cx="350" cy="1010" rx="38" ry="6" fill="white" opacity="0.28" />
-      {/* Ripples */}
       <ellipse cx="120" cy="970" rx="15" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
       <ellipse cx="400" cy="980" rx="20" ry="4" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
       <ellipse cx="260" cy="1020" rx="18" ry="3" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
 
-      {/* Boat */}
-      <Boat x={290} y={970} />
+      <Boat x={boatX} y={970} />
 
-      {/* Dock (small wooden pier) */}
       <rect x="65" y="908" width="40" height="14" fill="#a06834" />
       <rect x="65" y="906" width="40" height="3" fill="#c08858" />
       <rect x="68" y="918" width="4" height="10" fill="#7a4824" />
       <rect x="100" y="918" width="4" height="10" fill="#7a4824" />
 
-      {/* Lily pads */}
       <ellipse cx="410" cy="945" rx="9" ry="6" fill="#5a9a30" />
       <ellipse cx="425" cy="950" rx="6" ry="4" fill="#6ab040" />
       <ellipse cx="430" cy="940" rx="3" ry="2" fill="#f078a8" />
 
-      {/* Pine trees around lake edges */}
       <Pine x={30} y={905} h={42} />
       <Pine x={490} y={1010} h={36} />
       <Pine x={510} y={935} h={40} />
 
+      {/* Fireflies (night) */}
+      {isNight && (
+        <g>
+          {[
+            [180, 480], [220, 540], [280, 510], [340, 570], [400, 530],
+            [240, 660], [320, 700], [180, 720], [380, 680],
+          ].map(([fx, fy], i) => (
+            <circle
+              key={`fly-${i}`}
+              cx={fx} cy={fy} r="2.2"
+              fill="#fff080"
+              className="pk-firefly"
+              style={{ animationDelay: `${i * 0.4}s` }}
+            />
+          ))}
+        </g>
+      )}
+
+      {/* Rain */}
+      {weather === 'rain' && (
+        <g>
+          {Array.from({ length: 36 }, (_, i) => {
+            const x = (i * 23) % SCENE_W;
+            const delay = (i % 9) * 0.12;
+            return (
+              <line
+                key={`r-${i}`}
+                x1={x} y1="-30" x2={x - 6} y2="0"
+                stroke="#c4dde8"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                opacity="0.65"
+                className="pk-rain"
+                style={{ animationDelay: `${delay}s` }}
+              />
+            );
+          })}
+        </g>
+      )}
+
+      {/* Tint overlay for dusk/night */}
+      {overlayColor && (
+        <rect x={-400} y={-400} width={SCENE_W + 800} height={SCENE_H + 800} fill={overlayColor} style={{ pointerEvents: 'none' }} />
+      )}
+
       <style>{`
         .pk-flame { transform-origin: center bottom; animation: pk-flicker 0.9s ease-in-out infinite alternate; }
         @keyframes pk-flicker { 0%{transform:scale(1) translateY(0)} 100%{transform:scale(1.08,1.12) translateY(-1px)} }
+        .pk-twinkle { animation: pk-twinkle 2.2s ease-in-out infinite; }
+        @keyframes pk-twinkle { 0%,100%{opacity:0.6} 50%{opacity:1} }
+        .pk-firefly { animation: pk-firefly 2.2s ease-in-out infinite; }
+        @keyframes pk-firefly { 0%,100%{opacity:0.15;transform:translate(0,0) scale(0.9)} 50%{opacity:1;transform:translate(6px,-4px) scale(1.2)} }
+        .pk-rain { animation: pk-rain-drop 0.95s linear infinite; }
+        @keyframes pk-rain-drop { 0%{transform:translate(0,0);opacity:0.6} 100%{transform:translate(60px,1100px);opacity:0} }
+        .pk-spark { animation: pk-spark-rise 0.7s ease-out forwards; }
+        @keyframes pk-spark-rise { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-24px) scale(0.3)} }
       `}</style>
     </svg>
   );
 }
 
-// ── Animal sprite ──────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Animal sprite + speech
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 function AnimalSprite({ sprite }: { sprite: Sprite }) {
   const size = ANIMAL_SIZE;
-  const isWalking = sprite.action === 'walking';
+  const isWalking = sprite.action === 'walking' && !sprite.isDragging;
   const isFight = sprite.action === 'fight';
-  // Characters in this codebase face LEFT by default; flip when moving right
   const flipX = sprite.facing === 'right' ? -1 : 1;
 
   return (
@@ -565,10 +909,14 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
         top: sprite.y - size,
         width: size,
         height: size,
-        zIndex: Math.round(sprite.y),
-        transition: 'left 0.65s linear, top 0.65s linear',
+        zIndex: sprite.isDragging ? 99999 : Math.round(sprite.y),
+        transition: sprite.isDragging ? 'none' : 'left 0.65s linear, top 0.65s linear',
         pointerEvents: 'none',
-        filter: 'drop-shadow(0 3px 3px rgba(0,40,0,0.3))',
+        filter: sprite.isDragging
+          ? 'drop-shadow(0 14px 8px rgba(0,0,0,0.3))'
+          : 'drop-shadow(0 3px 3px rgba(0,40,0,0.3))',
+        transform: sprite.isDragging ? 'scale(1.08)' : 'none',
+        transformOrigin: 'center',
       }}
     >
       {sprite.speech && (
@@ -614,9 +962,14 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
   );
 }
 
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Interaction & scene FX layers
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 const FX_ITEMS: Record<string, string[]> = {
   friendly: ['💛', '💚', '🧡', '💛'],
   fight:    ['✨', '💥', '⭐', '✨'],
+  'tap-heart': ['❤️', '💕', '❤️'],
 };
 
 function InteractionFx({ fx }: { fx: Fx }) {
@@ -627,11 +980,11 @@ function InteractionFx({ fx }: { fx: Fx }) {
           key={i}
           style={{
             position: 'absolute',
-            fontSize: 22,
-            left: (i - 1.5) * 26,
+            fontSize: fx.kind === 'tap-heart' ? 18 : 22,
+            left: (i - (FX_ITEMS[fx.kind].length - 1) / 2) * 22,
             transform: 'translate(-50%, -50%)',
             animationDelay: `${i * 0.09}s`,
-            animation: 'pk-fx-rise 1.9s ease-out forwards',
+            animation: 'pk-fx-rise 1.7s ease-out forwards',
             opacity: 0,
           }}
         >
@@ -642,8 +995,52 @@ function InteractionFx({ fx }: { fx: Fx }) {
   );
 }
 
-// ── Zoom / pan ─────────────────────────────────────────────────────────────
-type Transform = { tx: number; ty: number; zoom: number };
+function SceneFxLayer({ sceneFx }: { sceneFx: SceneFx[] }) {
+  return (
+    <svg
+      viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
+      width={SCENE_W}
+      height={SCENE_H}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible' }}
+      aria-hidden
+    >
+      {sceneFx.map(fx => {
+        if (fx.kind === 'bird') return <Bird key={fx.uid} x={fx.x} y={fx.y} />;
+        if (fx.kind === 'ripple') return <Ripple key={fx.uid} x={fx.x} y={fx.y} />;
+        if (fx.kind === 'fish') return <FishJump key={fx.uid} x={fx.x} y={fx.y} />;
+        if (fx.kind === 'dig') return <DigFx key={fx.uid} x={fx.x} y={fx.y} />;
+        return null;
+      })}
+      <style>{`
+        .pk-bird { animation: pk-bird-fly 3.4s cubic-bezier(0.3, 0.5, 0.6, 1) forwards; }
+        @keyframes pk-bird-fly {
+          0%   { transform: translate(var(--bx, 0px), var(--by, 0px)) translate(0, 0) scale(0.7); opacity: 0; }
+          15%  { opacity: 1; }
+          100% { transform: translate(var(--bx, 0px), var(--by, 0px)) translate(-200px, -260px) scale(0.4); opacity: 0; }
+        }
+        .pk-bird-flap { animation: pk-bird-flap 0.22s ease-in-out infinite alternate; transform-origin: center; }
+        @keyframes pk-bird-flap { 0%{transform:scaleY(1)} 100%{transform:scaleY(0.4)} }
+
+        .pk-ripple { animation: pk-ripple-grow 1.8s ease-out forwards; }
+        @keyframes pk-ripple-grow { 0%{r:6;opacity:0.8} 100%{r:48;opacity:0} }
+
+        .pk-fish-arc { animation: pk-fish-arc 1s ease-out forwards; }
+        @keyframes pk-fish-arc {
+          0%   { transform: translate(0, 14px) rotate(-20deg); opacity: 1; }
+          35%  { transform: translate(8px, -20px) rotate(20deg); opacity: 1; }
+          70%  { transform: translate(16px, -8px) rotate(60deg); opacity: 1; }
+          100% { transform: translate(20px, 14px) rotate(90deg); opacity: 0; }
+        }
+        .pk-fish-splash { animation: pk-fish-splash 1s ease-out forwards; }
+        @keyframes pk-fish-splash { 0%{opacity:0.8;transform:scale(0.4)} 60%{opacity:0.7;transform:scale(1.2)} 100%{opacity:0;transform:scale(0.4)} }
+      `}</style>
+    </svg>
+  );
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Zoom / pan
+// ╚══════════════════════════════════════════════════════════════════════════╝
 
 function clampTransform(tx: number, ty: number, zoom: number, cw: number, ch: number): Transform {
   const sw = SCENE_W * zoom, sh = SCENE_H * zoom;
@@ -655,7 +1052,6 @@ function clampTransform(tx: number, ty: number, zoom: number, cw: number, ch: nu
   };
 }
 
-// Default fit: fill the screen edge-to-edge (some content may be clipped at edges)
 function computeFit(cw: number, ch: number): Transform {
   const fz = Math.max(cw / SCENE_W, ch / SCENE_H);
   const tx = (cw - SCENE_W * fz) / 2;
@@ -663,7 +1059,10 @@ function computeFit(cw: number, ch: number): Transform {
   return { tx, ty, zoom: fz };
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════════════╗
+//   Main page
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 export default function Park() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -681,11 +1080,7 @@ export default function Park() {
     setTransformState(t);
   }, []);
 
-  const fitTransform = useCallback(() => {
-    const cw = window.innerWidth;
-    const ch = window.innerHeight;
-    return computeFit(cw, ch);
-  }, []);
+  const fitTransform = useCallback(() => computeFit(window.innerWidth, window.innerHeight), []);
 
   // Resize listener
   useEffect(() => {
@@ -694,9 +1089,107 @@ export default function Park() {
     return () => window.removeEventListener('resize', onResize);
   }, [updateTransform]);
 
-  // ── Touch handling: pan + pinch + custom double-tap ──────────────────────
+  // ── Animal state ──────────────────────────────────────────────────────────
+  const { unlockedIds, companionId } = useMemo(() => ({
+    unlockedIds: getUnlockedIds('a-kiwi'),
+    companionId: getCompanionId(),
+  }), []);
+
+  const [sprites, setSprites] = useState<Sprite[]>(() => initSprites(unlockedIds, companionId));
+  const spritesRef = useRef(sprites);
+  useEffect(() => { spritesRef.current = sprites; }, [sprites]);
+
+  const [fxList, setFxList] = useState<Fx[]>([]);
+  const [sceneFxList, setSceneFxList] = useState<SceneFx[]>([]);
+
+  // Day/night and weather
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(() => getTimeOfDay());
+  const [weather, setWeather] = useState<Weather>('sunny');
+  const weatherRef = useRef(weather);
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
+
+  // Scene element states
+  const [cabinLit, setCabinLit] = useState<{ top: boolean; mid: boolean }>({ top: false, mid: false });
+  const [boatX, setBoatX] = useState(290);
+  const [fireBurstAt, setFireBurstAt] = useState<number | null>(null);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const addFx = useCallback((kind: Fx['kind'], x: number, y: number) => {
+    const uid = `fx-${Date.now()}-${Math.random()}`;
+    setFxList(prev => [...prev, { uid, kind, x, y }]);
+    setTimeout(() => setFxList(prev => prev.filter(f => f.uid !== uid)), 2200);
+  }, []);
+
+  const addSceneFx = useCallback((kind: SceneFx['kind'], x: number, y: number, duration: number) => {
+    const uid = `sfx-${Date.now()}-${Math.random()}`;
+    setSceneFxList(prev => [...prev, { uid, kind, x, y, expiresAt: Date.now() + duration }]);
+    setTimeout(() => setSceneFxList(prev => prev.filter(f => f.uid !== uid)), duration + 50);
+  }, []);
+
+  const setSpeech = useCallback((animalId: string, text: string, durationMs = 3200) => {
+    setSprites(prev => prev.map(sp =>
+      sp.id === animalId
+        ? { ...sp, speech: { text, expiresAt: Date.now() + durationMs } }
+        : sp,
+    ));
+  }, []);
+
+  // ── Tap on animal ─────────────────────────────────────────────────────────
+  const handleAnimalTap = useCallback((sprite: Sprite) => {
+    setSpeech(sprite.id, pickRandom(TAP_LINES));
+    addFx('tap-heart', sprite.x, sprite.y - ANIMAL_SIZE);
+    // briefly pause
+    setSprites(prev => prev.map(sp =>
+      sp.id === sprite.id ? { ...sp, action: 'idle', timer: 3 } : sp,
+    ));
+  }, [setSpeech, addFx]);
+
+  // ── Scene tap ─────────────────────────────────────────────────────────────
+  const handleSceneTap = useCallback((target: TapTarget, x: number, y: number) => {
+    switch (target.kind) {
+      case 'tree': {
+        if (Math.random() < 0.45) addSceneFx('bird', x, y - 10, 3400);
+        break;
+      }
+      case 'campfire': {
+        setFireBurstAt(Date.now() + 700);
+        setTimeout(() => setFireBurstAt(null), 750);
+        break;
+      }
+      case 'cabin_top':
+      case 'cabin_mid': {
+        const k = target.kind === 'cabin_top' ? 'top' : 'mid';
+        setCabinLit(prev => ({ ...prev, [k]: true }));
+        setTimeout(() => setCabinLit(prev => ({ ...prev, [k]: false })), 1800);
+        break;
+      }
+      case 'boat': {
+        const newX = boatX > 320 ? 290 : 370;
+        setBoatX(newX);
+        break;
+      }
+      case 'lake':
+      case 'small_lake': {
+        addSceneFx('ripple', x, y, 1900);
+        break;
+      }
+      case 'river': {
+        addSceneFx('fish', x, y, 1100);
+        break;
+      }
+      case 'x_marker': {
+        addSceneFx('dig', 380, 760, 2200);
+        // Random animal nearby reacts
+        const nearby = spritesRef.current.find(sp => Math.hypot(sp.x - 380, sp.y - 760) < 120);
+        if (nearby) setSpeech(nearby.id, '叮~挖到一颗小石头！', 3200);
+        break;
+      }
+    }
+  }, [addSceneFx, boatX, setSpeech]);
+
+  // ── Touch routing ─────────────────────────────────────────────────────────
   const touchRef = useRef({
-    type: 'none' as 'none' | 'drag' | 'pinch',
+    type: 'none' as 'none' | 'pan' | 'pinch' | 'animal-tap' | 'animal-drag',
     startT: { tx: 0, ty: 0, zoom: 1 },
     p1: { x: 0, y: 0 },
     startDist: 0,
@@ -704,7 +1197,15 @@ export default function Park() {
     tapStart: { time: 0, x: 0, y: 0 },
     lastTapTime: 0,
     moved: false,
+    dragAnimalId: '',
+    dragStartCtx: null as string | null,
+    dragStartAction: 'walking' as Action,
   });
+
+  const toScene = (clientX: number, clientY: number) => {
+    const { tx, ty, zoom } = transformRef.current;
+    return { sceneX: (clientX - tx) / zoom, sceneY: (clientY - ty) / zoom };
+  };
 
   const doReset = useCallback(() => {
     setBtnTransition(true);
@@ -717,9 +1218,20 @@ export default function Park() {
     tr.startT = { ...transformRef.current };
     tr.moved = false;
     if (e.touches.length === 1) {
-      tr.type = 'drag';
-      tr.p1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      tr.tapStart = { time: Date.now(), x: e.touches[0].clientX, y: e.touches[0].clientY };
+      const t = e.touches[0];
+      tr.p1 = { x: t.clientX, y: t.clientY };
+      tr.tapStart = { time: Date.now(), x: t.clientX, y: t.clientY };
+      // Hit-test animal
+      const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
+      const hit = hitTestAnimal(spritesRef.current, sceneX, sceneY);
+      if (hit) {
+        tr.type = 'animal-tap';
+        tr.dragAnimalId = hit.id;
+        tr.dragStartCtx = nearbyTarget(hit.x, hit.y);
+        tr.dragStartAction = hit.action;
+      } else {
+        tr.type = 'pan';
+      }
     } else if (e.touches.length >= 2) {
       const t1 = e.touches[0], t2 = e.touches[1];
       tr.type = 'pinch';
@@ -735,7 +1247,26 @@ export default function Park() {
     const cw = window.innerWidth, ch = window.innerHeight;
     const { startT, p1, startDist, startMid } = tr;
 
-    if (tr.type === 'drag' && e.touches.length === 1) {
+    if ((tr.type === 'animal-tap' || tr.type === 'animal-drag') && e.touches.length === 1) {
+      const t = e.touches[0];
+      const dx = t.clientX - p1.x;
+      const dy = t.clientY - p1.y;
+      // Upgrade to drag once finger moves enough
+      if (tr.type === 'animal-tap' && Math.hypot(dx, dy) > 8) {
+        tr.type = 'animal-drag';
+        // Mark sprite as dragging
+        setSprites(prev => prev.map(sp =>
+          sp.id === tr.dragAnimalId ? { ...sp, isDragging: true, action: 'dragged', speech: undefined } : sp,
+        ));
+      }
+      if (tr.type === 'animal-drag') {
+        const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
+        setSprites(prev => prev.map(sp =>
+          sp.id === tr.dragAnimalId ? { ...sp, x: sceneX, y: sceneY } : sp,
+        ));
+        tr.moved = true;
+      }
+    } else if (tr.type === 'pan' && e.touches.length === 1) {
       const dx = e.touches[0].clientX - p1.x;
       const dy = e.touches[0].clientY - p1.y;
       if (Math.hypot(dx, dy) > 6) tr.moved = true;
@@ -755,26 +1286,56 @@ export default function Park() {
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     const tr = touchRef.current;
-    const wasDrag = tr.type === 'drag';
+    const wasType = tr.type;
     tr.type = 'none';
 
-    // Double-tap detection (single quick tap without movement)
-    if (wasDrag && !tr.moved && e.changedTouches.length === 1) {
+    if (wasType === 'animal-tap' && e.changedTouches.length === 1) {
+      // Tap on animal
+      const sprite = spritesRef.current.find(sp => sp.id === tr.dragAnimalId);
+      if (sprite) handleAnimalTap(sprite);
+      return;
+    }
+    if (wasType === 'animal-drag' && e.changedTouches.length === 1) {
+      // Drop animal — pick mood line
+      const sprite = spritesRef.current.find(sp => sp.id === tr.dragAnimalId);
+      if (sprite) {
+        const endCtx = nearbyTarget(sprite.x, sprite.y);
+        const line = pickDragLine(tr.dragStartCtx, endCtx, tr.dragStartAction, weatherRef.current);
+        setSpeech(sprite.id, line, 3800);
+        // give it a fresh target, clear dragging
+        const newZone: Zone =
+          sprite.y < 380 ? 'upper' : sprite.y > 720 ? 'lower' : 'middle';
+        const { tx, ty } = pickTarget(newZone, sprite.x, sprite.y);
+        setSprites(prev => prev.map(sp =>
+          sp.id === sprite.id
+            ? { ...sp, isDragging: false, action: 'idle', timer: 4, zone: newZone, targetX: tx, targetY: ty }
+            : sp,
+        ));
+      }
+      return;
+    }
+    if (wasType === 'pan' && !tr.moved && e.changedTouches.length === 1) {
+      // It was a tap on empty/scene area
       const ct = e.changedTouches[0];
       const elapsed = Date.now() - tr.tapStart.time;
       const dx = ct.clientX - tr.tapStart.x;
       const dy = ct.clientY - tr.tapStart.y;
       if (elapsed < 280 && Math.hypot(dx, dy) < 12) {
+        // First check double-tap → reset
         const now = Date.now();
         if (now - tr.lastTapTime < 350) {
           doReset();
           tr.lastTapTime = 0;
-        } else {
-          tr.lastTapTime = now;
+          return;
         }
+        tr.lastTapTime = now;
+        // Hit-test scene
+        const { sceneX, sceneY } = toScene(ct.clientX, ct.clientY);
+        const target = hitTargetAt(SCENE_TARGETS, sceneX, sceneY);
+        if (target) handleSceneTap(target, sceneX, sceneY);
       }
     }
-  }, [doReset]);
+  }, [doReset, handleAnimalTap, handleSceneTap, setSpeech]);
 
   const handleZoom = useCallback((delta: number) => {
     const cw = window.innerWidth, ch = window.innerHeight;
@@ -787,15 +1348,7 @@ export default function Park() {
     setTimeout(() => setBtnTransition(false), 320);
   }, [updateTransform]);
 
-  // ── Animal state ──────────────────────────────────────────────────────────
-  const { unlockedIds, companionId } = useMemo(() => ({
-    unlockedIds: getUnlockedIds('a-kiwi'),
-    companionId: getCompanionId(),
-  }), []);
-
-  const [sprites, setSprites] = useState<Sprite[]>(() => initSprites(unlockedIds, companionId));
-  const [fxList, setFxList] = useState<Fx[]>([]);
-
+  // ── AI tick ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setSprites(prev => {
@@ -810,21 +1363,23 @@ export default function Park() {
     return () => clearInterval(interval);
   }, []);
 
-  // Speech bubble tick — periodically gives a random animal something to say
+  // ── Speech tick ───────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       setSprites(prev => {
-        // Clear expired speeches
         const cleaned = prev.map(sp =>
           sp.speech && sp.speech.expiresAt < now ? { ...sp, speech: undefined } : sp,
         );
-        // 50% chance to assign a new speech to an animal that isn't already speaking
         if (Math.random() < 0.5) {
-          const eligible = cleaned.filter(sp => !sp.speech);
+          const eligible = cleaned.filter(sp => !sp.speech && !sp.isDragging);
           if (eligible.length > 0) {
-            const chosen = eligible[Math.floor(Math.random() * eligible.length)];
-            const line = SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)];
+            const chosen = pickRandom(eligible);
+            // Pick from weather/time-aware pool
+            let pool: string[] = SPEECH_LINES;
+            if (weatherRef.current === 'rain' && Math.random() < 0.35) pool = RAIN_LINES;
+            else if (timeOfDay === 'night' && Math.random() < 0.3) pool = NIGHT_LINES;
+            const line = pickRandom(pool);
             return cleaned.map(sp =>
               sp.id === chosen.id
                 ? { ...sp, speech: { text: line, expiresAt: now + 3400 } }
@@ -835,6 +1390,20 @@ export default function Park() {
         return cleaned;
       });
     }, 2200);
+    return () => clearInterval(interval);
+  }, [timeOfDay]);
+
+  // ── Time of day tick ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(() => setTimeOfDay(getTimeOfDay()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Weather tick ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWeather(prev => pickWeather(prev));
+    }, 90_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -854,7 +1423,6 @@ export default function Park() {
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
-      {/* Scene */}
       <div
         style={{
           position: 'absolute',
@@ -865,7 +1433,14 @@ export default function Park() {
           transition: btnTransition ? 'transform 0.3s ease-out' : 'none',
         }}
       >
-        <ParkSceneSVG />
+        <ParkSceneSVG
+          timeOfDay={timeOfDay}
+          weather={weather}
+          cabinLit={cabinLit}
+          boatX={boatX}
+          fireBurstAt={fireBurstAt}
+        />
+        <SceneFxLayer sceneFx={sceneFxList} />
         {sortedSprites.map(sp => <AnimalSprite key={sp.id} sprite={sp} />)}
         {fxList.map(fx => <InteractionFx key={fx.uid} fx={fx} />)}
       </div>
@@ -874,45 +1449,37 @@ export default function Park() {
       <button
         onClick={() => navigate(-1)}
         style={{
-          position: 'absolute',
-          top: 'max(16px, env(safe-area-inset-top))',
-          left: 16,
-          background: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(8px)',
-          border: 'none',
-          borderRadius: 999,
-          padding: '8px 16px',
-          fontSize: 14,
-          fontWeight: 600,
-          color: '#1a2638',
-          cursor: 'pointer',
-          zIndex: 50,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+          position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', left: 16,
+          background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)',
+          border: 'none', borderRadius: 999, padding: '8px 16px',
+          fontSize: 14, fontWeight: 600, color: '#1a2638',
+          cursor: 'pointer', zIndex: 50, boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
         }}
       >
         ← 返回
       </button>
 
-      {/* Title */}
+      {/* Title chip with time/weather indicator */}
       <div
         style={{
-          position: 'absolute',
-          top: 'max(16px, env(safe-area-inset-top))',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(8px)',
-          borderRadius: 999,
-          padding: '8px 18px',
-          fontSize: 14,
-          fontWeight: 700,
-          color: '#1a2638',
-          zIndex: 50,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+          position: 'absolute', top: 'max(16px, env(safe-area-inset-top))',
+          left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)',
+          borderRadius: 999, padding: '8px 16px',
+          fontSize: 13, fontWeight: 700, color: '#1a2638',
+          zIndex: 50, boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
           whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 8,
         }}
       >
-        🏕️ 探险公园
+        <span>🏕️ 探险公园</span>
+        <span style={{ opacity: 0.5, fontSize: 11 }}>·</span>
+        <span style={{ fontSize: 14 }}>
+          {timeOfDay === 'dawn' ? '🌄' : timeOfDay === 'day' ? '☀️' : timeOfDay === 'dusk' ? '🌇' : '🌙'}
+        </span>
+        {weather !== 'sunny' && (
+          <span style={{ fontSize: 14 }}>{weather === 'cloudy' ? '☁️' : '🌧️'}</span>
+        )}
       </div>
 
       {/* Zoom buttons */}
@@ -943,14 +1510,9 @@ export default function Park() {
           left: 20,
           background: 'rgba(255,255,255,0.85)',
           backdropFilter: 'blur(8px)',
-          border: 'none',
-          borderRadius: 999,
-          padding: '7px 14px',
-          fontSize: 13,
-          fontWeight: 600,
-          color: '#1a2638',
-          zIndex: 50,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.16)',
+          border: 'none', borderRadius: 999, padding: '7px 14px',
+          fontSize: 13, fontWeight: 600, color: '#1a2638',
+          zIndex: 50, boxShadow: '0 2px 12px rgba(0,0,0,0.16)',
           cursor: 'pointer',
         }}
       >
