@@ -1441,12 +1441,12 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
       ...unlocked.filter(id => id === companion),
       ...unlocked.filter(id => id !== companion),
     ];
-    return ordered
-      .map((id) => {
-        const a = ANIMALS.find(x => x.id === id);
-        return a ? { charId: a.customArt } : null;
-      })
-      .filter((s): s is SpriteSeed => s !== null);
+    const out: SpriteSeed[] = [];
+    for (const id of ordered) {
+      const a = ANIMALS.find(x => x.id === id);
+      if (a) out.push({ charId: a.customArt });
+    }
+    return out;
   }, [mode, friends]);
 
   const [sprites, setSprites] = useState<Sprite[]>(() => initSpritesFromSeeds(spriteSeeds));
