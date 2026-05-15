@@ -31,6 +31,7 @@ export default function Friends() {
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
 
 
@@ -61,6 +62,7 @@ export default function Friends() {
     if (tab === 'search') return;
     setSearchQ('');
     setSearchResults([]);
+    setSearchError(null);
   }, [tab]);
 
   useEffect(() => {
@@ -76,10 +78,12 @@ export default function Friends() {
   useEffect(() => {
     if (tab !== 'search') return;
     const delay = searchQ.trim() ? 350 : 0;
+    setSearching(true);
+    setSearchError(null);
     const t = window.setTimeout(async () => {
-      setSearching(true);
       const r = await searchUsers(searchQ);
       setSearchResults(r.results);
+      setSearchError(r.error ?? null);
       setSearching(false);
     }, delay);
     return () => clearTimeout(t);
@@ -529,9 +533,14 @@ export default function Friends() {
             />
           </div>
 
-          {searching && <div className="muted" style={{ fontSize: 13, padding: 8 }}>搜索中…</div>}
-          {!searching && searchQ && searchResults.length === 0 && (
-            <div className="muted" style={{ fontSize: 13, padding: 8 }}>没找到匹配的用户</div>
+          {searching && <div className="muted" style={{ fontSize: 13, padding: 8 }}>加载中…</div>}
+          {!searching && searchError && (
+            <div style={{ fontSize: 13, color: '#b03028', padding: 8 }}>{searchError}</div>
+          )}
+          {!searching && !searchError && searchResults.length === 0 && (
+            <div className="muted" style={{ fontSize: 13, padding: 8 }}>
+              {searchQ ? '没找到匹配的用户' : '暂时没有其他用户'}
+            </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {searchResults.map(u => {
