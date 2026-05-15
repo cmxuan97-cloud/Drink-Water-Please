@@ -212,6 +212,27 @@ function hitTargetAt(targets: TapTarget[], x: number, y: number): TapTarget | nu
   return null;
 }
 
+/** 通过 DOM rect 命中视觉位置（动物在做 CSS transition 时，sprite.x 落后于视觉，会导致 hitTestAnimal 漏点）。
+ *  在浏览器里查找所有带 data-sprite-id 的元素，找点击坐标最接近哪个的中心。 */
+function hitTestAnimalDom(clientX: number, clientY: number): string | null {
+  if (typeof document === 'undefined') return null;
+  const els = document.querySelectorAll<HTMLElement>('[data-sprite-id]');
+  let bestId: string | null = null;
+  let bestD = ANIMAL_HIT_R;
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i];
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const d = Math.hypot(clientX - cx, clientY - cy);
+    if (d <= bestD) {
+      bestD = d;
+      bestId = el.getAttribute('data-sprite-id');
+    }
+  }
+  return bestId;
+}
+
 function hitTestAnimal(sprites: Sprite[], sceneX: number, sceneY: number): Sprite | null {
   let closest: Sprite | null = null;
   let closestD = ANIMAL_HIT_R;
@@ -1358,6 +1379,7 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
 
   return (
     <div
+      data-sprite-id={sprite.id}
       style={{
         position: 'absolute',
         left: sprite.x - size / 2,
@@ -1892,9 +1914,17 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
       const t = e.touches[0];
       tr.p1 = { x: t.clientX, y: t.clientY };
       tr.tapStart = { time: Date.now(), x: t.clientX, y: t.clientY };
-      // Hit-test animal
-      const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
-      const hit = hitTestAnimal(spritesRef.current, sceneX, sceneY);
+      // 优先用 DOM 实际渲染位置做命中检测 — 解决动物在 CSS transition 中、
+      // sprite.x 已经是目标位置但视觉位置还在路上的情况（尤其上半部走动较快时）
+      const hitId = hitTestAnimalDom(t.clientX, t.clientY);
+      let hit: Sprite | null = hitId
+        ? (spritesRef.current.find(sp => sp.id === hitId) ?? null)
+        : null;
+      // 回落：DOM 查不到时用 sprite.x/y 做粗略命中（兜底兼容）
+      if (!hit) {
+        const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
+        hit = hitTestAnimal(spritesRef.current, sceneX, sceneY);
+      }
       if (hit) {
         tr.type = 'animal-tap';
         tr.dragAnimalId = hit.id;
