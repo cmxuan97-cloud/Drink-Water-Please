@@ -32,7 +32,7 @@ const ANIMAL_SIZE = 58;
 // 给一点 slack 让用户点一次就能点中（之前 38 太严，常常要点两次）
 const ANIMAL_HIT_R = 56;
 const INTERACT_DIST = 64;
-const MAX_ANIMALS = 6;
+const MAX_ANIMALS = 50;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3.0;
 
