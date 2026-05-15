@@ -7,55 +7,73 @@ export const config = { runtime: 'edge' };
 const MAX_RESULTS = 20;
 
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'GET') return errResp('Method not allowed', 405);
-  const url = new URL(req.url);
-  const clientId = url.searchParams.get('clientId') ?? '';
-  const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+  try {
+    if (req.method !== 'GET') return errResp('Method not allowed', 405);
+    const url = new URL(req.url);
+    const clientId = url.searchParams.get('clientId') ?? '';
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
 
-  const redis = getRedis();
-  if (!redis) return errResp('Redis 未配置', 500);
+    const redis = getRedis();
+    if (!redis) return errResp('Redis 未配置', 500);
 
-  const auth = await requireUsername(redis, clientId);
-  if (!auth.ok) return errResp(auth.error, auth.status);
+    const auth = await requireUsername(redis, clientId);
+    if (!auth.ok) return errResp(auth.error, auth.status);
 
-  // 已好友列表，用于过滤
-  const friendSet = new Set((await redis.smembers(`friends:${clientId}`)) as string[]);
+    // 已好友列表，用于过滤
+    const friendIds = new Set((await redis.smembers(`friends:${clientId}`)) as string[]);
 
-  const results: Array<{
-    username: string;
-    displayName: string;
-    clientId: string;
-    companionId?: string;
-    charId?: string;
-  }> = [];
+    const pattern = q ? `user:${q}*` : 'user:*';
 
-  const pattern = q ? `user:${q}*` : 'user:*';
+    // 先收集所有候选 key（上限 MAX_RESULTS * 5 避免扫太多）
+    const candidateKeys: string[] = [];
+    let cursor: string | number = 0;
+    do {
+      const [next, batch] = (await redis.scan(cursor, {
+        match: pattern,
+        count: 100,
+      })) as [string, string[]];
+      cursor = next;
+      for (const key of batch) {
+        candidateKeys.push(key);
+        if (candidateKeys.length >= MAX_RESULTS * 5) break;
+      }
+      if (candidateKeys.length >= MAX_RESULTS * 5) break;
+    } while (cursor !== '0' && cursor !== 0);
 
-  let cursor: string | number = 0;
-  do {
-    const [next, batch] = (await redis.scan(cursor, {
-      match: pattern,
-      count: 100,
-    })) as [string, string[]];
-    cursor = next;
-    for (const key of batch) {
-      const rec = await redis.get<{ clientId?: string; displayName?: string }>(key);
-      if (!rec?.clientId) continue;
-      if (rec.clientId === clientId) continue;         // 排除自己
-      if (friendSet.has(rec.clientId)) continue;       // 排除已好友
-      const username = key.slice('user:'.length);
-      const summary = await profileSummary(redis, rec.clientId);
-      results.push({
-        username,
-        displayName: summary?.displayName ?? rec.displayName ?? username,
-        clientId: rec.clientId,
-        companionId: summary?.companionId,
-        charId: summary?.charId,
-      });
-      if (results.length >= MAX_RESULTS) break;
-    }
-    if (results.length >= MAX_RESULTS) break;
-  } while (cursor !== '0' && cursor !== 0);
+    // 并行获取所有候选记录
+    const recs = await Promise.all(
+      candidateKeys.map(key =>
+        redis.get<{ clientId?: string; displayName?: string }>(key)
+          .then(rec => ({ key, rec }))
+          .catch(() => ({ key, rec: null }))
+      )
+    );
 
-  return jsonResp({ results });
+    // 过滤：排除自己、已好友、无 clientId
+    const filtered = recs.filter(
+      ({ rec }) => rec?.clientId && rec.clientId !== clientId && !friendIds.has(rec.clientId)
+    ).slice(0, MAX_RESULTS);
+
+    // 并行获取 profile 摘要
+    const profiles = await Promise.all(
+      filtered.map(({ key, rec }) =>
+        profileSummary(redis, rec!.clientId!)
+          .then(summary => ({
+            username: key.slice('user:'.length),
+            displayName: summary?.displayName ?? rec!.displayName ?? key.slice('user:'.length),
+            clientId: rec!.clientId!,
+            companionId: summary?.companionId,
+            charId: summary?.charId,
+          }))
+          .catch(() => null)
+      )
+    );
+
+    const results = profiles.filter((p): p is NonNullable<typeof p> => p !== null);
+
+    return jsonResp({ results });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return errResp(`搜索出错: ${msg}`, 500);
+  }
 }
