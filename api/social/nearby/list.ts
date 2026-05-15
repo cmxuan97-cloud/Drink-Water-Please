@@ -28,9 +28,10 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     candidates = (await redis.geosearch(
       'geo:nearby',
-      { type: 'fromlonlat', longitude: lng, latitude: lat },
-      { type: 'byradius', radius: 5, unit: 'km' },
-      { count: 50, sort: 'asc' },
+      { type: 'FROMLONLAT', coordinate: { lon: lng, lat } },
+      { type: 'BYRADIUS', radius: 5, radiusType: 'KM' },
+      'ASC',
+      { count: { limit: 50 } },
     )) as string[];
   } catch {
     return errResp('地理查询失败', 500);
