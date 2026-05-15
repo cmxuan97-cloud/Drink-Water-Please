@@ -41,9 +41,8 @@ const safeJson = async (r: Response): Promise<Record<string, unknown>> => {
 };
 
 export const searchUsers = async (q: string): Promise<{ results: SearchResult[]; error?: string }> => {
-  if (!q.trim()) return { results: [] };
   const clientId = getOrCreateClientId();
-  const url = `/api/social/search?clientId=${encodeURIComponent(clientId)}&q=${encodeURIComponent(q)}`;
+  const url = `/api/social/search?clientId=${encodeURIComponent(clientId)}&q=${encodeURIComponent(q.trim())}`;
   try {
     const r = await fetch(url);
     if (!r.ok) {

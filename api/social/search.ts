@@ -1,17 +1,16 @@
-// 按 username 前缀搜用户。返回 username + displayName + companion。
+// 按 username 前缀搜用户。q 为空时返回所有未添加用户。
 // 注意：只有已注册账号能搜。
 import { errResp, getRedis, jsonResp, requireUsername, profileSummary } from './_shared';
 
 export const config = { runtime: 'edge' };
 
-const MAX_RESULTS = 12;
+const MAX_RESULTS = 20;
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'GET') return errResp('Method not allowed', 405);
   const url = new URL(req.url);
   const clientId = url.searchParams.get('clientId') ?? '';
   const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
-  if (!q || q.length < 1) return jsonResp({ results: [] });
 
   const redis = getRedis();
   if (!redis) return errResp('Redis 未配置', 500);
@@ -19,7 +18,9 @@ export default async function handler(req: Request): Promise<Response> {
   const auth = await requireUsername(redis, clientId);
   if (!auth.ok) return errResp(auth.error, auth.status);
 
-  // 用 SCAN 找匹配的 user:* keys
+  // 已好友列表，用于过滤
+  const friendSet = new Set((await redis.smembers(`friends:${clientId}`)) as string[]);
+
   const results: Array<{
     username: string;
     displayName: string;
@@ -28,20 +29,21 @@ export default async function handler(req: Request): Promise<Response> {
     charId?: string;
   }> = [];
 
+  const pattern = q ? `user:${q}*` : 'user:*';
+
   let cursor: string | number = 0;
   do {
     const [next, batch] = (await redis.scan(cursor, {
-      match: `user:${q}*`,
+      match: pattern,
       count: 100,
     })) as [string, string[]];
     cursor = next;
     for (const key of batch) {
       const rec = await redis.get<{ clientId?: string; displayName?: string }>(key);
       if (!rec?.clientId) continue;
-      // 排除自己
-      if (rec.clientId === clientId) continue;
+      if (rec.clientId === clientId) continue;         // 排除自己
+      if (friendSet.has(rec.clientId)) continue;       // 排除已好友
       const username = key.slice('user:'.length);
-      // 拉一下 profile 拿 companion / charId
       const summary = await profileSummary(redis, rec.clientId);
       results.push({
         username,

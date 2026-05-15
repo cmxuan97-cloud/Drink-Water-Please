@@ -56,6 +56,13 @@ export default function Friends() {
     setUnread(0);
   }, [tab, username, inbox.length]);
 
+  // 离开搜索 tab 时清空，下次进入重新加载
+  useEffect(() => {
+    if (tab === 'search') return;
+    setSearchQ('');
+    setSearchResults([]);
+  }, [tab]);
+
   useEffect(() => {
     if (!username) return;
     // 先推一份最新的 profile 上去，再加载好友列表
@@ -65,17 +72,16 @@ export default function Friends() {
     })();
   }, [username, loadFriends]);
 
-  // 搜索 debounce
+  // 搜索 debounce — 空查询时也加载（显示所有未添加用户）
   useEffect(() => {
     if (tab !== 'search') return;
-    const q = searchQ.trim();
-    if (!q) { setSearchResults([]); return; }
+    const delay = searchQ.trim() ? 350 : 0;
     const t = window.setTimeout(async () => {
       setSearching(true);
-      const r = await searchUsers(q);
+      const r = await searchUsers(searchQ);
       setSearchResults(r.results);
       setSearching(false);
-    }, 350);
+    }, delay);
     return () => clearTimeout(t);
   }, [searchQ, tab]);
 
