@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, MapPin, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
 import {
-  ackInbox, fetchFriends, fetchInbox, removeFriend, respondToRequest,
-  searchUsers, sendFriendRequest,
-  type Friend, type FriendRequest, type InboxEvent, type SearchResult,
+  ackInbox, checkinNearby, fetchFriends, fetchInbox, listNearby, removeFriend,
+  respondToRequest, searchUsers, sendFriendRequest,
+  type Friend, type FriendRequest, type InboxEvent, type NearbyUser, type SearchResult,
 } from '../lib/social';
 import { getCurrentUsername } from '../lib/auth';
 import { syncProfile } from '../lib/profile';
 
-type Tab = 'friends' | 'inbox' | 'requests' | 'search';
+type Tab = 'friends' | 'inbox' | 'requests' | 'search' | 'nearby';
 
 export default function Friends() {
   const navigate = useNavigate();
@@ -32,6 +32,13 @@ export default function Friends() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+
+  // 附近的人
+  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [nearbyCheckedIn, setNearbyCheckedIn] = useState(false);
+  const [nearbyExpiry, setNearbyExpiry] = useState<number | null>(null);
 
   const username = useMemo(() => getCurrentUsername(), []);
 
@@ -112,6 +119,38 @@ export default function Friends() {
     if (!r.ok) { showToast(r.error ?? '删除失败'); return; }
     showToast('已移除');
     void loadFriends();
+  };
+
+  const handleShareLocation = () => {
+    setNearbyError(null);
+    setNearbyLoading(true);
+    const ERR: Record<number, string> = {
+      1: '已拒绝位置权限，请在浏览器设置中允许后重试',
+      2: '无法获取位置信息，请检查设备 GPS',
+      3: '获取位置超时，请重试',
+    };
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const cin = await checkinNearby(lat, lng);
+        if (!cin.ok) {
+          setNearbyError(cin.error ?? '签到失败');
+          setNearbyLoading(false);
+          return;
+        }
+        setNearbyCheckedIn(true);
+        setNearbyExpiry(Date.now() + (cin.expiresIn ?? 1800) * 1000);
+        const res = await listNearby(lat, lng);
+        setNearbyUsers(res.users);
+        if (res.error) setNearbyError(res.error);
+        setNearbyLoading(false);
+      },
+      (err) => {
+        setNearbyError(ERR[err.code] ?? '获取位置失败，请重试');
+        setNearbyLoading(false);
+      },
+      { timeout: 10000, maximumAge: 60000 },
+    );
   };
 
   if (!username) {
@@ -211,6 +250,7 @@ export default function Friends() {
           { id: 'inbox', label: '收件', badge: unread > 0 ? unread : null },
           { id: 'requests', label: '请求', badge: reqBadge },
           { id: 'search', label: '搜索' },
+          { id: 'nearby', label: '附近' },
         ] as Array<{ id: Tab; label: string; badge?: number | null }>).map(t => {
           const active = tab === t.id;
           return (
@@ -562,6 +602,129 @@ export default function Friends() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* === NEARBY TAB === */}
+      {tab === 'nearby' && (
+        <div>
+          {!nearbyCheckedIn ? (
+            <div className="card-tinted" style={{
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
+              paddingTop: 28, paddingBottom: 28,
+            }}>
+              <div style={{ fontSize: 48 }}>📍</div>
+              <div style={{ fontWeight: 800, fontSize: 18, marginTop: 8, color: '#0c4a6e' }}>
+                看看附近谁在喝水
+              </div>
+              <div style={{ fontSize: 13, marginTop: 10, lineHeight: 1.7, color: '#075985' }}>
+                分享位置后，5公里内的用户可以看到你<br />
+                位置信息 30 分钟后自动消失
+              </div>
+              {nearbyError && (
+                <div style={{ fontSize: 13, color: '#b03028', marginTop: 12 }}>{nearbyError}</div>
+              )}
+              <button
+                className="btn btn-full"
+                style={{
+                  marginTop: 20,
+                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                  color: 'white', fontWeight: 700,
+                  boxShadow: '0 4px 14px rgba(2,132,199,0.32)',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}
+                onClick={handleShareLocation}
+                disabled={nearbyLoading}
+              >
+                <MapPin size={15} />
+                {nearbyLoading ? '获取位置中…' : '分享我的位置'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              {/* 已签到状态条 */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 14px', borderRadius: 12, marginBottom: 14,
+                background: 'rgba(16,185,129,0.12)', color: '#047857', fontSize: 13,
+              }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: 999,
+                  background: '#10b981', display: 'inline-block',
+                  boxShadow: '0 0 0 3px rgba(16,185,129,0.3)',
+                  flexShrink: 0,
+                }} />
+                <span>
+                  你的位置已共享，约 {nearbyExpiry ? Math.max(0, Math.round((nearbyExpiry - Date.now()) / 60000)) : 30} 分钟后消失
+                </span>
+                <button
+                  style={{ marginLeft: 'auto', fontSize: 12, color: '#047857', fontWeight: 600 }}
+                  onClick={handleShareLocation}
+                  disabled={nearbyLoading}
+                >
+                  {nearbyLoading ? '…' : '刷新'}
+                </button>
+              </div>
+
+              {nearbyError && (
+                <div style={{ fontSize: 13, color: '#b03028', marginBottom: 10 }}>{nearbyError}</div>
+              )}
+
+              {!nearbyLoading && nearbyUsers.length === 0 && (
+                <div className="card-tinted card-sky" style={{ textAlign: 'center', padding: 28 }}>
+                  <div style={{ fontSize: 36 }}>🌙</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginTop: 8 }}>附近暂时没有其他用户</div>
+                  <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                    5公里范围内没有正在用 App 的朋友
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {nearbyUsers.map(u => {
+                  const animal = u.companionId
+                    ? ANIMALS.find(a => a.id === u.companionId)
+                    : u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
+                  const sent = sentTo.has(u.username);
+                  return (
+                    <div key={u.clientId} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: 10, background: 'var(--bg-card)', borderRadius: 12,
+                      boxShadow: 'var(--shadow-card)',
+                    }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 999,
+                        background: 'rgba(14,165,233,0.12)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {animal ? <AnimalIcon animal={animal} size={38} /> : '?'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{u.displayName}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          @{u.username} · 附近 · 今日 {u.todayPctGoal}%
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onSendRequest(u as unknown as SearchResult)}
+                        disabled={sent}
+                        style={{
+                          padding: '7px 12px', borderRadius: 999,
+                          fontSize: 13, fontWeight: 600,
+                          background: sent ? 'rgba(0,0,0,0.06)' : 'var(--accent)',
+                          color: sent ? 'var(--text-soft)' : 'white',
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                        }}
+                      >
+                        {sent ? <>已发送</> : <><UserPlus size={13} /> 加</>}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -38,7 +38,7 @@ const MAX_ZOOM = 3.0;
 
 // ── Zones (top-down regions of grass) ──────────────────────────────────────
 type Zone = 'upper' | 'middle' | 'lower';
-type Action = 'walking' | 'idle' | 'friendly' | 'fight' | 'dragged';
+type Action = 'walking' | 'idle' | 'friendly' | 'fight' | 'crush' | 'dragged';
 
 const ZONE_CONFIG: Record<Zone, { minX: number; maxX: number; minY: number; maxY: number }> = {
   // Widened zones so animals can roam the side meadows too
@@ -167,7 +167,7 @@ type Fx = {
   uid: string;
   x: number;
   y: number;
-  kind: 'friendly' | 'fight' | 'tap-heart';
+  kind: 'friendly' | 'fight' | 'tap-heart' | 'crush-heart';
 };
 
 type SceneFx = {
@@ -386,19 +386,35 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
     for (let j = i + 1; j < free.length; j++) {
       const a = free[i], b = free[j];
       if (Math.hypot(a.x - b.x, a.y - b.y) > INTERACT_DIST) continue;
-      const isFight = Math.random() < 0.38;
-      const kind: Action = isFight ? 'fight' : 'friendly';
-      // 打架剪短：2 tick × 700ms ≈ 1.4s；友好稍长一点便于聊天
-      const dur = isFight ? 2 : 4;
+      const r = Math.random();
+      // 10% 有好感 crush（停留 5s，小爱心一颗颗冒）／35% 打架／55% 友好
+      let kind: Action;
+      let dur: number;
+      let fxKind: 'friendly' | 'fight' | 'tap-heart';
+      if (r < 0.10) { kind = 'crush';    dur = 7; fxKind = 'tap-heart'; }
+      else if (r < 0.45) { kind = 'fight'; dur = 2; fxKind = 'fight'; }
+      else            { kind = 'friendly'; dur = 4; fxKind = 'friendly'; }
       const mx = (a.x + b.x) / 2;
       const my = Math.min(a.y, b.y) - 12;
-      newFx.push({ uid: `${Date.now()}-${i}-${j}`, x: mx, y: my, kind: isFight ? 'fight' : 'friendly' });
+      newFx.push({ uid: `${Date.now()}-${i}-${j}`, x: mx, y: my, kind: fxKind });
       s = s.map(sp => {
         if (sp.id === a.id) return { ...sp, action: kind, timer: dur, peer: b.id, facing: a.x <= b.x ? 'right' : 'left' };
         if (sp.id === b.id) return { ...sp, action: kind, timer: dur, peer: a.id, facing: b.x <= a.x ? 'right' : 'left' };
         return sp;
       });
       break outer;
+    }
+  }
+
+  // 4. crush 中的动物 — 每 tick 头顶冒一颗小爱心
+  for (const sp of s) {
+    if (sp.action === 'crush' && Math.random() < 0.7) {
+      newFx.push({
+        uid: `crush-${sp.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: sp.x + (Math.random() - 0.5) * 18,
+        y: sp.y - ANIMAL_SIZE - 4 + (Math.random() - 0.5) * 8,
+        kind: 'crush-heart',
+      });
     }
   }
 
@@ -1427,6 +1443,7 @@ const FX_ITEMS: Record<string, string[]> = {
   friendly: ['💖', '💕', '✨', '💗', '💝'],
   fight:    ['💢', '😡', '💢', '🤬'],
   'tap-heart': ['❤️', '💕', '❤️'],
+  'crush-heart': ['💕'],   // 小爱心，互相有好感时一颗一颗冒出来
 };
 
 function InteractionFx({ fx }: { fx: Fx }) {

@@ -402,3 +402,55 @@ export const fetchFriends = async (): Promise<{
     return { friends: [], incoming: [], outgoing: [], error: e instanceof Error ? e.message : '网络错误' };
   }
 };
+
+// ── 附近的人 ──────────────────────────────────────────────
+
+export type NearbyUser = {
+  clientId: string;
+  username: string;
+  displayName: string;
+  companionId?: string;
+  charId?: string;
+  todayPctGoal: number;
+  currentStreak: number;
+  unlockedCount: number;
+};
+
+export const checkinNearby = async (
+  lat: number,
+  lng: number,
+): Promise<{ ok: boolean; expiresIn?: number; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/nearby/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, lat, lng }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '签到失败' };
+    return { ok: true, expiresIn: j.expiresIn as number };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
+export const listNearby = async (
+  lat: number,
+  lng: number,
+): Promise<{ users: NearbyUser[]; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch(
+      `/api/social/nearby/list?clientId=${encodeURIComponent(clientId)}&lat=${lat}&lng=${lng}`,
+    );
+    if (!r.ok) {
+      const j = await safeJson(r);
+      return { users: [], error: (j.error as string) ?? '获取附近用户失败' };
+    }
+    const j = (await safeJson(r)) as { users?: NearbyUser[] };
+    return { users: j.users ?? [] };
+  } catch (e) {
+    return { users: [], error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
