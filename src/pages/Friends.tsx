@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, MapPin, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
 import {
-  ackInbox, checkinNearby, fetchFriends, fetchInbox, listNearby, removeFriend,
-  respondToRequest, searchUsers, sendFriendRequest,
-  type Friend, type FriendRequest, type InboxEvent, type NearbyUser, type SearchResult,
+  ackInbox, fetchFriends, fetchInbox, removeFriend, respondToRequest,
+  searchUsers, sendFriendRequest,
+  type Friend, type FriendRequest, type InboxEvent, type SearchResult,
 } from '../lib/social';
 import { getCurrentUsername } from '../lib/auth';
 import { syncProfile } from '../lib/profile';
@@ -33,12 +33,6 @@ export default function Friends() {
   const [searching, setSearching] = useState(false);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
 
-  // 附近的人
-  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
-  const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [nearbyError, setNearbyError] = useState<string | null>(null);
-  const [nearbyCheckedIn, setNearbyCheckedIn] = useState(false);
-  const [nearbyExpiry, setNearbyExpiry] = useState<number | null>(null);
 
   const username = useMemo(() => getCurrentUsername(), []);
 
@@ -119,38 +113,6 @@ export default function Friends() {
     if (!r.ok) { showToast(r.error ?? '删除失败'); return; }
     showToast('已移除');
     void loadFriends();
-  };
-
-  const handleShareLocation = () => {
-    setNearbyError(null);
-    setNearbyLoading(true);
-    const ERR: Record<number, string> = {
-      1: '已拒绝位置权限，请在浏览器设置中允许后重试',
-      2: '无法获取位置信息，请检查设备 GPS',
-      3: '获取位置超时，请重试',
-    };
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        const cin = await checkinNearby(lat, lng);
-        if (!cin.ok) {
-          setNearbyError(cin.error ?? '签到失败');
-          setNearbyLoading(false);
-          return;
-        }
-        setNearbyCheckedIn(true);
-        setNearbyExpiry(Date.now() + (cin.expiresIn ?? 1800) * 1000);
-        const res = await listNearby(lat, lng);
-        setNearbyUsers(res.users);
-        if (res.error) setNearbyError(res.error);
-        setNearbyLoading(false);
-      },
-      (err) => {
-        setNearbyError(ERR[err.code] ?? '获取位置失败，请重试');
-        setNearbyLoading(false);
-      },
-      { timeout: 10000, maximumAge: 60000 },
-    );
   };
 
   if (!username) {
@@ -542,170 +504,64 @@ export default function Friends() {
 
       {/* === SEARCH TAB === */}
       {tab === 'search' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 用户名搜索 */}
-          <div>
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)' }} />
-              <input
-                type="text"
-                placeholder="输入用户名搜索"
-                value={searchQ}
-                onChange={e => setSearchQ(e.target.value)}
-                autoComplete="off"
-                autoCapitalize="off"
-                style={{
-                  width: '100%', padding: '12px 14px 12px 40px',
-                  borderRadius: 12, border: '1px solid var(--line)',
-                  background: 'var(--bg-card)', fontSize: 15,
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            {searching && <div className="muted" style={{ fontSize: 13, padding: 8 }}>搜索中…</div>}
-            {!searching && searchQ && searchResults.length === 0 && (
-              <div className="muted" style={{ fontSize: 13, padding: 8 }}>没找到匹配的用户</div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {searchResults.map(u => {
-                const animal = u.companionId
-                  ? ANIMALS.find(a => a.id === u.companionId)
-                  : u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
-                const sent = sentTo.has(u.username);
-                return (
-                  <div key={u.username} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: 10, background: 'var(--bg-card)', borderRadius: 12,
-                    boxShadow: 'var(--shadow-card)',
-                  }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(58,166,221,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {animal ? <AnimalIcon animal={animal} size={38} /> : '?'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{u.displayName}</div>
-                      <div className="muted" style={{ fontSize: 12 }}>@{u.username}</div>
-                    </div>
-                    <button
-                      onClick={() => onSendRequest(u)}
-                      disabled={sent}
-                      style={{
-                        padding: '7px 12px', borderRadius: 999,
-                        fontSize: 13, fontWeight: 600,
-                        background: sent ? 'rgba(0,0,0,0.06)' : 'var(--accent)',
-                        color: sent ? 'var(--text-soft)' : 'white',
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      {sent ? <>已发送</> : <><UserPlus size={13} /> 加</>}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+        <div>
+          <div style={{ position: 'relative', marginBottom: 12 }}>
+            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)' }} />
+            <input
+              type="text"
+              placeholder="输入用户名搜索"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              style={{
+                width: '100%', padding: '12px 14px 12px 40px',
+                borderRadius: 12, border: '1px solid var(--line)',
+                background: 'var(--bg-card)', fontSize: 15,
+                outline: 'none',
+              }}
+            />
           </div>
 
-          {/* 附近的人 */}
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--text)' }}>
-              附近的人
-            </div>
-            {!nearbyCheckedIn ? (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '14px 16px', borderRadius: 14,
-                background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                  background: 'rgba(14,165,233,0.18)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+          {searching && <div className="muted" style={{ fontSize: 13, padding: 8 }}>搜索中…</div>}
+          {!searching && searchQ && searchResults.length === 0 && (
+            <div className="muted" style={{ fontSize: 13, padding: 8 }}>没找到匹配的用户</div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {searchResults.map(u => {
+              const animal = u.companionId
+                ? ANIMALS.find(a => a.id === u.companionId)
+                : u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
+              const sent = sentTo.has(u.username);
+              return (
+                <div key={u.username} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: 10, background: 'var(--bg-card)', borderRadius: 12,
+                  boxShadow: 'var(--shadow-card)',
                 }}>
-                  <MapPin size={20} color="#0284c7" />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0c4a6e' }}>看看附近谁在喝水</div>
-                  <div style={{ fontSize: 12, color: '#075985', marginTop: 2 }}>5公里内 · 30分钟后自动消失</div>
-                  {nearbyError && <div style={{ fontSize: 12, color: '#b03028', marginTop: 4 }}>{nearbyError}</div>}
-                </div>
-                <button
-                  onClick={handleShareLocation}
-                  disabled={nearbyLoading}
-                  style={{
-                    padding: '8px 14px', borderRadius: 999, flexShrink: 0,
-                    background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                    color: 'white', fontWeight: 700, fontSize: 13,
-                    boxShadow: '0 3px 10px rgba(2,132,199,0.3)',
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                  }}
-                >
-                  <MapPin size={13} />
-                  {nearbyLoading ? '获取中…' : '分享位置'}
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '8px 12px', borderRadius: 10, marginBottom: 10,
-                  background: 'rgba(16,185,129,0.1)', color: '#047857', fontSize: 12,
-                }}>
-                  <span style={{
-                    width: 7, height: 7, borderRadius: 999, flexShrink: 0,
-                    background: '#10b981', boxShadow: '0 0 0 3px rgba(16,185,129,0.25)',
-                  }} />
-                  <span>位置已共享，约 {nearbyExpiry ? Math.max(0, Math.round((nearbyExpiry - Date.now()) / 60000)) : 30} 分钟后消失</span>
+                  <div style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(58,166,221,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {animal ? <AnimalIcon animal={animal} size={38} /> : '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>@{u.username}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>{u.displayName}</div>
+                  </div>
                   <button
-                    onClick={handleShareLocation}
-                    disabled={nearbyLoading}
-                    style={{ marginLeft: 'auto', fontWeight: 600, color: '#047857', fontSize: 12 }}
+                    onClick={() => onSendRequest(u)}
+                    disabled={sent}
+                    style={{
+                      padding: '7px 14px', borderRadius: 999,
+                      fontSize: 13, fontWeight: 600,
+                      background: sent ? 'rgba(0,0,0,0.06)' : 'var(--accent)',
+                      color: sent ? 'var(--text-soft)' : 'white',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}
                   >
-                    {nearbyLoading ? '…' : '刷新'}
+                    {sent ? '已发送' : <><UserPlus size={13} /> 添加好友</>}
                   </button>
                 </div>
-                {nearbyError && <div style={{ fontSize: 12, color: '#b03028', marginBottom: 8 }}>{nearbyError}</div>}
-                {nearbyUsers.length === 0 ? (
-                  <div className="muted" style={{ fontSize: 13, padding: '8px 4px' }}>附近暂时没有其他用户</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {nearbyUsers.map(u => {
-                      const animal = u.companionId
-                        ? ANIMALS.find(a => a.id === u.companionId)
-                        : u.charId ? ANIMALS.find(a => a.customArt === u.charId) : undefined;
-                      const sent = sentTo.has(u.username);
-                      return (
-                        <div key={u.clientId} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: 10, background: 'var(--bg-card)', borderRadius: 12,
-                          boxShadow: 'var(--shadow-card)',
-                        }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {animal ? <AnimalIcon animal={animal} size={38} /> : '?'}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>{u.displayName}</div>
-                            <div className="muted" style={{ fontSize: 12 }}>@{u.username} · 附近 · 今日 {u.todayPctGoal}%</div>
-                          </div>
-                          <button
-                            onClick={() => onSendRequest(u as unknown as SearchResult)}
-                            disabled={sent}
-                            style={{
-                              padding: '7px 12px', borderRadius: 999,
-                              fontSize: 13, fontWeight: 600,
-                              background: sent ? 'rgba(0,0,0,0.06)' : 'var(--accent)',
-                              color: sent ? 'var(--text-soft)' : 'white',
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                            }}
-                          >
-                            {sent ? <>已发送</> : <><UserPlus size={13} /> 加</>}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })}
           </div>
         </div>
       )}
