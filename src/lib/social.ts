@@ -219,6 +219,22 @@ export const ackInbox = async (): Promise<{ ok: boolean }> => {
   }
 };
 
+export const clearInbox = async (): Promise<{ ok: boolean; error?: string }> => {
+  const clientId = getOrCreateClientId();
+  try {
+    const r = await fetch('/api/social/inbox/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) return { ok: false, error: (j.error as string) ?? '清空失败' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '网络错误' };
+  }
+};
+
 // ── Friend Park (visit + notes) ────────────────────────────────────────────
 export type ParkNote = {
   uid: string;

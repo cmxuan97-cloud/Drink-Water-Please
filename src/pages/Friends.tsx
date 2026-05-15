@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Search, Tent, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Check, Search, Tent, Trash2, Trees, Trophy, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { ANIMALS } from '../data/animals';
 import AnimalIcon from '../components/AnimalIcon';
 import FriendCard from '../components/FriendCard';
 import {
-  ackInbox, fetchFriends, fetchInbox, removeFriend, respondToRequest,
+  ackInbox, clearInbox, fetchFriends, fetchInbox, removeFriend, respondToRequest,
   searchUsers, sendFriendRequest,
   type Friend, type FriendRequest, type InboxEvent, type SearchResult,
 } from '../lib/social';
@@ -358,6 +358,28 @@ export default function Friends() {
       {/* === INBOX TAB === */}
       {tab === 'inbox' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {inbox.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
+              <button
+                onClick={async () => {
+                  if (!confirm('确定要清空所有收件吗？')) return;
+                  const r = await clearInbox();
+                  if (!r.ok) { showToast(r.error ?? '清空失败'); return; }
+                  setInbox([]);
+                  setUnread(0);
+                  showToast('收件已清空');
+                }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 12px', borderRadius: 999,
+                  background: 'rgba(239,68,68,0.10)', color: '#b91c1c',
+                  fontSize: 12, fontWeight: 700,
+                }}
+              >
+                <Trash2 size={13} /> 一键清空
+              </button>
+            </div>
+          )}
           {inbox.length === 0 ? (
             <div className="card-tinted card-sky" style={{ textAlign: 'center', padding: 24 }}>
               <div style={{ fontSize: 36 }}>📭</div>
