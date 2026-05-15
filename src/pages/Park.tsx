@@ -49,11 +49,28 @@ const ZONE_CONFIG: Record<Zone, { minX: number; maxX: number; minY: number; maxY
 
 // ── Speech pools ───────────────────────────────────────────────────────────
 const SPEECH_LINES = [
-  '好渴啊…想喝水', '今天天气真好', '宝藏到底在哪里？', '蝴蝶蝴蝶~',
-  '走累了，歇会儿', '我闻到饼干味了', '你看到我的尾巴了吗？', '嗨~',
-  '好困哦 zzz', '刚才那只好凶！', '山好高啊', '我今天好开心',
-  '肚子咕咕叫', '想去看湖', '咦，是月亮？', '鱼鱼鱼！',
-  '想吃西瓜', '主人在干嘛', '公园真大', '想跟你聊天',
+  // 喝水 / 解渴
+  '好渴啊…想喝水', '今天天气真好', '走累了，歇会儿', '想去看湖',
+  '鱼鱼鱼！', '湖水今天好清~', '我刚刚喝水了，你呢？',
+  // 闲聊废话
+  '宝藏到底在哪里？', '蝴蝶蝴蝶~', '我闻到饼干味了', '你看到我的尾巴了吗？',
+  '嗨~', '好困哦 zzz', '刚才那只好凶！', '山好高啊',
+  '我今天好开心', '肚子咕咕叫', '咦，是月亮？', '想吃西瓜',
+  '主人在干嘛', '公园真大', '想跟你聊天',
+  // 公共公园废话（更随机更无厘头）
+  '我刚才差点踩到一颗石头', '听说今天的云会下雨', '风好大呀…等等没风',
+  '我有点想转圈圈', '你身上是什么味道？', '咕咕咕咕咕', '哼哼哼~',
+  '我刚才打了一个哈欠', '今天的草特别绿', '我看到一片云像鸡腿',
+  '蘑菇可以吃吗？', '我刚才想到一个笑话忘了', '主人为什么不喝水？',
+  '我有秘密要告诉你', '今天我决定要走 100 步', '其实我也不知道我在说什么',
+  '哎呀~脚踩湿了', '太阳好大，我要不要戴帽子', '我以为我看到了一只鸭子',
+  '你听我说，没什么事，就想说话',
+  // 主人养成系
+  '主人记得喝水哦', '主人你今天好棒', '主人有没有想我？',
+  '主人我今天表现好不好', '主人加油~',
+  // 情绪/状态
+  '我今天有点犯困', '感觉今天能挖到宝藏', '我刚刚梦到主人',
+  '我想去森林里转转', '想被抱抱', '想被夸一句',
 ];
 
 const TAP_LINES = [
@@ -296,8 +313,31 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
     if ((sp.action === 'friendly' || sp.action === 'fight') && sp.timer > 0) {
       const t = sp.timer - 1;
       if (t === 0) {
-        const { tx, ty } = pickTarget(sp.zone, sp.x, sp.y);
-        return { ...sp, action: 'walking' as Action, timer: 0, peer: undefined, targetX: tx, targetY: ty };
+        // 打架/友好结束 — 朝远离对方的方向找新目标，让他们立刻分开走开
+        const peer = sp.peer ? prev.find(p => p.id === sp.peer) : undefined;
+        let tx: number; let ty: number;
+        if (peer) {
+          const { minX, maxX, minY, maxY } = ZONE_CONFIG[sp.zone];
+          const dx = sp.x - peer.x;
+          const dy = sp.y - peer.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const stepLen = sp.action === 'fight' ? 140 : 90;
+          tx = Math.max(minX, Math.min(maxX, sp.x + (dx / dist) * stepLen));
+          ty = Math.max(minY, Math.min(maxY, sp.y + (dy / dist) * stepLen));
+        } else {
+          const p = pickTarget(sp.zone, sp.x, sp.y);
+          tx = p.tx;
+          ty = p.ty;
+        }
+        return {
+          ...sp,
+          action: 'walking' as Action,
+          timer: 0,
+          peer: undefined,
+          targetX: tx,
+          targetY: ty,
+          facing: tx > sp.x ? 'right' : 'left',
+        };
       }
       return { ...sp, timer: t };
     }
@@ -348,7 +388,8 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
       if (Math.hypot(a.x - b.x, a.y - b.y) > INTERACT_DIST) continue;
       const isFight = Math.random() < 0.38;
       const kind: Action = isFight ? 'fight' : 'friendly';
-      const dur = isFight ? 5 : 4;
+      // 打架剪短：2 tick × 700ms ≈ 1.4s；友好稍长一点便于聊天
+      const dur = isFight ? 2 : 4;
       const mx = (a.x + b.x) / 2;
       const my = Math.min(a.y, b.y) - 12;
       newFx.push({ uid: `${Date.now()}-${i}-${j}`, x: mx, y: my, kind: isFight ? 'fight' : 'friendly' });
