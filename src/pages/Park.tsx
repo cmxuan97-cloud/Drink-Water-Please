@@ -310,10 +310,10 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
   // 1. Countdown timers
   s = s.map(sp => {
     if (sp.isDragging || sp.action === 'dragged') return sp;
-    if ((sp.action === 'friendly' || sp.action === 'fight') && sp.timer > 0) {
+    if ((sp.action === 'friendly' || sp.action === 'fight' || sp.action === 'crush') && sp.timer > 0) {
       const t = sp.timer - 1;
       if (t === 0) {
-        // 打架/友好结束 — 朝远离对方的方向找新目标，让他们立刻分开走开
+        // 互动结束 — 朝远离对方的方向找新目标，让他们立刻分开走开
         const peer = sp.peer ? prev.find(p => p.id === sp.peer) : undefined;
         let tx: number; let ty: number;
         if (peer) {
@@ -321,7 +321,8 @@ function doTick(prev: Sprite[]): { sprites: Sprite[]; newFx: Fx[] } {
           const dx = sp.x - peer.x;
           const dy = sp.y - peer.y;
           const dist = Math.hypot(dx, dy) || 1;
-          const stepLen = sp.action === 'fight' ? 140 : 90;
+          // 打架 → 跑得远；友好 → 礼貌走开；crush → 依依不舍走一小段
+          const stepLen = sp.action === 'fight' ? 140 : sp.action === 'crush' ? 60 : 90;
           tx = Math.max(minX, Math.min(maxX, sp.x + (dx / dist) * stepLen));
           ty = Math.max(minY, Math.min(maxY, sp.y + (dy / dist) * stepLen));
         } else {
@@ -1351,6 +1352,8 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
   const size = ANIMAL_SIZE;
   const isWalking = sprite.action === 'walking' && !sprite.isDragging;
   const isFight = sprite.action === 'fight';
+  const isCrush = sprite.action === 'crush';
+  const isHappyMood = sprite.action === 'friendly' || sprite.action === 'crush';
   const flipX = sprite.facing === 'right' ? -1 : 1;
 
   return (
@@ -1406,8 +1409,16 @@ function AnimalSprite({ sprite }: { sprite: Sprite }) {
         </div>
       )}
       <div style={{ transform: `scaleX(${flipX})`, transformOrigin: 'center' }}>
-        <div style={{ animation: isWalking ? 'pk-walk 0.5s ease-in-out infinite' : isFight ? 'pk-shake 0.28s ease-in-out infinite' : 'none' }}>
-          <Character id={sprite.charId as any} mood={sprite.action === 'friendly' ? 'happy' : 'idle'} size={size} static />
+        <div style={{
+          animation: isWalking
+            ? 'pk-walk 0.5s ease-in-out infinite'
+            : isFight
+              ? 'pk-shake 0.28s ease-in-out infinite'
+              : isCrush
+                ? 'pk-crush-bob 1.1s ease-in-out infinite'
+                : 'none',
+        }}>
+          <Character id={sprite.charId as any} mood={isHappyMood ? 'happy' : 'idle'} size={size} static />
         </div>
       </div>
       {sprite.label && (
@@ -2222,6 +2233,7 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
       <style>{`
         @keyframes pk-walk  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         @keyframes pk-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px) rotate(-4deg)} 75%{transform:translateX(5px) rotate(4deg)} }
+        @keyframes pk-crush-bob { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-2px) rotate(2deg)} }
         @keyframes pk-fx-rise {
           0%  {opacity:0;transform:translate(-50%,-50%) scale(0.4)}
           15% {opacity:1;transform:translate(-50%,-50%) scale(1.1)}
