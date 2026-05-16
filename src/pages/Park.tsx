@@ -1889,6 +1889,8 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     // 动物双击检测 — 单击 = 招呼（爱心 + 说话泡）；双击同一只朋友动物 = 开互动抽屉
     lastAnimalTapId: '',
     lastAnimalTapTime: 0,
+    lastAnimalTapX: 0,
+    lastAnimalTapY: 0,
     moved: false,
     dragAnimalId: '',
     dragStartCtx: null as string | null,
@@ -1925,6 +1927,24 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
         hit = hitTestAnimal(spritesRef.current, sceneX, sceneY);
       }
+      // 双击候选期：若第二次 tap 落在上次位置 80px 内但 hitTest 返回了别的精灵或 null，
+      // 优先复用上次命中的精灵 — 避免 CSS transition 期间精灵视觉位移导致漏判
+      if (!hit || hit.id !== tr.lastAnimalTapId) {
+        const elapsed = Date.now() - tr.lastAnimalTapTime;
+        const dist = Math.hypot(t.clientX - tr.lastAnimalTapX, t.clientY - tr.lastAnimalTapY);
+        if (tr.lastAnimalTapId && elapsed < 600 && dist < 80) {
+          const prevSprite = spritesRef.current.find(sp => sp.id === tr.lastAnimalTapId);
+          if (prevSprite) hit = prevSprite;
+        }
+      }
+      // DIAG — 确认根因后删除
+      console.log('[tap]', {
+        x: t.clientX.toFixed(0), y: t.clientY.toFixed(0),
+        hitId,
+        hitFallback: !hitId && hit ? hit.id : null,
+        lastId: tr.lastAnimalTapId,
+        msSinceLast: tr.lastAnimalTapTime ? Date.now() - tr.lastAnimalTapTime : null,
+      });
       if (hit) {
         tr.type = 'animal-tap';
         tr.dragAnimalId = hit.id;
@@ -1999,7 +2019,7 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         const now = Date.now();
         const isDoubleTap =
           tr.lastAnimalTapId === sprite.id &&
-          (now - tr.lastAnimalTapTime) < 380;
+          (now - tr.lastAnimalTapTime) < 600;
         // 双击朋友的动物 → 开互动抽屉（自己的动物双击就还是打个招呼）
         if (isDoubleTap && sprite.friendClientId && sprite.friendUsername) {
           openFriendSheet(sprite);
@@ -2009,6 +2029,8 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
           handleAnimalTap(sprite);
           tr.lastAnimalTapId = sprite.id;
           tr.lastAnimalTapTime = now;
+          tr.lastAnimalTapX = e.changedTouches[0].clientX;
+          tr.lastAnimalTapY = e.changedTouches[0].clientY;
         }
       }
       return;
@@ -2578,7 +2600,7 @@ function FriendActionSheet({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(59,130,246,0.08)', borderRadius: 12, padding: '6px 14px', marginBottom: 12 }}>
             <span style={{ fontWeight: 800, fontSize: 16, color: '#1d4ed8' }}>你 {matchScore.me}</span>
             <span style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 500 }}>三局两胜 · 友排行榜</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: '#dc2626' }}>{matchScore.pc} 电脑</span>
+            <span style={{ fontWeight: 800, fontSize: 16, color: '#dc2626' }}>{matchScore.pc} {friend.displayName}</span>
           </div>
         )}
 
@@ -2587,8 +2609,8 @@ function FriendActionSheet({
           <div style={{ textAlign: 'center' }}>
             <div style={{ background: matchDone === 'me' ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)' : 'linear-gradient(135deg,#fee2e2,#fca5a5)', borderRadius: 16, padding: '22px 16px', animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)' }}>
               <div style={{ fontSize: 48 }}>{matchDone === 'me' ? '🏆' : '😅'}</div>
-              <div style={{ fontWeight: 800, fontSize: 20, marginTop: 8, color: matchDone === 'me' ? '#065f46' : '#991b1b' }}>{matchDone === 'me' ? '你赢了这场！' : '电脑赢了这场…'}</div>
-              <div style={{ fontSize: 13, marginTop: 6, color: matchDone === 'me' ? '#047857' : '#b91c1c', fontWeight: 600 }}>你 {matchScore.me} — {matchScore.pc} 电脑</div>
+              <div style={{ fontWeight: 800, fontSize: 20, marginTop: 8, color: matchDone === 'me' ? '#065f46' : '#991b1b' }}>{matchDone === 'me' ? '你赢了这场！' : `${friend.displayName} 赢了这场…`}</div>
+              <div style={{ fontSize: 13, marginTop: 6, color: matchDone === 'me' ? '#047857' : '#b91c1c', fontWeight: 600 }}>你 {matchScore.me} — {matchScore.pc} {friend.displayName}</div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button style={{ ...fasPillStyle, flex: 1, margin: 0 }} onClick={() => goToGame(action)}>再来一场</button>
@@ -2625,7 +2647,7 @@ function FriendActionSheet({
                   <div style={{ background: o.bg, borderRadius: 16, padding: '14px 12px', animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)', marginBottom: 12 }}>
                     <div style={{ fontSize: 32 }}>{o.emoji}</div>
                     <div style={{ fontWeight: 800, fontSize: 17, marginTop: 4, color: o.col }}>{o.text}</div>
-                    <div style={{ fontSize: 13, marginTop: 6, color: o.col }}>你出 {p.label}{p.name} · 电脑出 {c.label}{c.name}</div>
+                    <div style={{ fontSize: 13, marginTop: 6, color: o.col }}>你出 {p.label}{p.name} · {friend.displayName}出 {c.label}{c.name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button style={{ ...fasPillStyle, flex: 1, margin: 0 }} onClick={nextRound}>下一局</button>
@@ -2644,7 +2666,7 @@ function FriendActionSheet({
             {diceBet === null ? (
               <>
                 <div style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 4 }}>猜骰子大（4-6）还是小（1-3）？</div>
-                <div style={{ fontSize: 11, color: 'var(--text-soft)', marginBottom: 14 }}>电脑押相反方向和你对赌</div>
+                <div style={{ fontSize: 11, color: 'var(--text-soft)', marginBottom: 14 }}>{friend.displayName} 押相反方向和你对赌</div>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 14 }}>
                   {([{ key: 'big', label: '大', sub: '4 · 5 · 6' }, { key: 'small', label: '小', sub: '1 · 2 · 3' }] as const).map(o => (
                     <button key={o.key} onClick={() => onDiceBet(o.key)}
@@ -2667,7 +2689,7 @@ function FriendActionSheet({
                     {diceRolling ? '🎲' : ['','⚀','⚁','⚂','⚃','⚄','⚅'][diceRoll ?? 1]}
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-soft)', marginBottom: 2 }}>电脑押</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-soft)', marginBottom: 2 }}>{friend.displayName}押</div>
                     <div style={{ fontWeight: 800, fontSize: 26, color: '#dc2626' }}>{dicePcBet === 'big' ? '大' : '小'}</div>
                   </div>
                 </div>
@@ -2697,18 +2719,18 @@ function FriendActionSheet({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#1a2638' }}>⬜ Tic Tac Toe</div>
-              <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>你 ❌ · 电脑 ⭕</div>
+              <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>你 ❌ · {friend.displayName} ⭕</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 10 }}>
               {tttBoard.map((cell, i) => {
                 const isWin = tttWinLine?.includes(i);
                 return (
                   <button key={i} onClick={() => onTttCell(i)}
                     style={{
-                      aspectRatio: '1', borderRadius: 12, fontSize: 28, fontWeight: 700, border: 'none', cursor: cell || tttDone ? 'default' : 'pointer',
-                      background: isWin ? 'linear-gradient(135deg,#d1fae5,#6ee7b7)' : 'rgba(0,0,0,0.05)',
-                      color: cell === 'X' ? '#2563eb' : '#dc2626',
-                      transition: 'background 0.2s',
+                      aspectRatio: '1', borderRadius: 14, fontSize: 34, fontWeight: 700, border: 'none', cursor: cell || tttDone ? 'default' : 'pointer',
+                      background: isWin ? 'linear-gradient(135deg,#bbf7d0,#4ade80)' : cell === 'X' ? 'linear-gradient(135deg,#dbeafe,#93c5fd)' : cell === 'O' ? 'linear-gradient(135deg,#fee2e2,#fca5a5)' : 'rgba(0,0,0,0.06)',
+                      boxShadow: isWin ? '0 0 0 2px #22c55e' : 'none',
+                      transition: 'background 0.15s, box-shadow 0.15s',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     {cell === 'X' ? '❌' : cell === 'O' ? '⭕' : ''}
@@ -2720,7 +2742,7 @@ function FriendActionSheet({
               <>
                 <div style={{ textAlign: 'center', padding: '10px', borderRadius: 14, marginBottom: 10, background: tttDone === 'X' ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)' : tttDone === 'O' ? 'linear-gradient(135deg,#fee2e2,#fca5a5)' : 'linear-gradient(135deg,#fef3c7,#fde68a)', animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)' }}>
                   <div style={{ fontWeight: 800, fontSize: 16, color: tttDone === 'X' ? '#065f46' : tttDone === 'O' ? '#991b1b' : '#92400e' }}>
-                    {tttDone === 'X' ? '🎉 这局你赢！' : tttDone === 'O' ? '😢 这局电脑赢…' : '🤝 平局！'}
+                    {tttDone === 'X' ? '🎉 这局你赢！' : tttDone === 'O' ? `😢 这局${friend.displayName}赢…` : '🤝 平局！'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
