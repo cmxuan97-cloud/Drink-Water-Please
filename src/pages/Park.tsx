@@ -2309,6 +2309,45 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
 }
 
 // === 朋友互动抽屉（仅在公共公园里点朋友的动物时弹出）=========================
+// ── Tic Tac Toe helpers ───────────────────────────────────────────────────
+const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function tttCheckWinner(board: (null|'X'|'O')[]): { winner: 'X'|'O'|null; line: number[]|null } {
+  for (const line of TTT_LINES) {
+    const [a,b,c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c])
+      return { winner: board[a] as 'X'|'O', line };
+  }
+  return { winner: null, line: null };
+}
+
+function tttComputerMove(board: (null|'X'|'O')[]): number {
+  const empty = board.map((v,i) => v === null ? i : -1).filter(i => i >= 0);
+  // win
+  for (const i of empty) { const b=[...board]; b[i]='O'; if (tttCheckWinner(b).winner==='O') return i; }
+  // block
+  for (const i of empty) { const b=[...board]; b[i]='X'; if (tttCheckWinner(b).winner==='X') return i; }
+  // center
+  if (board[4]===null) return 4;
+  // corner
+  const corners = [0,2,6,8].filter(i => board[i]===null);
+  if (corners.length) return corners[Math.floor(Math.random()*corners.length)];
+  // any
+  return empty[Math.floor(Math.random()*empty.length)];
+}
+
+// ── RPS helpers ───────────────────────────────────────────────────────────
+const RPS_OPTIONS = [
+  { key: 'rock',     label: '✊', name: '石头' },
+  { key: 'scissors', label: '✌️', name: '剪刀' },
+  { key: 'paper',    label: '🖐', name: '布' },
+];
+function rpsOutcome(player: string, pc: string): 'win'|'lose'|'draw' {
+  if (player === pc) return 'draw';
+  if ((player==='rock'&&pc==='scissors')||(player==='scissors'&&pc==='paper')||(player==='paper'&&pc==='rock')) return 'win';
+  return 'lose';
+}
+
 function FriendActionSheet({
   friend, onClose, onToast, onNavigate,
 }: {
@@ -2317,17 +2356,39 @@ function FriendActionSheet({
   onToast: (msg: string) => void;
   onNavigate: (path: string) => void;
 }) {
-  const [action, setAction] = useState<null | 'note'>(null);
+  type GameAction = null | 'note' | 'games' | 'rps' | 'dice' | 'ttt';
+  const [action, setAction] = useState<GameAction>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [posting, setPosting] = useState(false);
-  // 成功反馈：在 sheet 里显示一段确认状态再自动关闭，避免用户以为没发出去
   const [success, setSuccess] = useState<null | { icon: string; title: string; sub?: string }>(null);
+
+  // RPS
+  const [rpsChoice, setRpsChoice] = useState<null | string>(null);
+  const [rpsResult, setRpsResult] = useState<null | { pc: string; outcome: 'win'|'lose'|'draw' }>(null);
+
+  // Dice
+  const [diceGuess, setDiceGuess] = useState<null | number>(null);
+  const [diceRoll, setDiceRoll] = useState<null | number>(null);
+  const [diceRolling, setDiceRolling] = useState(false);
+
+  // TTT
+  const [tttBoard, setTttBoard] = useState<(null|'X'|'O')[]>(Array(9).fill(null));
+  const [tttDone, setTttDone] = useState<null|'X'|'O'|'draw'>(null);
+  const [tttWinLine, setTttWinLine] = useState<number[]|null>(null);
+  const [tttWaiting, setTttWaiting] = useState(false);
 
   const close = () => { setAction(null); setNoteDraft(''); setSuccess(null); onClose(); };
 
   const finishWith = (icon: string, title: string, sub?: string) => {
     setSuccess({ icon, title, sub });
     setTimeout(() => close(), 1400);
+  };
+
+  const goToGame = (g: GameAction) => {
+    setRpsChoice(null); setRpsResult(null);
+    setDiceGuess(null); setDiceRoll(null); setDiceRolling(false);
+    setTttBoard(Array(9).fill(null)); setTttDone(null); setTttWinLine(null); setTttWaiting(false);
+    setAction(g);
   };
 
   const onCallWater = async () => {
@@ -2359,6 +2420,47 @@ function FriendActionSheet({
     finishWith('✉️', '留言已送达', `"${noteDraft.trim()}"`);
   };
 
+  // RPS: player picks
+  const onRpsPick = (key: string) => {
+    if (rpsChoice) return;
+    const pc = RPS_OPTIONS[Math.floor(Math.random() * 3)].key;
+    setRpsChoice(key);
+    setRpsResult({ pc, outcome: rpsOutcome(key, pc) });
+  };
+
+  // Dice: player guesses
+  const onDiceGuess = (n: number) => {
+    if (diceGuess !== null) return;
+    setDiceGuess(n);
+    setDiceRolling(true);
+    setTimeout(() => {
+      const roll = Math.floor(Math.random() * 6) + 1;
+      setDiceRoll(roll);
+      setDiceRolling(false);
+    }, 700);
+  };
+
+  // TTT: player taps a cell
+  const onTttCell = (i: number) => {
+    if (tttBoard[i] || tttDone || tttWaiting) return;
+    const b = [...tttBoard]; b[i] = 'X';
+    const { winner, line } = tttCheckWinner(b);
+    if (winner) { setTttBoard(b); setTttDone('X'); setTttWinLine(line); return; }
+    if (b.every(v => v !== null)) { setTttBoard(b); setTttDone('draw'); return; }
+    setTttBoard(b); setTttWaiting(true);
+    setTimeout(() => {
+      const ci = tttComputerMove(b);
+      const b2 = [...b]; b2[ci] = 'O';
+      const { winner: w2, line: l2 } = tttCheckWinner(b2);
+      setTttBoard(b2);
+      if (w2) { setTttDone('O'); setTttWinLine(l2); }
+      else if (b2.every(v => v !== null)) setTttDone('draw');
+      setTttWaiting(false);
+    }, 400);
+  };
+
+  const sheetPad: React.CSSProperties = { padding: 20 };
+
   return (
     <div
       onClick={close}
@@ -2373,9 +2475,9 @@ function FriendActionSheet({
         style={{
           background: 'white',
           borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          padding: 20,
           width: '100%', maxWidth: 480,
           boxShadow: '0 -8px 30px rgba(0,0,0,0.25)',
+          ...sheetPad,
         }}
       >
         {/* friend preview */}
@@ -2389,82 +2491,201 @@ function FriendActionSheet({
           </div>
         </div>
 
+        {/* success state */}
         {success && (
           <div style={{
-            padding: '22px 16px',
-            textAlign: 'center',
+            padding: '22px 16px', textAlign: 'center',
             background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
             borderRadius: 16,
             animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)',
           }}>
             <div style={{ fontSize: 40, lineHeight: 1 }}>{success.icon}</div>
-            <div style={{ fontWeight: 800, fontSize: 17, marginTop: 8, color: '#065f46' }}>
-              ✓ {success.title}
-            </div>
-            {success.sub && (
-              <div style={{ fontSize: 13, marginTop: 6, color: '#047857', fontStyle: 'italic', lineHeight: 1.5 }}>
-                {success.sub}
+            <div style={{ fontWeight: 800, fontSize: 17, marginTop: 8, color: '#065f46' }}>✓ {success.title}</div>
+            {success.sub && <div style={{ fontSize: 13, marginTop: 6, color: '#047857', fontStyle: 'italic', lineHeight: 1.5 }}>{success.sub}</div>}
+          </div>
+        )}
+
+        {/* main menu */}
+        {action === null && !success && (
+          <>
+            <button style={fasPillStyle} onClick={onCallWater} disabled={posting}>💧 叫他喝水</button>
+            <button style={fasPillStyle} onClick={onScold} disabled={posting}>😤 骂他没喝水</button>
+            <button style={fasPillStyle} onClick={() => goToGame('games')}>🎮 玩游戏</button>
+            <button style={fasPillStyle} onClick={() => onNavigate(`/u/${friend.username}/park`)}>🏡 去他主页</button>
+            <button style={{ ...fasPillStyle, color: 'var(--text-mute)', marginTop: 8, background: 'transparent' }} onClick={close}>关闭</button>
+          </>
+        )}
+
+        {/* note (kept but not in main menu — reachable if needed) */}
+        {action === 'note' && !success && (
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>✉️ 给 {friend.displayName} 留言</div>
+            <textarea
+              value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)}
+              maxLength={120} rows={3} placeholder="说点什么（120 字以内）" autoFocus
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 14, border: '1px solid var(--line)', background: 'var(--bg-card)', fontSize: 14, outline: 'none', resize: 'vertical', minHeight: 70, fontFamily: 'inherit', color: 'inherit', boxSizing: 'border-box' }}
+            />
+            <button onClick={onSendNote} disabled={posting || !noteDraft.trim()}
+              style={{ width: '100%', marginTop: 10, padding: '14px 16px', borderRadius: 999, background: noteDraft.trim() ? 'var(--primary)' : 'rgba(0,0,0,0.08)', color: 'white', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              {posting ? '送出中…' : '送出留言'}
+            </button>
+            <button style={{ ...fasPillStyle, marginTop: 8, color: 'var(--text-soft)', background: 'transparent' }} onClick={() => setAction(null)}>← 返回</button>
+          </div>
+        )}
+
+        {/* games menu */}
+        {action === 'games' && (
+          <>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: '#1a2638' }}>🎮 选个游戏</div>
+            <button style={fasPillStyle} onClick={() => goToGame('rps')}>✊ 猜拳</button>
+            <button style={fasPillStyle} onClick={() => goToGame('dice')}>🎲 骰子猜数</button>
+            <button style={fasPillStyle} onClick={() => goToGame('ttt')}>⬜ Tic Tac Toe</button>
+            <button style={{ ...fasPillStyle, color: 'var(--text-mute)', marginTop: 8, background: 'transparent' }} onClick={() => setAction(null)}>← 返回</button>
+          </>
+        )}
+
+        {/* ── RPS ── */}
+        {action === 'rps' && (
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: '#1a2638' }}>✊ 猜拳</div>
+            {!rpsChoice ? (
+              <>
+                <div style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 14 }}>选你要出的</div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 14 }}>
+                  {RPS_OPTIONS.map(o => (
+                    <button key={o.key} onClick={() => onRpsPick(o.key)}
+                      style={{ flex: 1, padding: '16px 0', borderRadius: 16, fontSize: 28, background: 'rgba(0,0,0,0.04)', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <span>{o.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2638' }}>{o.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                {(() => {
+                  const p = RPS_OPTIONS.find(o => o.key === rpsChoice)!;
+                  const c = RPS_OPTIONS.find(o => o.key === rpsResult!.pc)!;
+                  const outcomes = { win: { bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', emoji: '🎉', text: '你赢了！', color: '#065f46' }, lose: { bg: 'linear-gradient(135deg,#fee2e2,#fca5a5)', emoji: '😢', text: '你输了…', color: '#991b1b' }, draw: { bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', emoji: '🤝', text: '平局！', color: '#92400e' } };
+                  const o = outcomes[rpsResult!.outcome];
+                  return (
+                    <div style={{ background: o.bg, borderRadius: 16, padding: '18px 12px', animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)' }}>
+                      <div style={{ fontSize: 36 }}>{o.emoji}</div>
+                      <div style={{ fontWeight: 800, fontSize: 18, marginTop: 6, color: o.color }}>{o.text}</div>
+                      <div style={{ fontSize: 14, marginTop: 8, color: o.color }}>你出 {p.label}{p.name} &nbsp;·&nbsp; 电脑出 {c.label}{c.name}</div>
+                    </div>
+                  );
+                })()}
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <button style={{ ...fasPillStyle, flex: 1, margin: 0 }} onClick={() => goToGame('rps')}>再来一局</button>
+                  <button style={{ ...fasPillStyle, flex: 1, margin: 0, background: 'transparent', color: 'var(--text-mute)' }} onClick={() => goToGame('games')}>← 返回</button>
+                </div>
+              </div>
+            )}
+            {!rpsChoice && (
+              <button style={{ ...fasPillStyle, color: 'var(--text-mute)', background: 'transparent' }} onClick={() => goToGame('games')}>← 返回</button>
+            )}
+          </div>
+        )}
+
+        {/* ── Dice ── */}
+        {action === 'dice' && (
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: '#1a2638' }}>🎲 骰子猜数</div>
+            {diceGuess === null ? (
+              <>
+                <div style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 14 }}>猜骰子会出几点？</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>
+                  {[1,2,3,4,5,6].map(n => (
+                    <button key={n} onClick={() => onDiceGuess(n)}
+                      style={{ width: 52, height: 52, borderRadius: 14, fontSize: 20, fontWeight: 700, background: 'rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer', color: '#1a2638' }}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <button style={{ ...fasPillStyle, color: 'var(--text-mute)', background: 'transparent' }} onClick={() => goToGame('games')}>← 返回</button>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ fontSize: 72, lineHeight: 1, animation: diceRolling ? 'fas-dice-spin 0.7s ease-out' : undefined }}>
+                  {diceRolling ? '🎲' : ['','⚀','⚁','⚂','⚃','⚄','⚅'][diceRoll ?? 1]}
+                </div>
+                {!diceRolling && diceRoll !== null && (() => {
+                  const hit = diceGuess === diceRoll;
+                  return (
+                    <div style={{ background: hit ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)' : 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', borderRadius: 14, padding: '14px 12px', marginTop: 12, animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)' }}>
+                      <div style={{ fontWeight: 800, fontSize: 18, color: hit ? '#065f46' : '#374151' }}>{hit ? '🎉 猜中了！' : `差一点，是 ${diceRoll} 点`}</div>
+                      <div style={{ fontSize: 13, marginTop: 4, color: hit ? '#047857' : '#6b7280' }}>你猜的是 {diceGuess} 点</div>
+                    </div>
+                  );
+                })()}
+                {!diceRolling && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                    <button style={{ ...fasPillStyle, flex: 1, margin: 0 }} onClick={() => goToGame('dice')}>再来一次</button>
+                    <button style={{ ...fasPillStyle, flex: 1, margin: 0, background: 'transparent', color: 'var(--text-mute)' }} onClick={() => goToGame('games')}>← 返回</button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {action === null && !success && (
-          <>
-            <button style={fasPillStyle} onClick={onCallWater} disabled={posting}>
-              💧 叫他喝水
-            </button>
-            <button style={fasPillStyle} onClick={onScold} disabled={posting}>
-              😤 骂他没喝水
-            </button>
-            <button style={fasPillStyle} onClick={() => setAction('note')} disabled={posting}>
-              ✉️ 留言
-            </button>
-            <button style={fasPillStyle} onClick={() => onNavigate(`/u/${friend.username}/park`)}>
-              🏡 去他主页
-            </button>
-            <button style={{ ...fasPillStyle, color: 'var(--text-mute)', marginTop: 8, background: 'transparent' }} onClick={close}>
-              关闭
-            </button>
-          </>
-        )}
-
-        {action === 'note' && !success && (
+        {/* ── Tic Tac Toe ── */}
+        {action === 'ttt' && (
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-              ✉️ 给 {friend.displayName} 留言
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#1a2638' }}>⬜ Tic Tac Toe</div>
+              <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>你 ❌ &nbsp;·&nbsp; 电脑 ⭕</div>
             </div>
-            <textarea
-              value={noteDraft}
-              onChange={(e) => setNoteDraft(e.target.value)}
-              maxLength={120}
-              rows={3}
-              placeholder="说点什么（120 字以内）"
-              autoFocus
-              style={{
-                width: '100%', padding: '10px 14px', borderRadius: 14,
-                border: '1px solid var(--line)', background: 'var(--bg-card)',
-                fontSize: 14, outline: 'none', resize: 'vertical', minHeight: 70,
-                fontFamily: 'inherit', color: 'inherit', boxSizing: 'border-box',
-              }}
-            />
-            <button
-              onClick={onSendNote}
-              disabled={posting || !noteDraft.trim()}
-              style={{
-                width: '100%', marginTop: 10, padding: '14px 16px', borderRadius: 999,
-                background: noteDraft.trim() ? 'var(--primary)' : 'rgba(0,0,0,0.08)',
-                color: 'white', fontWeight: 600, fontSize: 14, border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              {posting ? '送出中…' : '送出留言'}
-            </button>
-            <button style={{ ...fasPillStyle, marginTop: 8, color: 'var(--text-soft)', background: 'transparent' }} onClick={() => setAction(null)}>
-              ← 返回
-            </button>
+            {/* board */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
+              {tttBoard.map((cell, i) => {
+                const isWin = tttWinLine?.includes(i);
+                return (
+                  <button key={i} onClick={() => onTttCell(i)}
+                    style={{
+                      aspectRatio: '1', borderRadius: 12, fontSize: 28, fontWeight: 700, border: 'none', cursor: cell || tttDone ? 'default' : 'pointer',
+                      background: isWin ? 'linear-gradient(135deg,#d1fae5,#6ee7b7)' : 'rgba(0,0,0,0.05)',
+                      color: cell === 'X' ? '#2563eb' : '#dc2626',
+                      transition: 'background 0.2s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    {cell === 'X' ? '❌' : cell === 'O' ? '⭕' : ''}
+                  </button>
+                );
+              })}
+            </div>
+            {/* status */}
+            {tttDone ? (
+              <div style={{
+                textAlign: 'center', padding: '12px', borderRadius: 14, marginBottom: 10,
+                background: tttDone === 'X' ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)' : tttDone === 'O' ? 'linear-gradient(135deg,#fee2e2,#fca5a5)' : 'linear-gradient(135deg,#fef3c7,#fde68a)',
+                animation: 'pk-fas-success 0.3s cubic-bezier(0.2,1.4,0.4,1)',
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 17, color: tttDone === 'X' ? '#065f46' : tttDone === 'O' ? '#991b1b' : '#92400e' }}>
+                  {tttDone === 'X' ? '🎉 你赢了！' : tttDone === 'O' ? '😢 电脑赢了…' : '🤝 平局！'}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-soft)', textAlign: 'center', marginBottom: 10 }}>
+                {tttWaiting ? '电脑思考中…' : '轮到你了'}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button style={{ ...fasPillStyle, flex: 1, margin: 0 }} onClick={() => goToGame('ttt')}>再来一局</button>
+              <button style={{ ...fasPillStyle, flex: 1, margin: 0, background: 'transparent', color: 'var(--text-mute)' }} onClick={() => goToGame('games')}>← 返回</button>
+            </div>
           </div>
         )}
+
+        <style>{`
+          @keyframes fas-dice-spin {
+            0%   { transform: rotate(0deg)   scale(1); }
+            30%  { transform: rotate(180deg) scale(1.2); }
+            70%  { transform: rotate(320deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+          }
+        `}</style>
       </div>
     </div>
   );
