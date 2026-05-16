@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AnimalIcon from '../components/AnimalIcon';
 import Companion from '../components/Companion';
 import EntryList from '../components/EntryList';
 import TimeBackground from '../components/TimeBackground';
 import { Container, DEFAULT_SETTINGS, Entry, Settings } from '../types';
 import {
+  addUnlockedId,
   deleteEntry,
   ensureUnlockedMigration,
   getCompanionId,
@@ -18,6 +20,7 @@ import {
   markDayCompleted,
   pruneOldPhotos,
   saveSettings,
+  setCompanionId,
   setSeenEarnedTokens,
   setUserName,
 } from '../lib/storage';
@@ -30,7 +33,7 @@ import {
   BarChart3, Cloud, Hand, Key, LogIn, PartyPopper, PawPrint,
   Settings as SettingsIcon, Sparkles, Trophy, UserPlus, Users,
 } from 'lucide-react';
-import { ANIMALS, availableTokens, earnedTokens } from '../data/animals';
+import { Animal, ANIMALS, availableTokens, earnedTokens } from '../data/animals';
 
 const greetingFor = (h: number): string => {
   if (h < 5) return '夜深啦';
@@ -52,6 +55,9 @@ export default function Home() {
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightInput, setWeightInput] = useState('');
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showCompanionPicker, setShowCompanionPicker] = useState(false);
+  const [pickerAnimals, setPickerAnimals] = useState<Animal[]>([]);
+  const [pickedAnimalId, setPickedAnimalId] = useState<string | null>(null);
 
   // === 首次开屏的认证流 ===
   type AuthMode = 'quick' | 'register' | 'login' | 'restore';
@@ -94,11 +100,33 @@ export default function Home() {
     saveSettings(next);
     setSettings(next);
     setShowWeightPrompt(false);
+    openCompanionPicker();
   };
 
   const onSkipWeight = () => {
     // 跳过就用默认值（DEFAULT_SETTINGS 已经有 65kg），不强迫
     setShowWeightPrompt(false);
+    openCompanionPicker();
+  };
+
+  const openCompanionPicker = () => {
+    // 随机取 4 只（全部候选，每次顺序不同）
+    const shuffled = [...ANIMALS].sort(() => Math.random() - 0.5).slice(0, 4);
+    setPickerAnimals(shuffled);
+    setShowCompanionPicker(true);
+  };
+
+  const onPickCompanion = (animal: Animal) => {
+    if (pickedAnimalId) return;
+    setPickedAnimalId(animal.id);
+    setTimeout(() => {
+      addUnlockedId(animal.id, ANIMALS[0].id);
+      setCompanionId(animal.id);
+      setCompanionIdLocal(animal.id);
+      void syncCompanionToServer(animal.id);
+      setShowCompanionPicker(false);
+      setPickedAnimalId(null);
+    }, 1400);
   };
 
   const onRegister = async () => {
@@ -630,6 +658,84 @@ export default function Home() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showCompanionPicker && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(20, 40, 60, 0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 60, padding: 24,
+          }}
+        >
+          <style>{`
+            @keyframes companion-bounce {
+              0%   { transform: scale(1); }
+              30%  { transform: scale(1.14); }
+              65%  { transform: scale(0.94); }
+              100% { transform: scale(1); }
+            }
+          `}</style>
+          <div
+            style={{
+              background: 'white', borderRadius: 28, padding: '28px 24px',
+              maxWidth: 340, width: '100%', textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 6 }}>🎉</div>
+            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 6 }}>选一个小伙伴！</div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
+              它会陪你一起完成每天的喝水目标<br />
+              还有 {ANIMALS.length - 1} 只等你去解锁～
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {pickerAnimals.map(animal => {
+                const isRevealed = pickedAnimalId === animal.id;
+                const isOther = !!pickedAnimalId && !isRevealed;
+                return (
+                  <button
+                    key={animal.id}
+                    onClick={() => onPickCompanion(animal)}
+                    disabled={!!pickedAnimalId}
+                    style={{
+                      background: isRevealed ? 'rgba(59,166,221,0.08)' : '#f5f7fa',
+                      border: `2px solid ${isRevealed ? '#3aa6dd' : 'transparent'}`,
+                      borderRadius: 18,
+                      padding: '18px 0 14px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      cursor: isOther ? 'default' : 'pointer',
+                      opacity: isOther ? 0.3 : 1,
+                      transition: 'opacity 0.4s ease, border-color 0.3s, background 0.3s',
+                      animation: isRevealed ? 'companion-bounce 0.45s ease' : undefined,
+                    }}
+                  >
+                    <div
+                      style={{
+                        filter: isRevealed ? 'none' : 'brightness(0) opacity(0.35)',
+                        transition: 'filter 0.5s ease 0.1s',
+                      }}
+                    >
+                      <AnimalIcon animal={animal} size={70} />
+                    </div>
+                    <div style={{ height: 20, display: 'flex', alignItems: 'center' }}>
+                      {isRevealed
+                        ? <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2638' }}>{animal.name}</span>
+                        : <span className="muted" style={{ fontSize: 11 }}>？？？</span>
+                      }
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 14, fontSize: 12, color: pickedAnimalId ? '#3aa6dd' : 'var(--text-muted)', fontWeight: pickedAnimalId ? 600 : 400 }}>
+              {pickedAnimalId
+                ? `${pickerAnimals.find(a => a.id === pickedAnimalId)?.name} 加入啦 🎊`
+                : 'tap 一下揭晓'}
+            </div>
           </div>
         </div>
       )}
