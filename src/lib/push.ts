@@ -127,17 +127,18 @@ export const syncSettingsToServer = async (): Promise<void> => {
 
 /** 用户在 Collection 选了新的主页伙伴 → 立刻推到服务端，让下一条 push 用新伙伴口吻。
  *  传 explicit ID 时强制用它（适合 Home 用「实际显示的 companion」做 backfill —
- *  显示逻辑会按 unlocked 限制做 fallback，可能跟 localStorage 的 companionId 不一样）。 */
+ *  显示逻辑会按 unlocked 限制做 fallback，可能跟 localStorage 的 companionId 不一样）。
+ *
+ *  使用轻量 /api/push/companion 接口：不依赖浏览器 subscription 状态，
+ *  避免因 subscription 丢失/过期导致 companion 字段无法更新的 bug。 */
 export const syncCompanionToServer = async (overrideId?: string): Promise<void> => {
-  const sub = await getCurrentSubscription();
-  if (!sub) return;  // 没订阅推送就不用 sync
-  const payload = buildSubscribePayload(sub);
-  if (overrideId && overrideId.length > 0) payload.companionId = overrideId;
-  if (!payload.companionId) return;  // 完全没 companion，让服务端保持原状
-  await fetch('/api/push/subscribe', {
+  const companionId = (overrideId && overrideId.length > 0) ? overrideId : getCompanionId();
+  if (!companionId) return;  // 完全没 companion，不用 sync
+  const clientId = getOrCreateClientId();
+  await fetch('/api/push/companion', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ clientId, companionId }),
   }).catch(() => {});
 };
 

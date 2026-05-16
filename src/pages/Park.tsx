@@ -1876,11 +1876,6 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     startMid: { x: 0, y: 0 },
     tapStart: { time: 0, x: 0, y: 0 },
     lastTapTime: 0,
-    // 动物双击检测 — 单击 = 招呼（爱心 + 说话泡）；双击同一只朋友动物 = 开互动抽屉
-    lastAnimalTapId: '',
-    lastAnimalTapTime: 0,
-    lastAnimalTapX: 0,
-    lastAnimalTapY: 0,
     moved: false,
     dragAnimalId: '',
     dragStartCtx: null as string | null,
@@ -1917,24 +1912,6 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         const { sceneX, sceneY } = toScene(t.clientX, t.clientY);
         hit = hitTestAnimal(spritesRef.current, sceneX, sceneY);
       }
-      // 双击候选期：若第二次 tap 落在上次位置 80px 内但 hitTest 返回了别的精灵或 null，
-      // 优先复用上次命中的精灵 — 避免 CSS transition 期间精灵视觉位移导致漏判
-      if (!hit || hit.id !== tr.lastAnimalTapId) {
-        const elapsed = Date.now() - tr.lastAnimalTapTime;
-        const dist = Math.hypot(t.clientX - tr.lastAnimalTapX, t.clientY - tr.lastAnimalTapY);
-        if (tr.lastAnimalTapId && elapsed < 600 && dist < 80) {
-          const prevSprite = spritesRef.current.find(sp => sp.id === tr.lastAnimalTapId);
-          if (prevSprite) hit = prevSprite;
-        }
-      }
-      // DIAG — 确认根因后删除
-      console.log('[tap]', {
-        x: t.clientX.toFixed(0), y: t.clientY.toFixed(0),
-        hitId,
-        hitFallback: !hitId && hit ? hit.id : null,
-        lastId: tr.lastAnimalTapId,
-        msSinceLast: tr.lastAnimalTapTime ? Date.now() - tr.lastAnimalTapTime : null,
-      });
       if (hit) {
         tr.type = 'animal-tap';
         tr.dragAnimalId = hit.id;
@@ -2186,13 +2163,20 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
 
       {/* FABs — only in community mode */}
       {mode === 'community' && friends.length > 0 && (
-        <div style={{ position: 'absolute', bottom: 'max(32px, env(safe-area-inset-bottom, 16px))', right: 20, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
+        <div style={{ position: 'absolute', bottom: 'max(32px, env(safe-area-inset-bottom, 16px))', right: 16, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50 }}>
           <button onClick={() => setPickerMode('action')}
-            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 26, cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            💢
+            style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 100 100" style={{ width: 28, height: 28 }}>
+              <g transform="translate(50,50)">
+                <path d="M -20 0 Q 0 -44 20 0 Q 0 -22 -20 0 Z" fill="#dc2626"/>
+                <path d="M -20 0 Q 0 -44 20 0 Q 0 -22 -20 0 Z" fill="#dc2626" transform="rotate(90)"/>
+                <path d="M -20 0 Q 0 -44 20 0 Q 0 -22 -20 0 Z" fill="#dc2626" transform="rotate(180)"/>
+                <path d="M -20 0 Q 0 -44 20 0 Q 0 -22 -20 0 Z" fill="#dc2626" transform="rotate(270)"/>
+              </g>
+            </svg>
           </button>
           <button onClick={() => setPickerMode('games')}
-            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 26, cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: 42, height: 42, borderRadius: 999, background: 'rgba(37,99,235,0.85)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 20, cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             🎮
           </button>
         </div>
