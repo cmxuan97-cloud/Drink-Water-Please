@@ -1780,8 +1780,10 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
   const [boatX, setBoatX] = useState(290);
   const [fireBurstAt, setFireBurstAt] = useState<number | null>(null);
 
-  // 公共公园：朋友互动抽屉
+  // 公共公园：朋友互动抽屉 + FAB 选人
   const [activeFriend, setActiveFriend] = useState<{ clientId: string; username: string; displayName: string; charId: string } | null>(null);
+  const [activeFriendInitial, setActiveFriendInitial] = useState<'games' | null>(null);
+  const [pickerMode, setPickerMode] = useState<null | 'action' | 'games'>(null);
   const [parkToast, setParkToast] = useState<string | null>(null);
   const showParkToast = useCallback((msg: string) => {
     setParkToast(msg);
@@ -2013,26 +2015,8 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     tr.type = 'none';
 
     if (wasType === 'animal-tap' && e.changedTouches.length === 1) {
-      // Tap on animal
       const sprite = spritesRef.current.find(sp => sp.id === tr.dragAnimalId);
-      if (sprite) {
-        const now = Date.now();
-        const isDoubleTap =
-          tr.lastAnimalTapId === sprite.id &&
-          (now - tr.lastAnimalTapTime) < 600;
-        // 双击朋友的动物 → 开互动抽屉（自己的动物双击就还是打个招呼）
-        if (isDoubleTap && sprite.friendClientId && sprite.friendUsername) {
-          openFriendSheet(sprite);
-          tr.lastAnimalTapId = '';
-          tr.lastAnimalTapTime = 0;
-        } else {
-          handleAnimalTap(sprite);
-          tr.lastAnimalTapId = sprite.id;
-          tr.lastAnimalTapTime = now;
-          tr.lastAnimalTapX = e.changedTouches[0].clientX;
-          tr.lastAnimalTapY = e.changedTouches[0].clientY;
-        }
-      }
+      if (sprite) handleAnimalTap(sprite);
       return;
     }
     if (wasType === 'animal-drag' && e.changedTouches.length === 1) {
@@ -2075,7 +2059,7 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         if (target) handleSceneTap(target, sceneX, sceneY);
       }
     }
-  }, [doReset, handleAnimalTap, handleSceneTap, openFriendSheet, setSpeech]);
+  }, [doReset, handleAnimalTap, handleSceneTap, setSpeech]);
 
   const handleZoom = useCallback((delta: number) => {
     const cw = window.innerWidth, ch = window.innerHeight;
@@ -2222,24 +2206,25 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         )}
       </div>
 
-      {/* Zoom buttons */}
-      <div style={{ position: 'absolute', bottom: 'max(32px, env(safe-area-inset-bottom, 16px))', right: 20, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
-        {[{ label: '+', delta: 1.35 }, { label: '−', delta: 1 / 1.35 }].map(({ label, delta }) => (
-          <button
-            key={label}
-            onClick={() => handleZoom(delta)}
-            style={{
-              width: 44, height: 44, borderRadius: 999,
-              background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)',
-              border: 'none', fontSize: 22, fontWeight: 300, color: '#1a2638',
-              cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            {label}
+      {/* FABs — only in community mode */}
+      {mode === 'community' && friends.length > 0 && (
+        <div style={{ position: 'absolute', bottom: 'max(32px, env(safe-area-inset-bottom, 16px))', right: 20, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
+          <button onClick={() => setPickerMode('action')}
+            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 100 100" style={{ width: 30, height: 30 }}>
+              <path d="M50 5 C35 5 22 16 20 30 C18 20 10 14 10 14 C10 14 14 26 22 32 C18 44 22 56 32 62 C26 60 18 62 18 62 C18 62 26 72 38 72 C42 78 46 82 50 82 C54 82 58 78 62 72 C74 72 82 62 82 62 C82 62 74 60 68 62 C78 56 82 44 78 32 C86 26 90 14 90 14 C90 14 82 20 80 30 C78 16 65 5 50 5 Z" fill="none"/>
+              <path d="M 28 22 A 26 16 0 0 1 50 10 A 26 16 0 0 1 72 22 A 18 10 0 0 0 50 18 A 18 10 0 0 0 28 22 Z" fill="#dc2626"/>
+              <path d="M 28 78 A 26 16 0 0 0 50 90 A 26 16 0 0 0 72 78 A 18 10 0 0 1 50 82 A 18 10 0 0 1 28 78 Z" fill="#dc2626"/>
+              <path d="M 22 28 A 16 26 0 0 0 10 50 A 16 26 0 0 0 22 72 A 10 18 0 0 1 18 50 A 10 18 0 0 1 22 28 Z" fill="#dc2626"/>
+              <path d="M 78 28 A 16 26 0 0 1 90 50 A 16 26 0 0 1 78 72 A 10 18 0 0 0 82 50 A 10 18 0 0 0 78 28 Z" fill="#dc2626"/>
+            </svg>
           </button>
-        ))}
-      </div>
+          <button onClick={() => setPickerMode('games')}
+            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 26, cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            🎮
+          </button>
+        </div>
+      )}
 
       {/* Info chip + reset */}
       <button
@@ -2259,12 +2244,30 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
         {sprites.length} 只小伙伴 · 还原
       </button>
 
+      {pickerMode && (
+        <FriendPickerSheet
+          mode={pickerMode}
+          friends={friends.map(f => {
+            const a = f.companionId ? ANIMALS.find(x => x.id === f.companionId) : undefined;
+            return { ...f, charId: a?.customArt ?? 'kiwi' };
+          })}
+          onPick={(f) => {
+            const init = pickerMode === 'games' ? 'games' : null;
+            setActiveFriendInitial(init);
+            setActiveFriend(f);
+            setPickerMode(null);
+          }}
+          onClose={() => setPickerMode(null)}
+        />
+      )}
+
       {activeFriend && (
         <FriendActionSheet
           friend={activeFriend}
-          onClose={() => setActiveFriend(null)}
+          initialAction={activeFriendInitial}
+          onClose={() => { setActiveFriend(null); setActiveFriendInitial(null); }}
           onToast={showParkToast}
-          onNavigate={(path) => { setActiveFriend(null); navigate(path); }}
+          onNavigate={(path) => { setActiveFriend(null); setActiveFriendInitial(null); navigate(path); }}
         />
       )}
 
@@ -2330,6 +2333,50 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
   );
 }
 
+// === 选朋友底部列表 ============================================================
+function FriendPickerSheet({
+  mode, friends, onPick, onClose,
+}: {
+  mode: 'action' | 'games';
+  friends: Array<{ clientId: string; username: string; displayName: string; charId: string }>;
+  onPick: (f: { clientId: string; username: string; displayName: string; charId: string }) => void;
+  onClose: () => void;
+}) {
+  const stopTouch = (e: React.TouchEvent) => e.stopPropagation();
+  return (
+    <div
+      onClick={onClose}
+      onTouchStart={stopTouch} onTouchMove={stopTouch} onTouchEnd={stopTouch}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(20,40,60,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, width: '100%', maxWidth: 480, padding: 20, maxHeight: '72vh', overflowY: 'auto', boxShadow: '0 -8px 30px rgba(0,0,0,0.25)' }}
+      >
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16, color: '#1a2638' }}>
+          {mode === 'action' ? '💢 叫谁喝水 / 骂谁？' : '🎮 跟谁玩游戏？'}
+        </div>
+        {friends.map(f => (
+          <button key={f.clientId} onClick={() => onPick(f)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, border: 'none', background: 'rgba(0,0,0,0.04)', cursor: 'pointer', marginBottom: 8 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(58,166,221,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Character id={f.charId as any} mood="idle" size={38} static />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#1a2638' }}>{f.displayName}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>@{f.username}</div>
+            </div>
+          </button>
+        ))}
+        <button onClick={onClose}
+          style={{ width: '100%', padding: 14, borderRadius: 999, border: 'none', background: 'transparent', color: 'var(--text-mute)', fontWeight: 600, fontSize: 14, cursor: 'pointer', marginTop: 4 }}>
+          关闭
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // === 朋友互动抽屉（仅在公共公园里点朋友的动物时弹出）=========================
 // ── Tic Tac Toe helpers ───────────────────────────────────────────────────
 const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -2371,15 +2418,16 @@ function rpsOutcome(player: string, pc: string): 'win'|'lose'|'draw' {
 }
 
 function FriendActionSheet({
-  friend, onClose, onToast, onNavigate,
+  friend, onClose, onToast, onNavigate, initialAction = null,
 }: {
   friend: { clientId: string; username: string; displayName: string; charId: string };
   onClose: () => void;
   onToast: (msg: string) => void;
   onNavigate: (path: string) => void;
+  initialAction?: 'games' | null;
 }) {
   type GameAction = null | 'note' | 'games' | 'rps' | 'dice' | 'ttt';
-  const [action, setAction] = useState<GameAction>(null);
+  const [action, setAction] = useState<GameAction>(initialAction);
   const [noteDraft, setNoteDraft] = useState('');
   const [posting, setPosting] = useState(false);
   const [success, setSuccess] = useState<null | { icon: string; title: string; sub?: string }>(null);
