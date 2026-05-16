@@ -8,6 +8,7 @@ import {
   validatePassword,
   validateUsername,
 } from './_crypto';
+import { clientIp, rateLimit } from '../_ratelimit';
 
 export const config = { runtime: 'edge' };
 
@@ -49,6 +50,10 @@ export default async function handler(req: Request): Promise<Response> {
 
   const redis = getRedis();
   if (!redis) return Response.json({ error: 'Redis 未配置' }, { status: 500 });
+
+  // 限流：每个 IP 每小时最多 5 次注册（防垃圾账号）
+  const { ok: rlOk } = await rateLimit(redis, 'reg', clientIp(req), 5, 3600);
+  if (!rlOk) return Response.json({ error: '注册太频繁，请稍后再试' }, { status: 429 });
 
   // 用户名占用？
   const existing = await redis.get(`user:${username}`);

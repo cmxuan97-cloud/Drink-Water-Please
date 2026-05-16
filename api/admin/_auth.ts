@@ -5,10 +5,8 @@ export const checkAdminAuth = (req: Request): { ok: boolean; reason?: string } =
   if (!expected || expected.length < 8) {
     return { ok: false, reason: '服务端未配置 ADMIN_SECRET（请在 Vercel env vars 加上，≥8 位）' };
   }
-  const url = new URL(req.url);
-  const provided = url.searchParams.get('secret')
-    ?? req.headers.get('x-admin-secret')
-    ?? '';
+  // 只接受 header，不接受 URL 参数（防止密钥进入服务器日志 / 浏览器历史）
+  const provided = req.headers.get('x-admin-secret') ?? '';
   if (!provided || provided !== expected) {
     return { ok: false, reason: '密钥错误' };
   }

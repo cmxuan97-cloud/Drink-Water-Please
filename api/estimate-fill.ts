@@ -4,6 +4,8 @@
 
 export const config = { runtime: 'edge' };
 
+import { clientIp, getRedis, rateLimit } from './_ratelimit';
+
 const SYSTEM = `你是一个饮料容器识别 + 容量估算助手。看用户上传的图片，做三件事：
 
 1. 估液位：液体占容器总容量的百分比 (0-100 整数)
@@ -56,6 +58,13 @@ type Payload = {
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  // 限流：每个 IP 每分钟最多 10 次（保护 Gemini API 配额不被滥刷）
+  const redis = getRedis();
+  if (redis) {
+    const { ok } = await rateLimit(redis, 'fill', clientIp(req), 10, 60);
+    if (!ok) return json({ error: '请求太频繁，每分钟最多 10 次，请稍后再试' }, 429);
+  }
 
   const apiKey = (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.GEMINI_API_KEY;

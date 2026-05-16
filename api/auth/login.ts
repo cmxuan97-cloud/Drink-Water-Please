@@ -6,6 +6,7 @@ import {
   normalizeUsername,
   timingSafeEq,
 } from './_crypto';
+import { clientIp, rateLimit } from '../_ratelimit';
 
 export const config = { runtime: 'edge' };
 
@@ -44,6 +45,10 @@ export default async function handler(req: Request): Promise<Response> {
 
   const redis = getRedis();
   if (!redis) return Response.json({ error: 'Redis 未配置' }, { status: 500 });
+
+  // 限流：每个 IP 每分钟最多 10 次（防暴力破解）
+  const { ok: rlOk } = await rateLimit(redis, 'login', clientIp(req), 10, 60);
+  if (!rlOk) return Response.json({ error: '请求太频繁，请稍后再试' }, { status: 429 });
 
   const raw = await redis.get(`user:${username}`);
   if (!raw) {
