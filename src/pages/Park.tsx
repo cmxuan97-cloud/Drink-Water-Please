@@ -1814,18 +1814,6 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
   // ── Tap on animal ─────────────────────────────────────────────────────────
   // 单击：爱心 + 说话泡（朋友的动物也走这个，让它先打个招呼）
   // 双击：朋友的动物 → 打开互动抽屉
-  const openFriendSheet = useCallback((sprite: Sprite) => {
-    if (!sprite.friendClientId || !sprite.friendUsername) return;
-    setActiveFriend({
-      clientId: sprite.friendClientId,
-      username: sprite.friendUsername,
-      displayName: sprite.label ?? sprite.friendUsername,
-      charId: sprite.charId,
-    });
-    setSprites(prev => prev.map(sp =>
-      sp.id === sprite.id ? { ...sp, action: 'idle', timer: 2 } : sp,
-    ));
-  }, []);
 
   const handleAnimalTap = useCallback((sprite: Sprite) => {
     // 爱心 + 说话泡 — 任何动物都走这套（包括朋友的）
@@ -2061,16 +2049,6 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
     }
   }, [doReset, handleAnimalTap, handleSceneTap, setSpeech]);
 
-  const handleZoom = useCallback((delta: number) => {
-    const cw = window.innerWidth, ch = window.innerHeight;
-    const { tx, ty, zoom } = transformRef.current;
-    const cx = cw / 2, cy = ch / 2;
-    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * delta));
-    const ratio = newZoom / zoom;
-    setBtnTransition(true);
-    updateTransform(clampTransform(cx - ratio * (cx - tx), cy - ratio * (cy - ty), newZoom, cw, ch));
-    setTimeout(() => setBtnTransition(false), 320);
-  }, [updateTransform]);
 
   // ── AI tick ───────────────────────────────────────────────────────────────
   useEffect(() => {
