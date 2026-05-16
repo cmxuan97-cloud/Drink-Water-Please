@@ -2461,9 +2461,14 @@ function FriendActionSheet({
 
   const sheetPad: React.CSSProperties = { padding: 20 };
 
+  const stopTouch = (e: React.TouchEvent) => e.stopPropagation();
+
   return (
     <div
       onClick={close}
+      onTouchStart={stopTouch}
+      onTouchMove={stopTouch}
+      onTouchEnd={stopTouch}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(20,40,60,0.5)', zIndex: 200,
