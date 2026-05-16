@@ -2188,14 +2188,8 @@ export default function Park({ mode = 'private', friends = [] }: ParkProps) {
       {mode === 'community' && friends.length > 0 && (
         <div style={{ position: 'absolute', bottom: 'max(32px, env(safe-area-inset-bottom, 16px))', right: 20, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
           <button onClick={() => setPickerMode('action')}
-            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 100 100" style={{ width: 30, height: 30 }}>
-              <path d="M50 5 C35 5 22 16 20 30 C18 20 10 14 10 14 C10 14 14 26 22 32 C18 44 22 56 32 62 C26 60 18 62 18 62 C18 62 26 72 38 72 C42 78 46 82 50 82 C54 82 58 78 62 72 C74 72 82 62 82 62 C82 62 74 60 68 62 C78 56 82 44 78 32 C86 26 90 14 90 14 C90 14 82 20 80 30 C78 16 65 5 50 5 Z" fill="none"/>
-              <path d="M 28 22 A 26 16 0 0 1 50 10 A 26 16 0 0 1 72 22 A 18 10 0 0 0 50 18 A 18 10 0 0 0 28 22 Z" fill="#dc2626"/>
-              <path d="M 28 78 A 26 16 0 0 0 50 90 A 26 16 0 0 0 72 78 A 18 10 0 0 1 50 82 A 18 10 0 0 1 28 78 Z" fill="#dc2626"/>
-              <path d="M 22 28 A 16 26 0 0 0 10 50 A 16 26 0 0 0 22 72 A 10 18 0 0 1 18 50 A 10 18 0 0 1 22 28 Z" fill="#dc2626"/>
-              <path d="M 78 28 A 16 26 0 0 1 90 50 A 16 26 0 0 1 78 72 A 10 18 0 0 0 82 50 A 10 18 0 0 0 78 28 Z" fill="#dc2626"/>
-            </svg>
+            style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 26, cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            💢
           </button>
           <button onClick={() => setPickerMode('games')}
             style={{ width: 52, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: 'none', fontSize: 26, cursor: 'pointer', boxShadow: '0 2px 14px rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
