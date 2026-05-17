@@ -3,7 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity, AlertTriangle, Bell, BarChart3, Cloud, Droplet,
   Key, LogIn, RefreshCw, Target, Trash2, TrendingUp, User, Users,
+  Wrench, Unlock, Calendar,
 } from 'lucide-react';
+
+// ── 全部小伙伴 ID（同步自 src/data/animals.ts）──────────────────────────────
+const ALL_ANIMAL_IDS = [
+  'a-kiwi','a-mola','a-dragon','a-squirrel','a-koala','a-zombie',
+  'a-butterfly','a-octopus','a-crab','a-unicorn','a-bee','a-fox',
+  'a-ghost','a-panda','a-mummy','a-dolphin','a-lion','a-seahorse',
+  'a-dino','a-flamingo','a-orangutan','a-hedgehog','a-shark','a-peacock',
+  'a-bear','a-rabbit','a-godzilla','a-chick','a-raccoon','a-snake',
+  'a-owl','a-turtle','a-alpaca','a-parrot','a-jellyfish','a-bigfoot',
+  'a-ladybug','a-bat','a-kong','a-sloth','a-hamster','a-robot',
+  'a-alien','a-otter','a-penguin',
+];
 
 type Stats = {
   asOf: string;
@@ -58,10 +71,11 @@ export default function Admin() {
   const fetchAll = async (sec: string, sortBy: string) => {
     setLoading(true);
     setError(null);
+    const authHeaders = { 'x-admin-secret': sec };
     try {
       const [statsResp, usersResp] = await Promise.all([
-        fetch(`/api/admin/stats?secret=${encodeURIComponent(sec)}`),
-        fetch(`/api/admin/users?secret=${encodeURIComponent(sec)}&sort=${sortBy}&limit=200`),
+        fetch('/api/admin/stats', { headers: authHeaders }),
+        fetch(`/api/admin/users?sort=${sortBy}&limit=200`, { headers: authHeaders }),
       ]);
       if (!statsResp.ok) {
         const j = await statsResp.json().catch(() => ({}));
@@ -111,9 +125,9 @@ export default function Admin() {
     setDeletingId(u.clientId);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/admin/delete-user?secret=${encodeURIComponent(secret)}`, {
+      const res = await fetch('/api/admin/delete-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ clientId: u.clientId }),
       });
       if (!res.ok) {
@@ -187,6 +201,9 @@ export default function Admin() {
 
       {authed && stats && (
         <>
+          {/* === Dev Tools === */}
+          <DevTools />
+
           <div className="row-between" style={{ marginTop: 4, marginBottom: 4 }}>
             <span className="muted" style={{ fontSize: 11 }}>
               更新于 {new Date(stats.asOf).toLocaleTimeString('zh-CN', { hour12: false })}
@@ -405,6 +422,90 @@ export default function Admin() {
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+    </div>
+  );
+}
+
+// ── Dev Tools 卡片（仅 admin 登录后可见）──────────────────────────────────────
+function DevTools() {
+  const [devMsg, setDevMsg] = useState<string | null>(null);
+
+  const flash = (msg: string) => {
+    setDevMsg(msg);
+    setTimeout(() => setDevMsg(null), 2500);
+  };
+
+  const unlockAll = () => {
+    localStorage.setItem('dw:unlockedIds', JSON.stringify(ALL_ANIMAL_IDS));
+    flash(`✅ 已解锁全部 ${ALL_ANIMAL_IDS.length} 只小伙伴！刷新页面生效。`);
+  };
+
+  const setCompletedDays = (n: number) => {
+    // 生成 n 天的日期字符串（今天往前推）
+    const days: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${day}`);
+    }
+    localStorage.setItem('dw:completedDays', JSON.stringify(days.sort()));
+    flash(`✅ 已设置 ${n} 天完成记录！刷新页面生效。`);
+  };
+
+  const resetLocal = () => {
+    if (!window.confirm('清除本设备所有 dw: 开头的 localStorage 数据（不影响服务端）？')) return;
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('dw:')) localStorage.removeItem(key);
+    }
+    flash('✅ 本地数据已清除，3 秒后刷新…');
+    setTimeout(() => window.location.reload(), 3000);
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 14, border: '2px dashed rgba(168,85,247,0.4)', background: 'rgba(168,85,247,0.04)' }}>
+      <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <Wrench size={16} color="#a855f7" /> Dev Tools <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-mute)' }}>（仅本地生效）</span>
+      </div>
+
+      {devMsg && (
+        <div style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 10, padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#15803d', marginBottom: 10 }}>
+          {devMsg}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* 解锁全部小伙伴 */}
+        <button
+          onClick={unlockAll}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, border: 'none', background: 'rgba(168,85,247,0.12)', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#7c3aed', textAlign: 'left' }}
+        >
+          <Unlock size={15} /> 解锁全部 {ALL_ANIMAL_IDS.length} 只小伙伴
+        </button>
+
+        {/* 设置完成天数 */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {[30, 100, 200].map(n => (
+            <button key={n}
+              onClick={() => setCompletedDays(n)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 10px', borderRadius: 12, border: 'none', background: 'rgba(59,130,246,0.1)', cursor: 'pointer', fontWeight: 600, fontSize: 12, color: '#1d4ed8' }}
+            >
+              <Calendar size={13} /> +{n}天完成
+            </button>
+          ))}
+        </div>
+
+        {/* 重置本地数据 */}
+        <button
+          onClick={resetLocal}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, border: 'none', background: 'rgba(220,38,38,0.08)', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#dc2626', textAlign: 'left' }}
+        >
+          <Trash2 size={15} /> 清除本地数据（重置测试账号）
+        </button>
+      </div>
     </div>
   );
 }
