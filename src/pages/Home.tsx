@@ -119,14 +119,14 @@ export default function Home() {
   const onPickCompanion = (animal: Animal) => {
     if (pickedAnimalId) return;
     setPickedAnimalId(animal.id);
+    addUnlockedId(animal.id, ANIMALS[0].id);
+    setCompanionId(animal.id);
+    setCompanionIdLocal(animal.id);
+    void syncCompanionToServer(animal.id);
     setTimeout(() => {
-      addUnlockedId(animal.id, ANIMALS[0].id);
-      setCompanionId(animal.id);
-      setCompanionIdLocal(animal.id);
-      void syncCompanionToServer(animal.id);
       setShowCompanionPicker(false);
       setPickedAnimalId(null);
-    }, 1400);
+    }, 800);
   };
 
   const onRegister = async () => {
@@ -694,38 +694,30 @@ export default function Home() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {pickerAnimals.map(animal => {
-                const isRevealed = pickedAnimalId === animal.id;
-                const isOther = !!pickedAnimalId && !isRevealed;
+                const isPicked = pickedAnimalId === animal.id;
+                const isOther = !!pickedAnimalId && !isPicked;
                 return (
                   <button
                     key={animal.id}
                     onClick={() => onPickCompanion(animal)}
                     disabled={!!pickedAnimalId}
                     style={{
-                      background: isRevealed ? 'rgba(59,166,221,0.08)' : '#f5f7fa',
-                      border: `2px solid ${isRevealed ? '#3aa6dd' : 'transparent'}`,
+                      background: isPicked ? 'rgba(59,166,221,0.10)' : '#f5f7fa',
+                      border: `2px solid ${isPicked ? '#3aa6dd' : 'transparent'}`,
                       borderRadius: 18,
                       padding: '18px 0 14px',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                       cursor: isOther ? 'default' : 'pointer',
                       opacity: isOther ? 0.3 : 1,
-                      transition: 'opacity 0.4s ease, border-color 0.3s, background 0.3s',
-                      animation: isRevealed ? 'companion-bounce 0.45s ease' : undefined,
+                      transition: 'opacity 0.3s ease, border-color 0.2s, background 0.2s',
+                      animation: isPicked ? 'companion-bounce 0.45s ease' : undefined,
                     }}
                   >
-                    <div
-                      style={{
-                        filter: isRevealed ? 'none' : 'brightness(0) opacity(0.35)',
-                        transition: 'filter 0.5s ease 0.1s',
-                      }}
-                    >
+                    <div style={{ filter: 'brightness(0) opacity(0.35)' }}>
                       <AnimalIcon animal={animal} size={70} />
                     </div>
                     <div style={{ height: 20, display: 'flex', alignItems: 'center' }}>
-                      {isRevealed
-                        ? <span style={{ fontSize: 12, fontWeight: 600, color: '#1a2638' }}>{animal.name}</span>
-                        : <span className="muted" style={{ fontSize: 11 }}>？？？</span>
-                      }
+                      <span className="muted" style={{ fontSize: 11 }}>？？？</span>
                     </div>
                   </button>
                 );
@@ -733,8 +725,8 @@ export default function Home() {
             </div>
             <div style={{ marginTop: 14, fontSize: 12, color: pickedAnimalId ? '#3aa6dd' : 'var(--text-muted)', fontWeight: pickedAnimalId ? 600 : 400 }}>
               {pickedAnimalId
-                ? `${pickerAnimals.find(a => a.id === pickedAnimalId)?.name} 加入啦 🎊`
-                : 'tap 一下揭晓'}
+                ? '它来了 🎊'
+                : '凭感觉选一只～'}
             </div>
           </div>
         </div>
