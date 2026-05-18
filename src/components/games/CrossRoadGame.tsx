@@ -1,29 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameProps } from './index';
 
-const LANES = 7; // 0=goal(top), 1-5=car lanes, 6=start(bottom)
-const CAR_COLORS = ['#e57373', '#ff8a65', '#ffd54f', '#81c784', '#64b5f6', '#ba68c8'];
+const LANES = 7;
+const CAR_COLORS = ['#e57373', '#ffb74d', '#64b5f6', '#ba68c8', '#4db6ac'];
 
 interface Car {
-  id: number;
-  lane: number; // 1-5
+  lane: number;
   x: number;
-  speed: number; // px/frame, negative=left
+  speed: number;
   w: number;
   color: string;
 }
 
 interface CrossState {
-  player: { lane: number; x: number; animY: number; targetLane: number };
+  player: { lane: number; col: number; animY: number; animX: number };
   cars: Car[];
   lives: number;
   score: number;
   phase: 'playing' | 'flash' | 'dead';
   flashTimer: number;
-  frameCount: number;
+  frame: number;
   speedMult: number;
-  carIdSeq: number;
 }
+
+const COLS = 9;
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -39,35 +39,36 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function initCars(W: number, speedMult: number): Car[] {
-  const lanes = [1, 2, 3, 4, 5];
+function initCars(W: number, rowH: number): Car[] {
   const cars: Car[] = [];
-  let idSeq = 0;
-  for (const lane of lanes) {
-    const count = lane % 2 === 0 ? 2 : 3;
+  for (let lane = 1; lane <= 5; lane++) {
     const dir = lane % 2 === 0 ? 1 : -1;
-    const baseSpeed = (1.5 + lane * 0.3) * speedMult;
-    const carW = 60 + Math.random() * 30;
+    const baseSpeed = (0.8 + lane * 0.15) * dir;
+    const carW = rowH * 1.3;
+    const count = 2;
     const spacing = W / count;
     for (let i = 0; i < count; i++) {
       cars.push({
-        id: idSeq++,
         lane,
-        x: i * spacing,
-        speed: dir * baseSpeed,
+        x: i * spacing + Math.random() * 40,
+        speed: baseSpeed,
         w: carW,
-        color: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+        color: CAR_COLORS[(lane + i) % CAR_COLORS.length],
       });
     }
   }
   return cars;
 }
 
-export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onRestart }: GameProps) {
+export default function CrossRoadGame({ onGameOver, onBack, onRestart }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<CrossState | null>(null);
   const rafRef = useRef<number>(0);
+  const onGameOverRef = useRef(onGameOver);
+  onGameOverRef.current = onGameOver;
+
   const [displayScore, setDisplayScore] = useState(0);
+  const [displayLives, setDisplayLives] = useState(3);
   const [phase, setPhase] = useState<'playing' | 'over'>('playing');
 
   useEffect(() => {
@@ -84,117 +85,126 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
     ctx.scale(dpr, dpr);
 
     const rowH = H / LANES;
-    const playerW = rowH * 0.6;
-    const playerH = rowH * 0.6;
+    const colW = W / COLS;
 
     stateRef.current = {
-      player: { lane: 6, x: W / 2, animY: 6 * rowH + rowH / 2, targetLane: 6 },
-      cars: initCars(W, 1),
+      player: { lane: 6, col: Math.floor(COLS / 2), animY: 6 * rowH + rowH / 2, animX: Math.floor(COLS / 2) * colW + colW / 2 },
+      cars: initCars(W, rowH),
       lives: 3,
       score: 0,
       phase: 'playing',
       flashTimer: 0,
-      frameCount: 0,
+      frame: 0,
       speedMult: 1,
-      carIdSeq: 100,
     };
 
     let stopped = false;
 
     const getLaneY = (lane: number) => lane * rowH + rowH / 2;
+    const getColX = (col: number) => col * colW + colW / 2;
+
+    const drawCar = (car: Car) => {
+      const carY = car.lane * rowH;
+      const carH = rowH * 0.62;
+      const yPad = (rowH - carH) / 2;
+      // Body
+      roundRect(ctx, car.x, carY + yPad, car.w, carH, 6);
+      ctx.fillStyle = car.color;
+      ctx.fill();
+      // Windshield band
+      const winW = car.w * 0.35;
+      const winX = car.speed > 0 ? car.x + car.w - winW - 6 : car.x + 6;
+      roundRect(ctx, winX, carY + yPad + carH * 0.18, winW, carH * 0.4, 3);
+      ctx.fillStyle = 'rgba(40,55,80,0.55)';
+      ctx.fill();
+      // Headlights (front of car)
+      const lightX = car.speed > 0 ? car.x + car.w - 4 : car.x;
+      ctx.beginPath();
+      ctx.arc(lightX, carY + yPad + carH * 0.5, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff3a0';
+      ctx.fill();
+    };
+
+    const drawFrog = (x: number, y: number) => {
+      const size = Math.min(colW, rowH) * 0.38;
+      // Body
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = '#5cb85c';
+      ctx.fill();
+      // Belly
+      ctx.beginPath();
+      ctx.ellipse(x, y + size * 0.25, size * 0.65, size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#c8e6a0';
+      ctx.fill();
+      // Eyes
+      const eyeR = size * 0.32;
+      const eyeOff = size * 0.45;
+      ctx.fillStyle = '#5cb85c';
+      ctx.beginPath(); ctx.arc(x - eyeOff, y - eyeOff * 0.85, eyeR, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + eyeOff, y - eyeOff * 0.85, eyeR, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(x - eyeOff, y - eyeOff * 0.85, eyeR * 0.65, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + eyeOff, y - eyeOff * 0.85, eyeR * 0.65, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a2638';
+      ctx.beginPath(); ctx.arc(x - eyeOff, y - eyeOff * 0.85, eyeR * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + eyeOff, y - eyeOff * 0.85, eyeR * 0.35, 0, Math.PI * 2); ctx.fill();
+    };
 
     const draw = () => {
       const s = stateRef.current!;
 
-      // Background lanes
+      // Lanes
       for (let i = 0; i < LANES; i++) {
-        if (i === 0) ctx.fillStyle = '#a8d5a2'; // goal: green
-        else if (i === LANES - 1) ctx.fillStyle = '#b8d4a8'; // start: lighter green
-        else ctx.fillStyle = '#ccc'; // road
+        if (i === 0) ctx.fillStyle = '#9ed29a'; // goal grass
+        else if (i === LANES - 1) ctx.fillStyle = '#b3dba8'; // start grass
+        else ctx.fillStyle = '#5a6068'; // road dark
         ctx.fillRect(0, i * rowH, W, rowH);
-
-        // Lane dividers
-        if (i > 0 && i < LANES - 1 && i < LANES - 2) {
-          ctx.setLineDash([20, 16]);
-          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(0, (i + 1) * rowH);
-          ctx.lineTo(W, (i + 1) * rowH);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
       }
 
-      // Road edges
-      ctx.fillStyle = '#b8b8b8';
-      ctx.fillRect(0, rowH, W, 2);
-      ctx.fillRect(0, (LANES - 1) * rowH - 2, W, 2);
+      // Dashed lane lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([16, 14]);
+      for (let i = 2; i < LANES - 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * rowH);
+        ctx.lineTo(W, i * rowH);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
 
-      // Goal text
-      ctx.font = `bold ${rowH * 0.35}px -apple-system,sans-serif`;
+      // Curbs
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, rowH - 2, W, 2);
+      ctx.fillRect(0, (LANES - 1) * rowH, W, 2);
+
+      // Goal label
+      ctx.font = `700 ${rowH * 0.28}px -apple-system,sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#2e7556';
-      ctx.fillText('🏁 安全区', W / 2, rowH / 2);
+      ctx.fillStyle = '#2e6e2e';
+      ctx.fillText('🏁 终点', W / 2, rowH / 2);
 
       // Cars
-      for (const car of s.cars) {
-        const carY = car.lane * rowH;
-        const carH = rowH * 0.65;
-        const carTopPad = (rowH - carH) / 2;
-        roundRect(ctx, car.x, carY + carTopPad, car.w, carH, 8);
-        ctx.fillStyle = car.color;
-        ctx.fill();
-        // Windshield
-        const winW = car.w * 0.3;
-        const winH = carH * 0.35;
-        roundRect(ctx, car.x + (car.speed > 0 ? car.w - winW - 6 : 6), carY + carTopPad + carH * 0.15, winW, winH, 4);
-        ctx.fillStyle = 'rgba(173,216,230,0.8)';
-        ctx.fill();
-        // Wheels
-        const wheelR = carH * 0.15;
-        for (const wx of [car.x + car.w * 0.2, car.x + car.w * 0.8]) {
-          ctx.beginPath();
-          ctx.arc(wx, carY + carTopPad + carH - wheelR * 0.5, wheelR, 0, Math.PI * 2);
-          ctx.fillStyle = '#333';
-          ctx.fill();
-        }
-      }
+      for (const car of s.cars) drawCar(car);
 
-      // Player
-      const playerY = s.player.animY;
-      const show = s.phase !== 'flash' || Math.floor(s.frameCount / 4) % 2 === 0;
-      if (show) {
-        const emojiSize = rowH * 0.65;
-        ctx.font = `${emojiSize}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(playerEmoji, s.player.x, playerY);
-      }
-
-      // Lives
-      ctx.font = `${rowH * 0.45}px serif`;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      for (let i = 0; i < s.lives; i++) {
-        ctx.fillText('❤️', 8 + i * rowH * 0.5, rowH + 6);
-      }
+      // Player frog (skip blink frames during flash)
+      const show = s.phase !== 'flash' || Math.floor(s.frame / 5) % 2 === 0;
+      if (show) drawFrog(s.player.animX, s.player.animY);
     };
 
     const checkCollision = (px: number, py: number) => {
       const s = stateRef.current!;
-      const pHalfW = playerW / 2 * 0.7;
-      const pHalfH = playerH / 2 * 0.7;
+      const playerR = Math.min(colW, rowH) * 0.35;
       for (const car of s.cars) {
-        const carY = car.lane * rowH + (rowH - rowH * 0.65) / 2;
-        const carH = rowH * 0.65;
-        const shrink = 6;
+        const carY = car.lane * rowH + (rowH - rowH * 0.62) / 2;
+        const carH = rowH * 0.62;
         if (
-          px + pHalfW > car.x + shrink &&
-          px - pHalfW < car.x + car.w - shrink &&
-          py + pHalfH > carY + shrink &&
-          py - pHalfH < carY + carH - shrink
+          px + playerR > car.x + 4 &&
+          px - playerR < car.x + car.w - 4 &&
+          py + playerR > carY + 4 &&
+          py - playerR < carY + carH - 4
         ) return true;
       }
       return false;
@@ -203,34 +213,37 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
     const loop = () => {
       if (stopped) return;
       const s = stateRef.current!;
-      s.frameCount++;
+      s.frame++;
 
-      // Animate player Y
-      const targetY = getLaneY(s.player.lane);
-      s.player.animY += (targetY - s.player.animY) * 0.25;
+      // Smooth player animation
+      const tY = getLaneY(s.player.lane);
+      const tX = getColX(s.player.col);
+      s.player.animY += (tY - s.player.animY) * 0.3;
+      s.player.animX += (tX - s.player.animX) * 0.3;
 
       // Move cars
       for (const car of s.cars) {
         car.x += car.speed * s.speedMult;
-        if (car.speed > 0 && car.x > W) car.x = -car.w;
-        if (car.speed < 0 && car.x + car.w < 0) car.x = W;
+        if (car.speed > 0 && car.x > W + 20) car.x = -car.w - 20;
+        if (car.speed < 0 && car.x + car.w < -20) car.x = W + 20;
       }
 
-      // Collision (only in car lanes and not flashing)
+      // Collision
       if (s.phase === 'playing' && s.player.lane >= 1 && s.player.lane <= 5) {
-        if (checkCollision(s.player.x, s.player.animY)) {
+        if (checkCollision(s.player.animX, s.player.animY)) {
           s.lives--;
+          setDisplayLives(s.lives);
           if (s.lives <= 0) {
             s.phase = 'dead';
             draw();
             setPhase('over');
-            onGameOver(s.score);
+            onGameOverRef.current(s.score);
             return;
           }
           s.phase = 'flash';
           s.flashTimer = 90;
           s.player.lane = 6;
-          s.player.animY = getLaneY(6);
+          s.player.col = Math.floor(COLS / 2);
         }
       }
 
@@ -245,34 +258,30 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
 
     rafRef.current = requestAnimationFrame(loop);
     return () => { stopped = true; cancelAnimationFrame(rafRef.current); };
-  }, [playerEmoji, onGameOver]);
+  }, []);
 
   const move = (dir: 'up' | 'down' | 'left' | 'right') => {
     const s = stateRef.current;
     if (!s || s.phase === 'dead') return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
 
-    if (dir === 'up' && s.player.lane > 0) {
-      s.player.lane--;
+    if (dir === 'up') {
+      if (s.player.lane > 0) s.player.lane--;
       if (s.player.lane === 0) {
-        // Reached goal!
         s.score++;
         setDisplayScore(s.score);
-        s.speedMult *= 1.05;
+        s.speedMult *= 1.08;
         s.player.lane = 6;
-        s.player.animY = canvas.offsetHeight * (6 / LANES) + (canvas.offsetHeight / LANES) / 2;
+        s.player.col = Math.floor(COLS / 2);
       }
     } else if (dir === 'down' && s.player.lane < LANES - 1) {
       s.player.lane++;
-    } else if (dir === 'left') {
-      s.player.x = Math.max(20, s.player.x - 30);
-    } else if (dir === 'right') {
-      s.player.x = Math.min((canvas?.offsetWidth ?? 360) - 20, s.player.x + 30);
+    } else if (dir === 'left' && s.player.col > 0) {
+      s.player.col--;
+    } else if (dir === 'right' && s.player.col < COLS - 1) {
+      s.player.col++;
     }
   };
 
-  // Touch swipe
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -281,40 +290,41 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
     if (!touchStartRef.current) return;
     const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
     const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    if (Math.abs(dx) > Math.abs(dy)) {
-      move(dx > 20 ? 'right' : 'left');
-    } else {
-      move(dy > 20 ? 'down' : 'up');
-    }
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) { touchStartRef.current = null; return; }
+    if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+    else move(dy > 0 ? 'down' : 'up');
     touchStartRef.current = null;
   };
 
   const btnStyle: React.CSSProperties = {
-    width: 52, height: 52, borderRadius: 999,
-    background: 'rgba(31,42,68,0.18)', color: '#fff',
-    border: 'none', cursor: 'pointer', fontSize: 22,
+    width: 56, height: 56, borderRadius: 999,
+    background: '#1f2a44', color: '#fff',
+    border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     WebkitUserSelect: 'none', userSelect: 'none',
     touchAction: 'manipulation',
+    boxShadow: '0 4px 12px rgba(31,42,68,0.25)',
   };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-      {/* Score bar */}
       <div style={{
-        flexShrink: 0, height: 56,
+        flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 20px',
-        background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
+        padding: '12px 20px',
+        background: 'rgba(255,255,255,0.9)',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#1a2638' }}>🐸 过马路</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 13, color: '#647c91' }}>过马路</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#1f2a44' }}>{displayScore}</div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 18 }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <span key={i} style={{ opacity: i < displayLives ? 1 : 0.25, transition: 'opacity 0.2s' }}>❤️</span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <div style={{ fontSize: 13, color: '#647c91' }}>过关</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#1f2a44' }}>{displayScore}</div>
         </div>
       </div>
 
-      {/* Canvas */}
       <canvas
         ref={canvasRef}
         style={{ flex: 1, display: 'block', touchAction: 'none' }}
@@ -322,14 +332,13 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
         onTouchEnd={handleTouchEnd}
       />
 
-      {/* Controls */}
       <div style={{
-        flexShrink: 0, height: 120,
+        flexShrink: 0, padding: '14px 0 18px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)',
+        background: 'rgba(255,255,255,0.7)',
         touchAction: 'none',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '52px 52px 52px', gridTemplateRows: '52px 52px', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '56px 56px 56px', gridTemplateRows: '56px 56px', gap: 8 }}>
           <div />
           <button style={btnStyle} onPointerDown={() => move('up')}>↑</button>
           <div />
@@ -339,7 +348,6 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
         </div>
       </div>
 
-      {/* Game over overlay */}
       {phase === 'over' && (
         <div style={{
           position: 'absolute', inset: 0,
@@ -350,34 +358,15 @@ export default function CrossRoadGame({ playerEmoji, onGameOver, onBack, onResta
             background: '#fff', borderRadius: 22,
             padding: '28px 24px', textAlign: 'center',
             boxShadow: '0 12px 40px rgba(31,50,80,0.18)',
-            minWidth: 220,
+            minWidth: 240,
           }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>🚗</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🐸</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#1a2638', marginBottom: 6 }}>游戏结束</div>
-            <div style={{ fontSize: 14, color: '#647c91', marginBottom: 4 }}>成功过马路</div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: '#1f2a44', marginBottom: 16 }}>{displayScore} 次</div>
+            <div style={{ fontSize: 14, color: '#647c91', marginBottom: 4 }}>过马路</div>
+            <div style={{ fontSize: 44, fontWeight: 800, color: '#1f2a44', marginBottom: 18 }}>{displayScore} 次</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                onClick={onRestart}
-                style={{
-                  borderRadius: 999, background: '#1f2a44', color: '#fff',
-                  border: 'none', cursor: 'pointer',
-                  padding: '12px 24px', fontSize: 15, fontWeight: 600,
-                }}
-              >
-                再来一局
-              </button>
-              <button
-                onClick={onBack}
-                style={{
-                  borderRadius: 999,
-                  background: 'rgba(58,166,221,0.1)', color: '#1d7fb8',
-                  border: 'none', cursor: 'pointer',
-                  padding: '12px 24px', fontSize: 15, fontWeight: 600,
-                }}
-              >
-                换游戏
-              </button>
+              <button onClick={onRestart} style={{ borderRadius: 999, background: '#1f2a44', color: '#fff', border: 'none', cursor: 'pointer', padding: '13px 24px', fontSize: 15, fontWeight: 600 }}>再来一局</button>
+              <button onClick={onBack} style={{ borderRadius: 999, background: 'rgba(58,166,221,0.1)', color: '#1d7fb8', border: 'none', cursor: 'pointer', padding: '13px 24px', fontSize: 15, fontWeight: 600 }}>换游戏</button>
             </div>
           </div>
         </div>

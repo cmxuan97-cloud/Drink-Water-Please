@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { ANIMALS } from '../../data/animals';
-import { getCompanionId } from '../../lib/storage';
 import { GameId, GAME_LS_KEYS, GAME_META } from './index';
 import SnakeGame from './SnakeGame';
 import CrossRoadGame from './CrossRoadGame';
@@ -22,23 +20,12 @@ export default function GameHub({ onClose }: GameHubProps) {
     jump: getBest('jump'),
   });
 
-  const companionId = getCompanionId();
-  const animal = ANIMALS.find(a => a.id === companionId);
-  const playerEmoji = animal?.emoji ?? '🐾';
-
   const handleGameOver = (id: GameId, score: number) => {
     const key = GAME_LS_KEYS[id];
     const prev = parseInt(localStorage.getItem(key) ?? '0', 10);
     if (score > prev) localStorage.setItem(key, String(score));
     setBestScores(cur => ({ ...cur, [id]: Math.max(cur[id], score) }));
   };
-
-  const gameProps = activeGame ? {
-    playerEmoji,
-    onGameOver: (score: number) => handleGameOver(activeGame, score),
-    onBack: () => setActiveGame(null),
-    onRestart: () => setRestartCount(n => n + 1),
-  } : null;
 
   return (
     <div
@@ -100,9 +87,6 @@ export default function GameHub({ onClose }: GameHubProps) {
         {/* Content */}
         {activeGame === null ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontSize: 13, color: '#647c91', textAlign: 'center', marginBottom: 4 }}>
-              {playerEmoji} 你的伙伴将在游戏中登场
-            </div>
             {(['snake', 'cross', 'jump'] as GameId[]).map(id => {
               const meta = GAME_META[id];
               return (
@@ -135,7 +119,7 @@ export default function GameHub({ onClose }: GameHubProps) {
                         padding: '3px 10px', fontSize: 12, color: '#1d7fb8', fontWeight: 600,
                         marginBottom: 8,
                       }}>
-                        ⭐ 最高分 {bestScores[id]}
+                        ⭐ 最高 {bestScores[id]}
                       </div>
                     )}
                     <div>
@@ -159,14 +143,29 @@ export default function GameHub({ onClose }: GameHubProps) {
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {activeGame === 'snake' && gameProps && (
-              <SnakeGame key={restartCount} {...gameProps} />
+            {activeGame === 'snake' && (
+              <SnakeGame
+                key={restartCount}
+                onGameOver={(s) => handleGameOver('snake', s)}
+                onBack={() => setActiveGame(null)}
+                onRestart={() => setRestartCount(n => n + 1)}
+              />
             )}
-            {activeGame === 'cross' && gameProps && (
-              <CrossRoadGame key={restartCount} {...gameProps} />
+            {activeGame === 'cross' && (
+              <CrossRoadGame
+                key={restartCount}
+                onGameOver={(s) => handleGameOver('cross', s)}
+                onBack={() => setActiveGame(null)}
+                onRestart={() => setRestartCount(n => n + 1)}
+              />
             )}
-            {activeGame === 'jump' && gameProps && (
-              <JumpGame key={restartCount} {...gameProps} />
+            {activeGame === 'jump' && (
+              <JumpGame
+                key={restartCount}
+                onGameOver={(s) => handleGameOver('jump', s)}
+                onBack={() => setActiveGame(null)}
+                onRestart={() => setRestartCount(n => n + 1)}
+              />
             )}
           </div>
         )}

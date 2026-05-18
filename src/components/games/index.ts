@@ -7,13 +7,12 @@ export const GAME_LS_KEYS: Record<GameId, string> = {
 };
 
 export const GAME_META: Record<GameId, { emoji: string; name: string; desc: string }> = {
-  snake: { emoji: '🐍', name: '贪吃蛇', desc: '吃掉食物，越来越长！' },
-  cross: { emoji: '🐸', name: '过马路', desc: '躲开汽车，安全到达彼岸！' },
-  jump: { emoji: '🌤️', name: '越跳越高', desc: '一直往上跳，冲破天际！' },
+  snake: { emoji: '🐍', name: '贪吃蛇', desc: '经典玩法，吃苹果越长越快' },
+  cross: { emoji: '🐸', name: '过马路', desc: '操控小青蛙，躲开来车' },
+  jump: { emoji: '🐰', name: '越跳越高', desc: '一直往上跳，挑战最高纪录' },
 };
 
 export interface GameProps {
-  playerEmoji: string;
   onGameOver: (score: number) => void;
   onBack: () => void;
   onRestart: () => void;
