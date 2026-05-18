@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameProps } from './index';
 
-const GRAVITY = 0.42;
-const JUMP_VY = -12;
+const GRAVITY = 0.45;
+const JUMP_VY = -9.5;
 const PLAYER_VX = 4.2;
 const PLATFORM_COUNT = 12;
 const PLATFORM_W = 78;
